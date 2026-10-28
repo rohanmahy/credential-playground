@@ -98,7 +98,8 @@ pub enum Layer {
         /// Path from the root to the string.
         path: Vec<PathSegment>,
     },
-    /// base64url (RFC 4648 §5).
+    /// base64url (RFC 4648 §5). Text using neither `+/` nor `-_` is recorded
+    /// as `Base64Url` when unpadded and as [`Layer::Base64Std`] when padded.
     Base64Url {
         /// Whether the text has `=` padding.
         padded: bool,

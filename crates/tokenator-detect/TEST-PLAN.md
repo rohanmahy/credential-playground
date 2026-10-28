@@ -24,12 +24,22 @@ under test), CBOR builders on top of `tokenator-cbor`, candidate lookups, and
 | `ambiguity.rs` | Ranking and multiple readings: token fields outrank their container's `JsonClaims`; one candidate per token field; key kinds outrank the claims catch-alls and vice versa for real claim sets; SD-KBT > SD-CWT > CWT > COSE_Sign1; hex readings outrank base64 readings of hex-looking text; JSON outranks EDN. |
 | `rewrap.rs` | `rewrap` output for each layer on its own (exact bytes, including preferred CBOR tag heads and JSON escaping), layer order, `json_pointer` (RFC 6901 escaping), `unwrap_layers` success and failure (with the failing layer index), and `rewrap(unwrap_layers(x)) == x` for every top candidate of a table of canonical inputs. |
 | `robustness.rs` | Empty input, whitespace only, NUL bytes, invalid UTF-8, lone quotes/prefixes, truncated fixtures (every prefix of a JWT and a CWT), bit-flipped fixtures, 4 MiB inputs (base64 alphabet, hex digits, `{`, CBOR `0x81` depth bombs), 20 levels of base64 nesting (capped at `MAX_LAYERS`), and many JSON fields. |
-| `proptest.rs` | Never panics on arbitrary bytes, arbitrary strings, token-alphabet strings, and mutated fixtures, and `check_invariants` holds. `rewrap` then `unwrap_layers` round-trips arbitrary payloads through arbitrary layer stacks. |
+| `proptest.rs` | Never panics on arbitrary bytes, arbitrary strings, token-alphabet strings, CBOR-like bytes, and mutated (and mutated encoded) fixtures, and `check_invariants` holds. `rewrap` then `unwrap_layers` round-trips arbitrary payloads through arbitrary layer stacks. `detect` finds a real CWT inside any canonical `rewrap` stack with exactly that stack. |
+| `helpers.rs` | Self-checks of the test helpers (RFC 4648 vectors, hex/percent layouts) and fixture shapes (CBOR and JSON fixtures parse with `tokenator-cbor`/`tokenator-json`). These pass without the implementation. |
 
 ## Decisions encoded in the tests
 
 - Layers are listed outermost first, and only peeled layers are recorded (an
-  exact token has no layers). `Trim` is always the outermost layer.
+  exact token has no layers). Surrounding whitespace of text input is always
+  recorded as `Trim`, which is always the outermost layer (so a file's final
+  newline shows up as `Trim { leading: "", trailing: "\n" }`).
+- `payload_range` is the input range fed to the first decoding layer, or the
+  payload itself when all layers are positional.
+- JSON containers may be objects or arrays; paths use `PathSegment::Index`
+  for array elements. String fields that don't classify yield nothing.
+- base64 text with neither `+/` nor `-_` is recorded as `Base64Url` when
+  unpadded and as `Base64Std` when padded. Mixing both alphabets is invalid.
+  Hex readings outrank base64 readings of the same text.
 - Raw binary is tried as-is. Whitespace is never trimmed from input that
   parses as CBOR, so a COSE_Key ending in `0x0a` keeps its last byte.
 - Tags 61 and 18 are both layers (`[CborTag(61), CborTag(18)]`), and the
