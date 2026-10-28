@@ -141,7 +141,13 @@ fn openssl_fixtures_round_trip_through_jwk_and_cose() {
         for fmt in [KeyFormat::Jwk, KeyFormat::CoseKey] {
             for vis in [Visibility::Public, Visibility::Private] {
                 let back = import_one(&export(&key, fmt, vis).unwrap(), None);
-                assert_eq!(back, expected(&key, vis), "{kind:?} {fmt:?} {vis:?}");
+                let mut want = expected(&key, vis);
+                // AKP keys always export an alg (RFC 9964 §3), which then
+                // imports as the declared alg.
+                if let Some(set) = kind.ml_dsa() {
+                    want.alg = Some(DeclaredAlg::Known(set.alg()));
+                }
+                assert_eq!(back, want, "{kind:?} {fmt:?} {vis:?}");
             }
         }
     }

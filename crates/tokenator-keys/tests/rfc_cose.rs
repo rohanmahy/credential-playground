@@ -309,10 +309,11 @@ fn rfc9964_to_cwk_order_and_values() {
         let key = import_one(&original, None);
         let out = export(&key, KeyFormat::CoseKey, Visibility::Private).unwrap();
         assert_eq!(cbor_int_labels(&out), [1, 2, 3, -1, -2]);
+        // The RFC map starts with the kid, so compare values, not spans.
         for label in [1, 2, 3, -1, -2] {
             assert_eq!(
-                cbor_get(&out, label),
-                cbor_get(&original, label),
+                cbor_get(&out, label).map(|i| i.value),
+                cbor_get(&original, label).map(|i| i.value),
                 "label {label}"
             );
         }
