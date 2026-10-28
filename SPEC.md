@@ -235,11 +235,12 @@ links to the tree nodes it concerns.
 
 ## 8. EDN
 
-A parser and printer for draft-ietf-cbor-edn:
+A parser and printer for draft-ietf-cbor-edn-literals (targeting -28):
 
 - Full core grammar: comments, indefinite-length items, encoding indicators
-  (`_0`–`_3`, `_i`), embedded CBOR (`<<…>>`), concatenated strings, and all
-  numeric forms.
+  (`_0`–`_3`, `_i`), embedded CBOR (`<<…>>`), and all numeric forms. String
+  concatenation uses the `b1''`/`t1''` extensions, because -28 removed
+  juxtaposition.
 - Application-extensions `h''`, `b64''`, `dt''`, `ip''`, and `hash''`. Other
   extensions round-trip as opaque values with a warning.
 - The printer emits per-node text ranges for tree sync, and can print in
