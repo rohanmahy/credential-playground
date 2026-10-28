@@ -33,11 +33,11 @@ fn duplicates_preserved_in_order() {
 
 #[test]
 fn duplicate_keys_with_different_escapes_compare_decoded() {
-    let n = p(r#"{"a":1,"a":2}"#);
+    let n = p(r#"{"a":1,"\u0061":2}"#);
     assert_eq!(n.get_all("a").len(), 2);
     let m = n.members().unwrap();
     assert_eq!(m[0].key_raw(), Some(r#""a""#));
-    assert_eq!(m[1].key_raw(), Some(r#""a""#));
+    assert_eq!(m[1].key_raw(), Some(r#""\u0061""#));
 }
 
 #[test]

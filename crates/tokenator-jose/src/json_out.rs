@@ -1,9 +1,10 @@
 //! The JSON writer behind [`JsonStyle`] for generated headers, payloads,
 //! and disclosures.
 //!
-//! TODO: replace the `Spaced` branch with tokenator-json's canonical-spacing
-//! print option once feat/json-3-4 lands. It is private and minimal until
-//! then.
+//! This stays separate from tokenator-json's printer: `Spaced` is one line
+//! with `", "`/`": "` (Python `json.dumps` defaults), while
+//! `InsertedLayout::Canonical` lays out synthesized trees on multiple lines
+//! like Pretty, and tokenator-json has no ASCII-only escaping.
 
 use core::fmt::Write as _;
 

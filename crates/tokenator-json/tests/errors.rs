@@ -101,15 +101,17 @@ fn lone_and_inverted_surrogates() {
 }
 
 #[test]
-fn invalid_utf8() {
-    expect(b"[\"\xff\"]", InvalidUtf8, 2);
-    expect(b"\xc3", InvalidUtf8, 0);
-    expect(b"\"\xc0\xaf\"", InvalidUtf8, 1);
-    expect(b"{\"a\xed\xa0\x80\":1}", InvalidUtf8, 3);
-    expect(b"\"\xf4\x90\x80\x80\"", InvalidUtf8, 1);
-    // Whole input is validated before grammar errors are reported.
-    expect(b"[1]\xff", InvalidUtf8, 3);
-    expect(b"\x00[\xe9]", InvalidUtf8, 2);
+fn invalid_utf8_outside_strings_is_unexpected_character() {
+    // Inside strings invalid UTF-8 is only a warning (see warnings.rs).
+    expect(b"\xc3", UnexpectedCharacter, 0);
+    expect(b"[1]\xff", TrailingCharacters, 3);
+    expect(b"[\xe9]", UnexpectedCharacter, 1);
+    expect(b"{\"a\":1,\xff}", UnexpectedCharacter, 7);
+    // UTF-16 input fails on its first NUL or non-UTF-8 byte.
+    expect(b"\x00[\x00]", UnexpectedCharacter, 0);
+    expect(b"[\x00\"\x00a\x00\"\x00]\x00", UnexpectedCharacter, 1);
+    expect(b"\xff\xfe[\x00]\x00", UnexpectedCharacter, 0);
+    expect(b"\xfe\xff\x00[\x00]", UnexpectedCharacter, 0);
 }
 
 #[test]
