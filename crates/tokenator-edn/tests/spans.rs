@@ -117,7 +117,7 @@ fn embedded_cbor_spans_are_absolute() {
     let bytes = h("82 01 d818 43 820203");
     let item = decode(&bytes).unwrap();
     let opts = PrintOptions {
-        embedded_cbor: EmbeddedCbor::Containers,
+        embedded_cbor: EmbeddedCbor::tagged(),
         ..PrintOptions::new()
     };
     let r = print(&item, &opts);
@@ -149,7 +149,7 @@ fn embedded_sequence_items_are_indexed() {
     let bytes = h("a1 01 d818 45 a2 01 02 03 04");
     let item = decode(&bytes).unwrap();
     let opts = PrintOptions {
-        embedded_cbor: EmbeddedCbor::Containers,
+        embedded_cbor: EmbeddedCbor::tagged(),
         ..PrintOptions::indented(2)
     };
     let r = print(&item, &opts);
@@ -157,6 +157,50 @@ fn embedded_sequence_items_are_indexed() {
     let k1 = Path([base.clone(), vec![Key(1)]].concat());
     assert_eq!(slice(&r, &k1), "3");
     assert_eq!(r.spans.get(&k1).unwrap().cbor, sp(8, 9, 1));
+}
+
+#[test]
+fn listed_sequence_spans() {
+    // {1: <<1, [2]>>}: a listed byte string holding a two-item sequence.
+    let bytes = h("a1 01 43 01 81 02");
+    let item = decode(&bytes).unwrap();
+    let paths = [p([Value(0)])];
+    let opts = PrintOptions {
+        embedded_cbor: EmbeddedCbor::at(&paths),
+        ..PrintOptions::new()
+    };
+    let r = print(&item, &opts);
+    assert_eq!(r.text, "{1: <<1, [2]>>}");
+    let got: Vec<_> = r
+        .spans
+        .iter()
+        .map(|(p, s)| (p.to_string(), s.cbor))
+        .collect();
+    assert_eq!(
+        got,
+        [
+            ("".to_string(), sp(0, 6, 1)),
+            ("k0".to_string(), sp(1, 2, 1)),
+            ("v0".to_string(), sp(2, 6, 1)),
+            ("v0/e0".to_string(), sp(3, 4, 1)),
+            ("v0/e1".to_string(), sp(4, 6, 1)),
+            ("v0/e1/0".to_string(), sp(5, 6, 1)),
+        ]
+    );
+    assert_eq!(slice(&r, &p([Value(0), Embedded(1)])), "[2]");
+}
+
+#[test]
+fn unlisted_paths_get_no_embedded_entries() {
+    let bytes = h("a1 01 43 01 81 02");
+    let item = decode(&bytes).unwrap();
+    let r = print(&item, &PrintOptions::new());
+    assert!(
+        r.spans
+            .iter()
+            .all(|(p, _)| !p.segments().iter().any(|s| matches!(s, Embedded(_))))
+    );
+    check_span_map(&item, Some(&bytes), &r).unwrap();
 }
 
 #[test]

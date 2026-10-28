@@ -55,13 +55,7 @@ pub fn roundtrip_options() -> Vec<(&'static str, PrintOptions<'static>)> {
     vec![
         ("default", PrintOptions::new()),
         ("indented", PrintOptions::indented(2)),
-        (
-            "embedded",
-            PrintOptions {
-                embedded_cbor: EmbeddedCbor::AnyItem,
-                ..PrintOptions::indented(4)
-            },
-        ),
+        ("indented4", PrintOptions::indented(4)),
         (
             "always",
             PrintOptions {
@@ -94,6 +88,72 @@ pub fn rt(bytes: &[u8]) -> Result<(), String> {
         if again != bytes {
             return Err(format!(
                 "[{name}] {} printed as {:?} re-encodes to {}",
+                hex(bytes),
+                rendered.text,
+                hex(&again)
+            ));
+        }
+    }
+    Ok(())
+}
+
+/// Paths of every definite-length byte string whose content is a complete
+/// CBOR sequence of one or more items, including byte strings inside such
+/// content (through `Embedded(i)` segments): what a caller would list to
+/// show every decodable byte string as `<<…>>`.
+pub fn all_bstr_paths(item: &Item) -> Vec<Path> {
+    let mut out = Vec::new();
+    let mut todo = vec![(Path::root(), item.clone().into_owned())];
+    while let Some((base, it)) = todo.pop() {
+        for (path, node) in nodes(&it) {
+            let Value::Bytes(b) = &node.value else {
+                continue;
+            };
+            if node.width == tokenator_cbor::Width::Indefinite
+                || b.is_empty()
+                || path
+                    .segments()
+                    .last()
+                    .is_some_and(|s| matches!(s, PathSegment::Chunk(_)))
+            {
+                continue;
+            }
+            let Ok(inner) = tokenator_cbor::decode_seq(b) else {
+                continue;
+            };
+            let mut full = base.0.clone();
+            full.extend_from_slice(path.segments());
+            let full = Path(full);
+            if base.depth() + path.depth() + 2 > tokenator_cbor::MAX_DEPTH / 2 {
+                continue;
+            }
+            for (i, inner) in inner.into_iter().enumerate() {
+                todo.push((full.child(PathSegment::Embedded(i)), inner.into_owned()));
+            }
+            out.push(full);
+        }
+    }
+    out.sort();
+    out
+}
+
+/// Like [`rt`], with every decodable byte string (and tags 24/63) shown as
+/// embedded CBOR, compact and indented.
+pub fn rt_embedded(bytes: &[u8]) -> Result<(), String> {
+    let item = decode(bytes).map_err(|e| format!("decode: {e}"))?;
+    let paths = all_bstr_paths(&item);
+    for opts in [PrintOptions::new(), PrintOptions::indented(2)] {
+        let opts = PrintOptions {
+            embedded_cbor: EmbeddedCbor::at(&paths),
+            ..opts
+        };
+        let rendered = print(&item, &opts);
+        let back = parse(&rendered.text)
+            .map_err(|e| format!("[embedded] reparse of {:?}: {e:?}", rendered.text))?;
+        let again = encode(&back, EncodeMode::Preserve);
+        if again != bytes {
+            return Err(format!(
+                "[embedded] {} printed as {:?} re-encodes to {}",
                 hex(bytes),
                 rendered.text,
                 hex(&again)

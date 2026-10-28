@@ -5,7 +5,9 @@ use std::fmt;
 use std::fmt::Write as _;
 use std::ops::Range;
 
-use tokenator_cbor::{EncodeMode, FloatWidth, Item, MAX_DEPTH, Span, Value, Width, decode, encode};
+use tokenator_cbor::{
+    EncodeMode, FloatWidth, Item, MAX_DEPTH, Span, Value, Width, decode_seq, encode,
+};
 
 use crate::annotate::Annotator;
 use crate::datetime::{EpochValue, Instant};
@@ -46,18 +48,54 @@ pub enum EncodingIndicators {
     Never,
 }
 
-/// When to show a byte string as embedded CBOR `<<…>>`. Only definite-length
-/// byte strings qualify; chunks of indefinite-length strings never do.
+/// Which byte strings to show as embedded CBOR `<<…>>` (issue #15: no
+/// guessing). Only definite-length byte strings qualify; chunks of
+/// indefinite-length strings never do.
+///
+/// A qualifying byte string is shown as `<<…>>` only if that re-encodes
+/// exactly; otherwise it stays `h'…'` (the printer never fails). An empty
+/// byte string always stays `h''`. To decode a byte string the user picked
+/// by hand, use [`decode_embedded`](crate::decode_embedded), which reports
+/// trailing bytes instead of refusing.
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
-pub enum EmbeddedCbor {
-    /// Always as a byte string.
-    #[default]
-    Off,
-    /// If the bytes decode as exactly one array, map, or tag, or if the byte
-    /// string is the content of tag 24 or 63 and decodes as exactly one item.
-    Containers,
-    /// If the bytes decode as exactly one item of any kind.
-    AnyItem,
+pub struct EmbeddedCbor<'a> {
+    /// Byte strings at these paths, which the caller knows hold CBOR (COSE
+    /// protected headers, payloads, SD-CWT disclosures, `kcwt`, …). The
+    /// content is shown if it is a complete CBOR sequence of one or more
+    /// items; the items get paths ending in
+    /// [`PathSegment::Embedded(i)`](crate::PathSegment::Embedded). Paths
+    /// below an embedded item go through its `Embedded(i)` segment, so nested
+    /// embedded CBOR is listed explicitly too.
+    pub paths: &'a [Path],
+    /// Also the content of tag 24 ("encoded CBOR data item": shown if it is
+    /// exactly one item) and tag 63 ("encoded CBOR sequence": one or more
+    /// items). These tags are format knowledge too, so they need no path.
+    /// Off by default, like the draft's basic output format (§1.3.3).
+    pub tagged: bool,
+}
+
+impl<'a> EmbeddedCbor<'a> {
+    /// No embedded CBOR: every byte string prints as `h'…'`.
+    pub const OFF: EmbeddedCbor<'static> = EmbeddedCbor {
+        paths: &[],
+        tagged: false,
+    };
+
+    /// The byte strings at `paths`, plus tags 24 and 63.
+    pub fn at(paths: &'a [Path]) -> EmbeddedCbor<'a> {
+        EmbeddedCbor {
+            paths,
+            tagged: true,
+        }
+    }
+
+    /// Only the contents of tags 24 and 63.
+    pub fn tagged() -> EmbeddedCbor<'static> {
+        EmbeddedCbor {
+            paths: &[],
+            tagged: true,
+        }
+    }
 }
 
 /// How to print byte strings that are not shown as embedded CBOR.
@@ -92,7 +130,7 @@ pub struct PrintOptions<'a> {
     /// When to emit encoding indicators.
     pub encoding_indicators: EncodingIndicators,
     /// When to render byte strings as `<<…>>`.
-    pub embedded_cbor: EmbeddedCbor,
+    pub embedded_cbor: EmbeddedCbor<'a>,
     /// How to render other byte strings.
     pub bytes: ByteStyle,
     /// How to render indefinite-length strings.
@@ -121,7 +159,7 @@ impl PrintOptions<'_> {
         PrintOptions {
             layout: Layout::Compact,
             encoding_indicators: EncodingIndicators::NonPreferred,
-            embedded_cbor: EmbeddedCbor::Off,
+            embedded_cbor: EmbeddedCbor::OFF,
             bytes: ByteStyle::Hex,
             indefinite_strings: IndefiniteStringStyle::AppExtension,
             ascii: false,
@@ -208,8 +246,9 @@ pub struct Rendered {
 ///     [PathSegment::Key(0)] => Some("alg".to_string()),
 ///     _ => None,
 /// };
+/// let decoded = [Path::from([PathSegment::Value(1)])];
 /// let options = PrintOptions {
-///     embedded_cbor: EmbeddedCbor::AnyItem,
+///     embedded_cbor: EmbeddedCbor::at(&decoded),
 ///     annotator: Some(&names),
 ///     ..PrintOptions::indented(2)
 /// };
@@ -308,42 +347,58 @@ impl<'r> Node<'r> {
     }
 }
 
-/// The single item embedded in a definite-length byte string, if `mode`
-/// shows it as `<<…>>` here. `depth` is the byte string's nesting depth;
-/// expansion stops where the text would nest deeper than `MAX_DEPTH`.
+/// The item embedded in a definite-length byte string, if `mode` shows it
+/// as `<<…>>` here. `path` is the byte string's path and `depth` its
+/// nesting depth; expansion stops where the text would nest deeper than
+/// `MAX_DEPTH`.
 pub(crate) fn embedded<'r>(
     node: &Node<'r>,
+    path: &Path,
     parent_tag: Option<u64>,
-    mode: EmbeddedCbor,
+    mode: EmbeddedCbor<'_>,
     depth: usize,
-) -> Option<Item<'r>> {
-    if mode == EmbeddedCbor::Off || node.item().width == Width::Indefinite {
+) -> Option<Vec<Item<'r>>> {
+    if mode == EmbeddedCbor::OFF || node.item().width == Width::Indefinite {
         return None;
     }
-    let (inner, content): (Item<'r>, &[u8]) = match node {
+    // Issue #15: only listed paths (a CBOR sequence) and, with `tagged`, the
+    // content of tag 24 (exactly one item) or tag 63 (a sequence).
+    let listed = mode.paths.contains(path);
+    let tagged = mode.tagged && matches!(parent_tag, Some(24 | 63));
+    if !listed && !tagged {
+        return None;
+    }
+    let (items, content): (Vec<Item<'r>>, &[u8]) = match node {
         Node::Ref(item) => match &item.value {
-            Value::Bytes(b) => (decode(b.as_ref()).ok()?, b),
+            Value::Bytes(b) => (decode_seq(b.as_ref()).ok()?, b),
             _ => return None,
         },
         Node::Own(item) => match &item.value {
-            Value::Bytes(Cow::Borrowed(b)) => (decode(b).ok()?, b),
-            Value::Bytes(Cow::Owned(b)) => (decode(b).ok()?.into_owned(), b),
+            Value::Bytes(Cow::Borrowed(b)) => (decode_seq(b).ok()?, b),
+            Value::Bytes(Cow::Owned(b)) => (
+                decode_seq(b)
+                    .ok()?
+                    .into_iter()
+                    .map(Item::into_owned)
+                    .collect(),
+                b,
+            ),
             _ => return None,
         },
     };
-    let shown = match mode {
-        EmbeddedCbor::Off => false,
-        EmbeddedCbor::AnyItem => true,
-        EmbeddedCbor::Containers => {
-            matches!(parent_tag, Some(24 | 63))
-                || matches!(
-                    inner.value,
-                    Value::Array(_) | Value::Map(_) | Value::Tag(..)
-                )
-        }
-    };
-    let fits_depth = depth + 1 + height(&inner) <= MAX_DEPTH;
-    (shown && fits_depth && encode(&inner, EncodeMode::Preserve) == content).then_some(inner)
+    if items.is_empty() || (!listed && parent_tag == Some(24) && items.len() != 1) {
+        return None;
+    }
+    let deepest = items.iter().map(height).max().unwrap_or(0);
+    if depth + 1 + deepest > MAX_DEPTH {
+        return None;
+    }
+    // Shown only where the text re-encodes to exactly these bytes.
+    let mut again = Vec::with_capacity(content.len());
+    for item in &items {
+        again.extend(encode(item, EncodeMode::Preserve));
+    }
+    (again == content).then_some(items)
 }
 
 /// The CBOR span of `item` in the outermost bytes, given the offset its
@@ -988,23 +1043,29 @@ impl<'o> Printer<'o> {
                 if !child.chunk
                     && let Some(inner) = embedded(
                         &child.node,
+                        &child.path,
                         child.parent_tag,
                         opts.embedded_cbor,
                         child.path.depth(),
                     )
                 {
                     let ind = self.int_ind(item.width, len_u64(b.len()));
-                    let kid = Child {
-                        node: Node::Own(inner),
-                        path: child.path.child(PathSegment::Embedded(0)),
-                        base: embedded_base(item, child.base),
-                        prefix: Prefix::Element,
-                        level: child.level + 1,
-                        parent_tag: None,
-                        chunk: false,
-                    };
+                    let base = embedded_base(item, child.base);
+                    let kids = inner
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, it)| Child {
+                            node: Node::Own(it),
+                            path: child.path.child(PathSegment::Embedded(i)),
+                            base,
+                            prefix: Prefix::Element,
+                            level: child.level + 1,
+                            parent_tag: None,
+                            chunk: false,
+                        })
+                        .collect();
                     return self.open(
-                        vec![kid],
+                        kids,
                         "<<",
                         "",
                         format!(">>{ind}"),
