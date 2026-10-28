@@ -270,3 +270,65 @@ fn control_characters_and_lone_separators() {
         run(input);
     }
 }
+
+#[test]
+fn adversarial_1mb_inputs_are_fast() {
+    // About 1 MB each. Release builds must stay under a second per input
+    // (including `run`'s second detect call and an unwrap per candidate).
+    let limit = if cfg!(debug_assertions) {
+        SLOW
+    } else {
+        Duration::from_secs(1)
+    };
+    let jwt = token_text(JWT).into_bytes();
+    let grow = |f: &dyn Fn(&[u8]) -> Vec<u8>| {
+        let mut s = jwt.clone();
+        while s.len() < 1 << 20 {
+            s = f(&s);
+        }
+        s
+    };
+    let fields = {
+        let mut doc = String::from("{");
+        let mut i = 0;
+        while doc.len() < 1 << 20 {
+            doc.push_str(&format!("\"f{i}\":\"a0a0\","));
+            i += 1;
+        }
+        doc.push_str("\"end\":\"a0\"}");
+        doc.into_bytes()
+    };
+    let inputs = [
+        // Hex of hex of ...: every level is also valid base64.
+        grow(&|s| hex(s).into_bytes()),
+        // Percent-encoding of percent-encoding of ...
+        grow(&|s| pct_all(s).into_bytes()),
+        // Alternating base64url and hex.
+        grow(&|s| {
+            if s.len() % 2 == 0 {
+                hex(s).into_bytes()
+            } else {
+                b64url(s).into_bytes()
+            }
+        }),
+        // Many short fields, each hex for a CBOR map (and valid base64).
+        fields,
+        // A JSON array of the same JWT, many times.
+        format!(
+            "[{}]",
+            vec![format!("\"{}\"", token_text(JWT)); 5000].join(",")
+        )
+        .into_bytes(),
+    ];
+    for input in inputs {
+        let t = Instant::now();
+        let cands = run(&input);
+        assert!(
+            t.elapsed() < limit,
+            "detect took {:?} on {} bytes",
+            t.elapsed(),
+            input.len()
+        );
+        assert!(cands.len() <= 64);
+    }
+}

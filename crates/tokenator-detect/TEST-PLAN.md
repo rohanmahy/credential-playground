@@ -38,7 +38,9 @@ under test), CBOR builders on top of `tokenator-cbor`, candidate lookups, and
 - JSON containers may be objects or arrays; paths use `PathSegment::Index`
   for array elements. String fields that don't classify yield nothing.
 - base64 text with neither `+/` nor `-_` is recorded as `Base64Url` when
-  unpadded and as `Base64Std` when padded. Mixing both alphabets is invalid.
+  unpadded and as `Base64Std` when padded. Text that needs no `=` is
+  `Base64Std { padded: true }` or `Base64Url { padded: false }`. Mixing both
+  alphabets is invalid.
   Hex readings outrank base64 readings of the same text.
 - Raw binary is tried as-is. Whitespace is never trimmed from input that
   parses as CBOR, so a COSE_Key ending in `0x0a` keeps its last byte.
