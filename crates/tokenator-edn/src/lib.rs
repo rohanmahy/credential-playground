@@ -9,7 +9,7 @@
 //!
 //! - [`parse`], [`parse_seq`], [`parse_with`]: EDN text to items, with
 //!   app-extensions ([`AppExtension`], [`Extensions`]) and warnings.
-//! - [`print`]: items to EDN text plus a [`SpanMap`] that maps each node's
+//! - [`print()`]: items to EDN text plus a [`SpanMap`] that maps each node's
 //!   [`Path`] to its text range, line range, and CBOR byte span.
 //! - [`annotated_hex`]: one [`HexRow`] per encoded data item, aligned with
 //!   the printed lines by [`Path`].

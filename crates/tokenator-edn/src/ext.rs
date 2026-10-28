@@ -127,10 +127,6 @@ impl fmt::Debug for Extensions {
     }
 }
 
-/// The message the built-in `h` extension uses for an ellipsis; the parser
-/// turns it into [`EdnErrorKind::Ellipsis`](crate::EdnErrorKind::Ellipsis).
-pub(crate) const ELLIPSIS: &str = "an ellipsis has no CBOR representation";
-
 /// The built-in extensions.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 enum Builtin {
@@ -192,7 +188,7 @@ impl AppExtension for Builtin {
             _ => {}
         }
         match self {
-            Builtin::H => Ok(Item::bytes(hex_text(&single_text(args)?)?)),
+            Builtin::H => Ok(h(&single_text(args)?)?),
             Builtin::B64 => Ok(Item::bytes(base64(&single_text(args)?)?)),
             Builtin::Hash => hash(args),
             Builtin::B1 => Ok(Item::bytes(concat(args)?)),
@@ -221,9 +217,17 @@ fn single_text<'i>(args: &'i [Item<'static>]) -> Result<Cow<'i, str>, ExtError> 
     }
 }
 
-/// Hex digits with blank space and comments (`h''`, `float''`).
-pub(crate) fn hex_text(text: &str) -> Result<Vec<u8>, ExtError> {
+/// A piece of `h''` content.
+enum HexPart {
+    Bytes(Vec<u8>),
+    Ellipsis,
+}
+
+/// Hex digits with blank space, comments, and ellipses (three or more
+/// dots). Adjacent ellipses merge; bytes must be whole at each ellipsis.
+fn hex_parts(text: &str) -> Result<Vec<HexPart>, ExtError> {
     let b = text.as_bytes();
+    let mut parts = Vec::new();
     let mut out = Vec::with_capacity(b.len() / 2);
     let mut high: Option<u8> = None;
     let mut i = 0;
@@ -242,7 +246,21 @@ pub(crate) fn hex_text(text: &str) -> Result<Vec<u8>, ExtError> {
                 i = skip_comment(b, i)?;
                 continue;
             }
-            b'.' if b.get(i..i + 2) == Some(b"..") => return err(ELLIPSIS),
+            b'.' if b.get(i..i + 2) == Some(&b".."[..]) => {
+                while b.get(i) == Some(&b'.') {
+                    i += 1;
+                }
+                if high.is_some() {
+                    return err("odd number of hex digits before an ellipsis");
+                }
+                if !out.is_empty() {
+                    parts.push(HexPart::Bytes(std::mem::take(&mut out)));
+                }
+                if !matches!(parts.last(), Some(HexPart::Ellipsis)) {
+                    parts.push(HexPart::Ellipsis);
+                }
+                continue;
+            }
             _ => return err("not a hex digit"),
         };
         match high.take() {
@@ -253,7 +271,44 @@ pub(crate) fn hex_text(text: &str) -> Result<Vec<u8>, ExtError> {
     if high.is_some() {
         return err("odd number of hex digits");
     }
-    Ok(out)
+    if !out.is_empty() || parts.is_empty() {
+        parts.push(HexPart::Bytes(out));
+    }
+    Ok(parts)
+}
+
+/// Hex digits with blank space and comments (`float''`); no ellipses.
+pub(crate) fn hex_text(text: &str) -> Result<Vec<u8>, ExtError> {
+    let mut parts = hex_parts(text)?;
+    match (parts.pop(), parts.is_empty()) {
+        (Some(HexPart::Bytes(bytes)), true) => Ok(bytes),
+        _ => err("an ellipsis is not allowed here"),
+    }
+}
+
+/// `h''`: a byte string, or with ellipses the -27 §5.2 tag-888 form.
+fn h(text: &str) -> Result<Item<'static>, ExtError> {
+    let mut parts = hex_parts(text)?;
+    let ellipsis = || Item::tag(ELLIPSIS_TAG, Item::new(Value::Null));
+    match parts.as_slice() {
+        [HexPart::Bytes(_)] => match parts.pop() {
+            Some(HexPart::Bytes(bytes)) => Ok(Item::bytes(bytes)),
+            _ => err("unreachable"),
+        },
+        [HexPart::Ellipsis] => Ok(ellipsis()),
+        _ => Ok(Item::tag(
+            ELLIPSIS_TAG,
+            Item::array(
+                parts
+                    .into_iter()
+                    .map(|p| match p {
+                        HexPart::Bytes(bytes) => Item::bytes(bytes),
+                        HexPart::Ellipsis => ellipsis(),
+                    })
+                    .collect(),
+            ),
+        )),
+    }
 }
 
 /// Skips to the end of the line; returns the index after the LF.

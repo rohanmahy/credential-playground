@@ -84,7 +84,7 @@ pub enum IndefiniteStringStyle {
     Streamstring,
 }
 
-/// Options for [`print`]. [`Default`] is [`PrintOptions::new`].
+/// Options for [`print()`]. [`Default`] is [`PrintOptions::new`].
 #[derive(Clone, Copy)]
 pub struct PrintOptions<'a> {
     /// Compact or indented.

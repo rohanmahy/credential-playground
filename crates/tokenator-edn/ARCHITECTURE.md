@@ -34,9 +34,14 @@ covers the internals. Grammar decisions are listed in `TEST-PLAN.md`
   encoding at the target width: tokenator-cbor's bit-exact float helpers are
   `pub(crate)`, and its encoder silently widens a value that does not fit.
 - **Extensions** receive `&[Item]`; a string literal arrives as one text
-  string. The built-in `h` reports an ellipsis with a sentinel message that
-  the parser maps to `EdnErrorKind::Ellipsis`. Unknown prefixes become
-  `999([prefix, [args]])`.
+  string. Unknown prefixes become `999([prefix, [args]])`. The built-in `h`
+  turns ellipses into the tag-888 form; the parser warns when any
+  extension returns tag 888, and when the input opens a tag 888.
+- **Warnings** go through one `warn()` call, which fails at once with
+  `EdnErrorKind::Strict` in strict mode (except unknown extensions, which
+  have their own option). So the strict error is the first warning the
+  parser meets; that is source order except inside `p<<…>>`, whose own
+  warning is only known at `>>`.
 - **Printer `Node`s** are either borrowed from the caller's tree or owned.
   Owned nodes come from decoding an embedded byte string; they are taken
   apart by value as they are printed, so no self-referential storage is

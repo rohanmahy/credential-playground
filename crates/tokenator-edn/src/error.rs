@@ -56,12 +56,6 @@ pub enum EdnErrorKind {
     /// Chunks of a streamstring `(_ …)` that are not all byte strings or all
     /// text strings, or a streamstring with no chunks.
     InvalidChunks,
-    /// An ellipsis (`...`), which has no CBOR representation.
-    ///
-    /// No longer produced since issue #14: an ellipsis inside `h''` is
-    /// accepted with [`WarningKind::Ellipsis`] (or fails with
-    /// [`EdnErrorKind::Strict`] in strict mode).
-    Ellipsis,
     /// A prefix that is not all lowercase or all uppercase, or a reserved
     /// word (`true`, `false`, `null`, `undefined`) used as a prefix.
     InvalidPrefix,
@@ -108,7 +102,6 @@ impl fmt::Display for EdnErrorKind {
             EdnErrorKind::ControlCharacter => f.write_str("control character in string"),
             EdnErrorKind::InvalidEncodingIndicator => f.write_str("invalid encoding indicator"),
             EdnErrorKind::InvalidChunks => f.write_str("invalid streamstring chunks"),
-            EdnErrorKind::Ellipsis => f.write_str("ellipsis has no CBOR representation"),
             EdnErrorKind::InvalidPrefix => f.write_str("invalid app-extension prefix"),
             EdnErrorKind::UnknownExtension(p) => write!(f, "unknown app-extension {p:?}"),
             EdnErrorKind::Extension { prefix, message } => write!(f, "{prefix}'': {message}"),
