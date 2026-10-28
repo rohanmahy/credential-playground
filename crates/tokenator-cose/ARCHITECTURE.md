@@ -46,14 +46,14 @@ decisions the tests pin (#23, #24).
   digest order, elements are replaced in place, and everything else is
   cloned (so it still borrows the input). Each digest fills at most one
   slot, so the recursion ends.
-- **Lint** runs `deterministic_findings` and a duplicate-key scan on the
+- **Lint** runs `deterministic_findings` and `tokenator_cbor::duplicate_keys` on the
   outer item (heads, unprotected header) and on each decoded content.
   Spans are made absolute with the content offset and `base`. Inside a
   KBT, findings that fall within the kcwt range are left to the
   recursive pass over the embedded SD-CWT, which reports them as
   `Part::Kcwt(..)`.
-- Scans (indefinite lengths, SD markers, duplicate keys) use an explicit
-  stack. The rebuilding walks (redaction, matching, widening integers)
+- Scans (indefinite lengths, SD markers) use an explicit stack;
+  `duplicate_keys` recurses, bounded by the decoder's `MAX_DEPTH` (512). The rebuilding walks (redaction, matching, widening integers)
   recurse, and 1000-deep payloads are tested.
 
 ## Deviations from the skeleton / top-level docs
@@ -63,6 +63,9 @@ decisions the tests pin (#23, #24).
 - The top-level doc names the third backend method `build`; it is
   `assemble`. `resign` signs through `Sign1Backend::sign`, then splices the
   returned signature into the input.
+- Encoding is fallible (`tokenator_cbor::encode` rejects `simple(24..=31)`),
+  so `Sign1Backend::assemble` and `encode_disclosure` return
+  `Result<Vec<u8>, CoseError>`, with the new `CoseError::Encode`.
 
 ## Gaps
 

@@ -28,6 +28,8 @@ decisions the tests encode (#16, #17, #18).
   and the thumbprint functions work without valid material. `Jwk` holds an
   owned copy of the JSON tree (spans are dropped, number lexemes kept).
   Their `Debug` shows member names / labels only.
+  A `CoseKey` must encode (no `simple(24..=31)`), so `to_cbor` stays
+  infallible even though `tokenator_cbor::encode` returns a `Result`.
 - Thumbprints of a `Key` are built from its public material (AKP `alg` from
   the parameter set), not from any stored JWK/COSE_Key, so metadata never
   changes them.

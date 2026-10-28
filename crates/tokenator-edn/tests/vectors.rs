@@ -18,7 +18,9 @@ mod common;
 
 use common::{check_span_map, deep, hex, rt, vector_file};
 use tokenator_cbor::{EncodeMode, Item, Value, decode, encode};
-use tokenator_edn::{ParseOptions, PrintOptions, parse, parse_with, print};
+use tokenator_edn::{
+    EdnErrorKind, ParseOptions, PrintOptions, WarningKind, parse, parse_with, print,
+};
 
 const FILES: &[&str] = &[
     "rfc8949-appendixA/mt0",
@@ -98,7 +100,7 @@ fn check_edn_file_encodes_to_cbor(name: &str) {
     let text = edn_text(name);
     let want = vector_file(&format!("{name}.cbor"));
     let item = parse(&text).unwrap_or_else(|e| panic!("{name}.edn: {e:?}"));
-    let got = encode(&item, EncodeMode::Preserve);
+    let got = encode(&item, EncodeMode::Preserve).unwrap();
     if got != want {
         let at = got
             .iter()
@@ -128,10 +130,28 @@ fn check_cbor_file_roundtrips(name: &str) {
         let rendered = print(&item, &opts);
         check_span_map(&item, Some(&bytes), &rendered)
             .unwrap_or_else(|e| panic!("{name} ({:?}): {e}", opts.layout));
-        // The printer's default output parses without warnings (#14).
-        let parsed = parse_with(&rendered.text, &strict)
-            .unwrap_or_else(|e| panic!("{name} ({:?}) in strict mode: {e}", opts.layout));
-        assert!(parsed.warnings.is_empty(), "{name}: {:?}", parsed.warnings);
+        // The printer's default output parses without warnings (#14),
+        // except for non-canonical NaNs, which warn by design (#7).
+        match parse_with(&rendered.text, &strict) {
+            Ok(parsed) => assert!(parsed.warnings.is_empty(), "{name}: {:?}", parsed.warnings),
+            Err(e) => {
+                assert_eq!(
+                    e.kind,
+                    EdnErrorKind::Strict(WarningKind::NonCanonicalNaN),
+                    "{name} ({:?}) in strict mode: {e}",
+                    opts.layout
+                );
+                let parsed = parse_with(&rendered.text, &ParseOptions::default()).unwrap();
+                assert!(
+                    parsed
+                        .warnings
+                        .iter()
+                        .all(|w| w.kind == WarningKind::NonCanonicalNaN),
+                    "{name}: {:?}",
+                    parsed.warnings
+                );
+            }
+        }
     }
 }
 
@@ -151,14 +171,14 @@ fn check_each_test_roundtrips(name: &str) {
             failures.push(format!("{desc}: encoded: {e}"));
         }
         if let Some(decoded) = get(test, "decoded") {
-            let want = encode(decoded, EncodeMode::Preserve);
+            let want = encode(decoded, EncodeMode::Preserve).unwrap();
             for (opt_name, opts) in common::roundtrip_options() {
                 let text = print(decoded, &opts).text;
                 match parse(&text) {
-                    Ok(back) if encode(&back, EncodeMode::Preserve) == want => {}
+                    Ok(back) if encode(&back, EncodeMode::Preserve).unwrap() == want => {}
                     Ok(back) => failures.push(format!(
                         "{desc}: decoded [{opt_name}] {text:?} re-encodes to {}, want {}",
-                        hex(&encode(&back, EncodeMode::Preserve)),
+                        hex(&encode(&back, EncodeMode::Preserve).unwrap()),
                         hex(&want)
                     )),
                     Err(e) => {

@@ -180,7 +180,7 @@ proptest! {
         for (label, v) in extra {
             entries.push((Item::int(label), Item::int(i64::from(v))));
         }
-        let bytes = tokenator_cbor::encode(&Item::map(entries), EncodeMode::Preserve);
+        let bytes = tokenator_cbor::encode(&Item::map(entries), EncodeMode::Preserve).unwrap();
         let cwk = CoseKey::decode(&bytes).unwrap();
         prop_assert_eq!(hex::encode(cose_thumbprint(&cwk, HashAlg::Sha256).unwrap()), RFC9679_THUMBPRINT);
     }
@@ -189,7 +189,8 @@ proptest! {
 #[test]
 fn cose_thumbprint_hashes_the_deterministic_map() {
     let item = Item::map(rfc9679_entries());
-    let cwk = CoseKey::decode(&tokenator_cbor::encode(&item, EncodeMode::Preserve)).unwrap();
+    let cwk =
+        CoseKey::decode(&tokenator_cbor::encode(&item, EncodeMode::Preserve).unwrap()).unwrap();
     let mut canonical = vec![0xa4, 0x01, 0x02, 0x20, 0x01, 0x21, 0x58, 0x20];
     canonical.extend(hex::decode(RFC9679_X).unwrap());
     canonical.extend([0x22, 0x58, 0x20]);
@@ -205,14 +206,17 @@ fn cose_thumbprint_hashes_the_deterministic_map() {
 
 #[test]
 fn cose_thumbprint_needs_no_valid_material_and_reports_missing() {
-    let ok = CoseKey::decode(&tokenator_cbor::encode(
-        &Item::map(vec![
-            (Item::int(1), Item::int(1)),
-            (Item::int(-1), Item::int(6)),
-            (Item::int(-2), Item::bytes(vec![0; 3])),
-        ]),
-        EncodeMode::Preserve,
-    ))
+    let ok = CoseKey::decode(
+        &tokenator_cbor::encode(
+            &Item::map(vec![
+                (Item::int(1), Item::int(1)),
+                (Item::int(-1), Item::int(6)),
+                (Item::int(-2), Item::bytes(vec![0; 3])),
+            ]),
+            EncodeMode::Preserve,
+        )
+        .unwrap(),
+    )
     .unwrap();
     assert_eq!(
         cose_thumbprint(&ok, HashAlg::Sha256).unwrap(),
@@ -221,13 +225,16 @@ fn cose_thumbprint_needs_no_valid_material_and_reports_missing() {
             &[0xa3, 0x01, 0x01, 0x20, 0x06, 0x21, 0x43, 0, 0, 0]
         )
     );
-    let missing = CoseKey::decode(&tokenator_cbor::encode(
-        &Item::map(vec![
-            (Item::int(1), Item::int(7)),
-            (Item::int(-1), Item::bytes(vec![1])),
-        ]),
-        EncodeMode::Preserve,
-    ))
+    let missing = CoseKey::decode(
+        &tokenator_cbor::encode(
+            &Item::map(vec![
+                (Item::int(1), Item::int(7)),
+                (Item::int(-1), Item::bytes(vec![1])),
+            ]),
+            EncodeMode::Preserve,
+        )
+        .unwrap(),
+    )
     .unwrap();
     assert_eq!(
         cose_thumbprint(&missing, HashAlg::Sha256).unwrap_err(),
@@ -378,10 +385,9 @@ fn thumbprint_of_cbor_value_types() {
         (Item::int(-1), Item::int(6)),
         (Item::int(-2), Item::bytes(vec![7; 32])),
     ];
-    let cwk = CoseKey::decode(&tokenator_cbor::encode(
-        &Item::map(entries),
-        EncodeMode::Preserve,
-    ))
+    let cwk = CoseKey::decode(
+        &tokenator_cbor::encode(&Item::map(entries), EncodeMode::Preserve).unwrap(),
+    )
     .unwrap();
     let mut canonical = vec![0xa3, 0x01, 0x01, 0x20, 0x06, 0x21, 0x58, 0x20];
     canonical.extend([7; 32]);

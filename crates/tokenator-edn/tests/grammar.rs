@@ -15,7 +15,7 @@ fn err(edn: &str) -> EdnErrorKind {
     match parse(edn) {
         Ok(item) => panic!(
             "{edn:?} parsed as {}, expected an error",
-            hex(&encode(&item, EncodeMode::Preserve))
+            hex(&encode(&item, EncodeMode::Preserve).unwrap())
         ),
         Err(e) => e.kind,
     }
@@ -535,7 +535,7 @@ fn sequences() {
         parse_seq(edn)
             .unwrap()
             .iter()
-            .map(|i| hex(&encode(i, EncodeMode::Preserve)))
+            .map(|i| hex(&encode(i, EncodeMode::Preserve).unwrap()))
             .collect()
     };
     assert!(enc_all("").is_empty());

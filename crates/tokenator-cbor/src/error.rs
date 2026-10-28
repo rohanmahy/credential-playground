@@ -1,4 +1,4 @@
-//! Decode errors.
+//! Decode and encode errors.
 
 use std::fmt;
 
@@ -48,3 +48,21 @@ impl fmt::Display for DecodeError {
 }
 
 impl std::error::Error for DecodeError {}
+
+/// Why encoding failed.
+#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+pub enum EncodeError {
+    /// A `Value::Simple` in 24..=31, which has no well-formed encoding
+    /// (RFC 8949 §3.3).
+    InvalidSimple(u8),
+}
+
+impl fmt::Display for EncodeError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            EncodeError::InvalidSimple(n) => write!(f, "simple({n}) cannot be encoded"),
+        }
+    }
+}
+
+impl std::error::Error for EncodeError {}

@@ -313,18 +313,18 @@ fn items_for_each_form() {
     ] {
         let item = t.to_item(form).unwrap();
         assert_eq!(
-            hex(&encode(&item, EncodeMode::Preserve)),
+            hex(&encode(&item, EncodeMode::Preserve).unwrap()),
             hex(&enc(edn)),
             "{form:?}"
         );
     }
     let frac = at(T, 500_000_000);
     assert_eq!(
-        encode(&frac.to_item(DateForm::Tag1).unwrap(), EncodeMode::Preserve),
+        encode(&frac.to_item(DateForm::Tag1).unwrap(), EncodeMode::Preserve).unwrap(),
         h("c1fb41d452d9ec200000")
     );
     assert_eq!(
-        encode(&frac.to_item(DateForm::Tag0).unwrap(), EncodeMode::Preserve),
+        encode(&frac.to_item(DateForm::Tag0).unwrap(), EncodeMode::Preserve).unwrap(),
         enc("0(\"2013-03-21T20:04:00.5Z\")")
     );
 }
@@ -346,7 +346,7 @@ fn edn_for_each_form() {
         // The EDN parses to the same item.
         assert_eq!(
             hex(&enc(edn)),
-            hex(&encode(&t.to_item(form).unwrap(), EncodeMode::Preserve))
+            hex(&encode(&t.to_item(form).unwrap(), EncodeMode::Preserve).unwrap())
         );
     }
     let frac = at(-1, 750_000_000);

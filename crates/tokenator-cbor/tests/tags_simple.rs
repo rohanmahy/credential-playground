@@ -4,8 +4,8 @@
 
 mod common;
 
-use common::{decode_diag, det, h};
-use tokenator_cbor::{Value, decode, preferred_findings};
+use common::{decode_diag, det, enc, h, plus};
+use tokenator_cbor::{EncodeMode, Value, decode};
 
 #[test]
 fn tags_are_preserved() {
@@ -39,20 +39,78 @@ fn tag_content_is_not_validated() {
     assert_eq!(decode_diag("d818 00"), "24(0)");
 }
 
-#[test]
-fn bignums_are_not_rewritten() {
-    for input in [
-        "c240",
-        "c24100",
-        "c24101",
-        "c3420001",
+/// (input, preferred-plus = deterministic encoding) for bignums, per
+/// draft-ietf-cbor-serialization-11 §4.1 rule 5: no leading zeros, and major
+/// type 0/1 when the value fits.
+const BIGNUMS: &[(&str, &str)] = &[
+    ("c240", "00"),
+    ("c24100", "00"),
+    ("c24101", "01"),
+    ("c24118", "1818"),
+    ("c2420100", "190100"),
+    ("c2430000ff", "18ff"),
+    ("c248ffffffffffffffff", "1bffffffffffffffff"),
+    ("c24900ffffffffffffffff", "1bffffffffffffffff"),
+    ("c340", "20"),
+    ("c34100", "20"),
+    ("c3420001", "21"),
+    ("c348ffffffffffffffff", "3bffffffffffffffff"),
+    // too big for major type 0/1: only leading zeros go
+    ("c249010000000000000000", "c249010000000000000000"),
+    ("c24a00010000000000000000", "c249010000000000000000"),
+    ("c349010000000000000000", "c349010000000000000000"),
+    ("c34b0000010000000000000000", "c349010000000000000000"),
+    // non-preferred heads and indefinite content are normalized as well
+    ("d80241 01", "01"),
+    ("c2 5801 01", "01"),
+    ("c2 5f 4100 4101 ff", "01"),
+    (
+        "c2 5f 4101 48 0000000000000000 ff",
         "c249010000000000000000",
-    ] {
+    ),
+];
+
+#[test]
+fn bignums_round_trip_under_preserve() {
+    for (input, _) in BIGNUMS {
         let bytes = h(input);
         let item = decode(&bytes).unwrap();
         assert!(matches!(item.value, Value::Tag(2 | 3, _)), "{input}");
-        assert_eq!(det(input), input, "{input}");
-        assert_eq!(preferred_findings(&item), vec![], "{input}");
+        assert_eq!(
+            enc(&item, EncodeMode::Preserve),
+            bytes,
+            "Preserve of {input}"
+        );
+    }
+}
+
+#[test]
+fn bignums_are_rewritten_by_preferred_plus_and_deterministic() {
+    for (input, expected) in BIGNUMS {
+        assert_eq!(plus(input), *expected, "PreferredPlus of {input}");
+        assert_eq!(det(input), *expected, "Deterministic of {input}");
+    }
+}
+
+#[test]
+fn bignums_nested_in_containers_are_rewritten() {
+    assert_eq!(plus("82 c24101 c340"), "820120");
+    assert_eq!(det("a1 c24101 c24100"), "a10100");
+    assert_eq!(plus("c1 c24101"), "c101");
+}
+
+#[test]
+fn tags_2_and_3_over_non_bytes_are_left_alone() {
+    // The inner bignum of c2 c24101 is rewritten; the outer tag is not a
+    // bignum because its content is not a byte string.
+    for (input, expected) in [
+        ("c2 6161", "c26161"),
+        ("c3 80", "c380"),
+        ("c2 00", "c200"),
+        ("c2 c24101", "c201"),
+    ] {
+        assert_eq!(plus(input), expected, "{input}");
+        assert_eq!(det(input), expected, "{input}");
     }
 }
 

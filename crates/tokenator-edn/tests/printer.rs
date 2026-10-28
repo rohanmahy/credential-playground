@@ -28,7 +28,11 @@ fn check(edn: &str, opts: &PrintOptions, want: &str) {
     let text = show(&bytes, opts);
     assert_eq!(text, want, "printing {edn}");
     let back = parse(&text).unwrap_or_else(|e| panic!("{text:?}: {e:?}"));
-    assert_eq!(encode(&back, EncodeMode::Preserve), bytes, "{text:?}");
+    assert_eq!(
+        encode(&back, EncodeMode::Preserve).unwrap(),
+        bytes,
+        "{text:?}"
+    );
 }
 
 // ---------------------------------------------------------------- compact
@@ -498,7 +502,11 @@ fn annotator_comments_are_sanitized() {
         let bytes = enc("{1: [2, 3]}");
         let text = show(&bytes, &o);
         let back = parse(&text).unwrap_or_else(|e| panic!("{comment:?} gave {text:?}: {e:?}"));
-        assert_eq!(encode(&back, EncodeMode::Preserve), bytes, "{text}");
+        assert_eq!(
+            encode(&back, EncodeMode::Preserve).unwrap(),
+            bytes,
+            "{text}"
+        );
     }
     let ann = |_: &Path, _: &Item| Some("HMAC 256/64".to_string());
     let o = PrintOptions {
@@ -530,8 +538,8 @@ fn print_never_panics_on_odd_built_items() {
         let text = print(&item, &PrintOptions::new()).text;
         let back = parse(&text).unwrap_or_else(|e| panic!("{text:?}: {e:?}"));
         assert_eq!(
-            encode(&back, EncodeMode::Preserve),
-            encode(&item, EncodeMode::Preserve),
+            encode(&back, EncodeMode::Preserve).unwrap(),
+            encode(&item, EncodeMode::Preserve).unwrap(),
             "{text}"
         );
     }

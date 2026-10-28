@@ -2,9 +2,7 @@
 
 use std::borrow::Cow;
 
-use tokenator_cbor::{
-    EncodeMode, FindingKind as CborKind, Item, Span, Value, deterministic_findings, encode,
-};
+use tokenator_cbor::{FindingKind as CborKind, Item, Span, Value, deterministic_findings};
 use tokenator_crypto::{DeclaredAlg, KeyMismatch, KeyParams, check_key};
 use tokenator_keys::{Label, params_from_cwk};
 
@@ -16,7 +14,7 @@ use crate::codepoints::{
 use crate::kbt::embedded;
 use crate::model::content_type_of;
 use crate::sd::{DisclosureContent, SdCwt};
-use crate::util::{declared_alg, entries, label_of, map_get, shift, walk};
+use crate::util::{declared_alg, entries, label_of, map_get, shift};
 use crate::{
     Bucket, ContentType, CoseError, DiagnosticKind, Part, Payload, Sign1, Sign1Backend, TokenKind,
 };
@@ -534,20 +532,8 @@ fn locate(sd: &SdCwt<'_>, at: usize) -> Part {
 /// The spans of map keys whose deterministic encoding repeats an earlier
 /// key in the same map.
 fn duplicate_keys(item: &Item<'_>) -> Vec<Span> {
-    let mut out = Vec::new();
-    walk(item, |i| {
-        if let Value::Map(m) = &i.value {
-            let keys: Vec<Vec<u8>> = m
-                .iter()
-                .map(|(k, _)| encode(k, EncodeMode::Deterministic))
-                .collect();
-            for (j, (k, _)) in m.iter().enumerate() {
-                let key = keys.get(j);
-                if keys.iter().take(j).any(|earlier| Some(earlier) == key) {
-                    out.push(k.span);
-                }
-            }
-        }
-    });
-    out
+    tokenator_cbor::duplicate_keys(item)
+        .into_iter()
+        .map(|d| d.duplicate_key)
+        .collect()
 }

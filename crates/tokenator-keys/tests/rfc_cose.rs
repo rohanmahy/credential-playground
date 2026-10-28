@@ -333,7 +333,7 @@ fn ec2_map(extra: Vec<(Item<'static>, Item<'static>)>) -> Vec<u8> {
         (Item::int(-3), Item::bytes(hex::decode(RFC9679_Y).unwrap())),
     ];
     entries.extend(extra);
-    tokenator_cbor::encode(&Item::map(entries), tokenator_cbor::EncodeMode::Preserve)
+    tokenator_cbor::encode(&Item::map(entries), tokenator_cbor::EncodeMode::Preserve).unwrap()
 }
 
 #[test]
@@ -370,7 +370,7 @@ fn cose_unknown_labels_are_extras_in_order() {
         .map(|(k, v)| {
             (
                 k.value.clone(),
-                tokenator_cbor::encode(v, tokenator_cbor::EncodeMode::Preserve),
+                tokenator_cbor::encode(v, tokenator_cbor::EncodeMode::Preserve).unwrap(),
             )
         })
         .collect();
@@ -392,7 +392,8 @@ fn cose_compressed_point_is_an_error_not_a_panic() {
             (Item::int(-3), Item::new(Value::Bool(true))),
         ]),
         tokenator_cbor::EncodeMode::Preserve,
-    );
+    )
+    .unwrap();
     assert!(import(&bytes, None).is_err());
     // params work without the material.
     let cwk = CoseKey::decode(&bytes).unwrap();

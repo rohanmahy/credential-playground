@@ -10,9 +10,14 @@
 //!   Preserve mode to exactly `encoded`;
 //! - it means the same as `decoded` (see `common::sem`);
 //! - when `roundtrip` is true (the default) a typical encoder produces
-//!   `encoded`, so it has no preferred-serialization findings;
-//! - its Deterministic encoding decodes to the same meaning, has no
-//!   deterministic findings, and is a fixed point of Deterministic encoding.
+//!   `encoded`, so it has no preferred-plus findings other than
+//!   `NonCanonicalNaN` (the vectors keep NaN payloads, which RFC 8949
+//!   preferred serialization allows but preferred-plus does not);
+//! - its PreferredPlus encoding keeps the meaning (with NaNs canonical) and
+//!   has no preferred-plus findings;
+//! - its Deterministic encoding decodes to the same meaning (with NaNs
+//!   canonical and maps sorted), has no deterministic findings, and is a
+//!   fixed point of Deterministic encoding.
 //!
 //! Failing tests must not decode, except the ones in
 //! `ACCEPTED_BY_GENERIC_DECODER`.
@@ -21,9 +26,9 @@
 
 mod common;
 
-use common::{check_spans, get, hex, sem, sem_unordered};
+use common::{check_spans, enc, get, hex, sem, sem_canonical, sem_plus};
 use tokenator_cbor::{
-    EncodeMode, Item, Value, decode, deterministic_findings, encode, preferred_findings,
+    EncodeMode, FindingKind, Item, Value, decode, deterministic_findings, preferred_plus_findings,
 };
 
 /// Failing tests whose problem is the content of a tag. tokenator-cbor does
@@ -51,7 +56,7 @@ fn as_bool(item: Option<&Item>) -> Option<bool> {
 fn check_good(encoded: &[u8], decoded: Option<&Item>, roundtrip: bool) -> Result<(), String> {
     let item = decode(encoded).map_err(|e| format!("decode failed: {e}"))?;
     check_spans(&item, encoded)?;
-    let preserved = encode(&item, EncodeMode::Preserve);
+    let preserved = enc(&item, EncodeMode::Preserve);
     if preserved != encoded {
         return Err(format!("Preserve gave {}", hex(&preserved)));
     }
@@ -65,15 +70,34 @@ fn check_good(encoded: &[u8], decoded: Option<&Item>, roundtrip: bool) -> Result
         ));
     }
     if roundtrip {
-        let findings = preferred_findings(&item);
+        let findings: Vec<_> = preferred_plus_findings(&item)
+            .into_iter()
+            .filter(|f| f.kind != FindingKind::NonCanonicalNaN)
+            .collect();
         if !findings.is_empty() {
-            return Err(format!("unexpected preferred findings: {findings:?}"));
+            return Err(format!("unexpected preferred-plus findings: {findings:?}"));
         }
     }
-    let det = encode(&item, EncodeMode::Deterministic);
+    let plus = enc(&item, EncodeMode::PreferredPlus);
+    let plus_item = decode(&plus)
+        .map_err(|e| format!("PreferredPlus output {} does not decode: {e}", hex(&plus)))?;
+    if sem_plus(&plus_item) != sem_plus(&item) {
+        return Err(format!(
+            "PreferredPlus output {} changed the value",
+            hex(&plus)
+        ));
+    }
+    let findings = preferred_plus_findings(&plus_item);
+    if !findings.is_empty() {
+        return Err(format!(
+            "PreferredPlus output {} has findings {findings:?}",
+            hex(&plus)
+        ));
+    }
+    let det = enc(&item, EncodeMode::Deterministic);
     let det_item = decode(&det)
         .map_err(|e| format!("Deterministic output {} does not decode: {e}", hex(&det)))?;
-    if sem_unordered(&det_item) != sem_unordered(&item) {
+    if sem_canonical(&det_item) != sem_canonical(&item) {
         return Err(format!(
             "Deterministic output {} changed the value",
             hex(&det)
@@ -86,7 +110,7 @@ fn check_good(encoded: &[u8], decoded: Option<&Item>, roundtrip: bool) -> Result
             hex(&det)
         ));
     }
-    if encode(&det_item, EncodeMode::Deterministic) != det {
+    if enc(&det_item, EncodeMode::Deterministic) != det {
         return Err("Deterministic encoding is not idempotent".into());
     }
     Ok(())

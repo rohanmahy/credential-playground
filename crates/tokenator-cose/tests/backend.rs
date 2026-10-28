@@ -45,7 +45,7 @@ impl Sign1Backend for Spy {
         self.calls.borrow_mut().push("sig_structure");
         CborBackend.sig_structure(protected, external_aad, payload)
     }
-    fn assemble(&self, parts: &Sign1Parts<'_>) -> Vec<u8> {
+    fn assemble(&self, parts: &Sign1Parts<'_>) -> Result<Vec<u8>, CoseError> {
         self.calls.borrow_mut().push("assemble");
         CborBackend.assemble(parts)
     }
@@ -65,7 +65,7 @@ impl Sign1Backend for WrongContext {
         out.splice(1..12, *b"\x69Signature");
         out
     }
-    fn assemble(&self, parts: &Sign1Parts<'_>) -> Vec<u8> {
+    fn assemble(&self, parts: &Sign1Parts<'_>) -> Result<Vec<u8>, CoseError> {
         CborBackend.assemble(parts)
     }
 }

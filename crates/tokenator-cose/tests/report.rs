@@ -42,6 +42,7 @@ fn token_with(
         payload: Some(Cow::Owned(enc(payload))),
         signature: Cow::Borrowed(&[]),
     })
+    .unwrap()
 }
 
 fn sd_protected<'a>() -> Item<'a> {
@@ -68,11 +69,11 @@ fn report(bytes: &[u8]) -> SdReport<'_> {
 }
 
 fn claim(value: Item<'_>, key: Item<'_>) -> Vec<u8> {
-    encode_disclosure(&SALT, Some(&value), Some(&key))
+    encode_disclosure(&SALT, Some(&value), Some(&key)).unwrap()
 }
 
 fn element(value: Item<'_>) -> Vec<u8> {
-    encode_disclosure(&SALT, Some(&value), None)
+    encode_disclosure(&SALT, Some(&value), None).unwrap()
 }
 
 fn redacted_keys<'a>(digests: &[Vec<u8>]) -> (Item<'a>, Item<'a>) {
@@ -252,8 +253,8 @@ fn kind_mismatch_is_forbidden() {
     let r = report(&tok);
     assert_eq!(r.forbidden[0].reason, ForbiddenReason::KindMismatch);
     // A decoy fits either kind.
-    let dk = encode_disclosure(&[1; 16], None, None);
-    let de = encode_disclosure(&[2; 16], None, None);
+    let dk = encode_disclosure(&[1; 16], None, None).unwrap();
+    let de = encode_disclosure(&[2; 16], None, None).unwrap();
     let payload = map(vec![
         (int(1), arr(vec![tag(60, bs(&digest(&de)))])),
         redacted_keys(&[digest(&dk)]),
@@ -340,8 +341,8 @@ fn disclosed_key_collides_with_existing_key() {
     assert!(!r.is_valid(MatchMode::Verifier));
 
     // Two disclosures with the same key in one map.
-    let d1 = encode_disclosure(&[1; 16], Some(&int(1)), Some(&text("k")));
-    let d2 = encode_disclosure(&[2; 16], Some(&int(2)), Some(&text("k")));
+    let d1 = encode_disclosure(&[1; 16], Some(&int(1)), Some(&text("k"))).unwrap();
+    let d2 = encode_disclosure(&[2; 16], Some(&int(2)), Some(&text("k"))).unwrap();
     let payload = map(vec![redacted_keys(&[digest(&d1), digest(&d2)])]);
     let tok = simple_token(&payload, &[d1, d2]);
     let r = report(&tok);
@@ -420,13 +421,15 @@ fn sd_structural_diagnostics() {
     assert!(!match_disclosures(&sd).is_valid(MatchMode::Verifier));
 
     // sd_claims not an array.
-    let bytes = B.assemble(&Sign1Parts {
-        tags: vec![18],
-        protected: Cow::Owned(enc(&sd_protected())),
-        unprotected: map(vec![(int(17), bs(b"x"))]),
-        payload: Some(Cow::Owned(enc(&payload))),
-        signature: Cow::Borrowed(&[]),
-    });
+    let bytes = B
+        .assemble(&Sign1Parts {
+            tags: vec![18],
+            protected: Cow::Owned(enc(&sd_protected())),
+            unprotected: map(vec![(int(17), bs(b"x"))]),
+            payload: Some(Cow::Owned(enc(&payload))),
+            signature: Cow::Borrowed(&[]),
+        })
+        .unwrap();
     let sd = parse_sd_cwt(&B, &bytes).unwrap();
     assert!(
         sd.diagnostics
@@ -437,13 +440,15 @@ fn sd_structural_diagnostics() {
     // sd_claims in the protected header, sd_alg in the unprotected header.
     let d = claim(tru(), int(500));
     let prot = map(vec![(int(1), int(-7)), (int(17), arr(vec![bs(&d)]))]);
-    let bytes = B.assemble(&Sign1Parts {
-        tags: vec![18],
-        protected: Cow::Owned(enc(&prot)),
-        unprotected: map(vec![(int(170), int(-16))]),
-        payload: Some(Cow::Owned(enc(&map(vec![redacted_keys(&[digest(&d)])])))),
-        signature: Cow::Borrowed(&[]),
-    });
+    let bytes = B
+        .assemble(&Sign1Parts {
+            tags: vec![18],
+            protected: Cow::Owned(enc(&prot)),
+            unprotected: map(vec![(int(170), int(-16))]),
+            payload: Some(Cow::Owned(enc(&map(vec![redacted_keys(&[digest(&d)])])))),
+            signature: Cow::Borrowed(&[]),
+        })
+        .unwrap();
     let sd = parse_sd_cwt(&B, &bytes).unwrap();
     let kinds: Vec<_> = sd.diagnostics.iter().map(|d| d.kind.clone()).collect();
     assert!(
@@ -463,13 +468,15 @@ fn sd_structural_diagnostics() {
 #[test]
 fn processed_is_none_without_a_claims_map() {
     for payload in [h("80"), h("ff"), vec![]] {
-        let bytes = B.assemble(&Sign1Parts {
-            tags: vec![18],
-            protected: Cow::Owned(enc(&sd_protected())),
-            unprotected: map(vec![]),
-            payload: Some(Cow::Owned(payload)),
-            signature: Cow::Borrowed(&[]),
-        });
+        let bytes = B
+            .assemble(&Sign1Parts {
+                tags: vec![18],
+                protected: Cow::Owned(enc(&sd_protected())),
+                unprotected: map(vec![]),
+                payload: Some(Cow::Owned(payload)),
+                signature: Cow::Borrowed(&[]),
+            })
+            .unwrap();
         let r = report(&bytes);
         assert!(r.processed.is_none());
     }

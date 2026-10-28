@@ -172,4 +172,10 @@ pub enum WarningKind {
     /// An end-of-line comment (`#` or `//`) at the end of the input with no
     /// line feed after it. At the `#` or `//`.
     EolCommentAtEof,
+    /// A NaN whose encoding is not the canonical `f97e00`: a payload, a
+    /// signaling NaN, the sign bit, or a wider width (`float'7fc00001'`,
+    /// `NaN_2`). It is kept as written, but preferred-plus and deterministic
+    /// encoding replace it (draft-ietf-cbor-serialization-11 §4.1, #7). At
+    /// the start of the literal.
+    NonCanonicalNaN,
 }

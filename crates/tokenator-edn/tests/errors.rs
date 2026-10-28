@@ -179,7 +179,7 @@ fn depth_limit_matches_the_decoder() {
         for (open, close) in [("[", "]"), ("{0: ", "}"), ("1(", ")"), ("[_ ", "]")] {
             let ok = nested(open, "0", close, MAX_DEPTH);
             let item = parse(&ok).unwrap_or_else(|e| panic!("{open}: {e:?}"));
-            assert!(decode(&encode(&item, EncodeMode::Preserve)).is_ok());
+            assert!(decode(&encode(&item, EncodeMode::Preserve).unwrap()).is_ok());
             let too_deep = nested(open, "0", close, MAX_DEPTH + 1);
             assert_eq!(err(&too_deep).kind, EdnErrorKind::DepthLimit, "{open}");
         }
@@ -227,7 +227,7 @@ fn depth_error_position() {
 fn large_inputs() {
     let big = format!("h'{}'", "ab".repeat(500_000));
     let item = parse(&big).unwrap();
-    assert_eq!(encode(&item, EncodeMode::Preserve).len(), 500_005);
+    assert_eq!(encode(&item, EncodeMode::Preserve).unwrap().len(), 500_005);
     let many = format!("[{}]", "1, ".repeat(100_000));
     assert!(parse(&many).is_ok());
 }

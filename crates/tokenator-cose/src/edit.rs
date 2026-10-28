@@ -59,13 +59,13 @@ pub fn resign(
     let protected: Cow<'_, [u8]> = match &opts.protected {
         Edit::Keep => parts.protected.clone(),
         Edit::Bytes(b) => Cow::Borrowed(b),
-        Edit::Item(item) => Cow::Owned(enc(item)),
+        Edit::Item(item) => Cow::Owned(enc(item)?),
     };
     let unprotected = opts.unprotected.as_ref().unwrap_or(&parts.unprotected);
     let payload: Option<Cow<'_, [u8]>> = match &opts.payload {
         Edit::Keep => parts.payload.clone(),
         Edit::Bytes(b) => Some(Cow::Borrowed(b)),
-        Edit::Item(item) => Some(Cow::Owned(enc(item))),
+        Edit::Item(item) => Some(Cow::Owned(enc(item)?)),
     };
     let alg = match opts.alg {
         Some(alg) => alg,
@@ -101,7 +101,7 @@ pub fn resign(
         edits.push((p.span, bstr(&protected, width_of_head(p.span.head_len))));
     }
     if let (Some(new), Some(old)) = (&opts.unprotected, &msg.unprotected) {
-        edits.push((old.span, enc(new)));
+        edits.push((old.span, enc(new)?));
     }
     if let (false, Some(new)) = (matches!(opts.payload, Edit::Keep), &payload) {
         match &msg.payload {
@@ -288,7 +288,7 @@ pub fn tamper(
                     } else {
                         map.width = Width::Indefinite;
                     }
-                    (p.span, bstr(&enc(&map), width))
+                    (p.span, bstr(&enc(&map)?, width))
                 }
             }
         }
@@ -324,7 +324,7 @@ fn protected_edit(
     if let Value::Map(entries) = &mut map.value {
         f(entries);
     }
-    Ok((p.span, bstr(&enc(&map), width_of_head(p.span.head_len))))
+    Ok((p.span, bstr(&enc(&map)?, width_of_head(p.span.head_len))))
 }
 
 /// The unprotected map re-encoded after `f` edits its entries.
@@ -340,7 +340,7 @@ fn unprotected_edit(
     if let Value::Map(entries) = &mut map.value {
         f(entries);
     }
-    Ok((span, enc(&map)))
+    Ok((span, enc(&map)?))
 }
 
 /// The next wider argument width.
@@ -470,7 +470,7 @@ fn apply(list: &mut Vec<Item<'_>>, op: &DisclosureOp<'_>) -> Result<(), CoseErro
             salt,
             value.as_ref(),
             key.as_ref(),
-        ))),
+        )?)),
     }
     Ok(())
 }
@@ -559,6 +559,6 @@ fn rewrite_parsed(
     }
     Ok(splice(
         bytes,
-        vec![(u.span, enc(&with_value(u, Value::Map(entries))))],
+        vec![(u.span, enc(&with_value(u, Value::Map(entries)))?)],
     ))
 }

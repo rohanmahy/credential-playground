@@ -7,7 +7,9 @@
 //!   `float'<ieee>'` with the indicator for the source width parses to the
 //!   input bytes;
 //! - the input and the preferred bytes print as the expected EDN, which
-//!   parses back to exactly those bytes (in strict mode, without warnings);
+//!   parses back to exactly those bytes, with a `NonCanonicalNaN` warning
+//!   (an error in strict mode) unless the bytes are the canonical `f97e00`
+//!   (#7);
 //! - both survive decode → print → parse → encode(Preserve) for every
 //!   print option set.
 
@@ -17,7 +19,9 @@ mod common;
 
 use common::{h, hex, rt};
 use tokenator_cbor::{EncodeMode, decode, encode};
-use tokenator_edn::{ParseOptions, PrintOptions, parse, parse_with, print};
+use tokenator_edn::{
+    EdnErrorKind, ParseOptions, PrintOptions, WarningKind, parse, parse_with, print,
+};
 
 struct Row {
     ieee: String,
@@ -135,10 +139,25 @@ fn expected_edn_parses_to_exact_bytes() {
     };
     for r in rows() {
         for (edn, bytes) in [(&r.edn_input, &r.input), (&r.edn_preferred, &r.preferred)] {
-            let parsed = parse_with(edn, &strict).unwrap_or_else(|e| panic!("{edn}: {e:?}"));
-            assert!(parsed.warnings.is_empty(), "{edn}");
+            let canonical = bytes.as_slice() == [0xf9, 0x7e, 0x00];
+            match parse_with(edn, &strict) {
+                Ok(_) => assert!(canonical, "{edn} parsed in strict mode"),
+                Err(e) => assert_eq!(
+                    e.kind,
+                    EdnErrorKind::Strict(WarningKind::NonCanonicalNaN),
+                    "{edn}"
+                ),
+            }
+            let parsed = parse_with(edn, &ParseOptions::default())
+                .unwrap_or_else(|e| panic!("{edn}: {e:?}"));
+            let kinds: Vec<_> = parsed.warnings.iter().map(|w| &w.kind).collect();
+            if canonical {
+                assert!(kinds.is_empty(), "{edn}: {kinds:?}");
+            } else {
+                assert_eq!(kinds, [&WarningKind::NonCanonicalNaN], "{edn}");
+            }
             assert_eq!(
-                hex(&encode(&parsed.items[0], EncodeMode::Preserve)),
+                hex(&encode(&parsed.items[0], EncodeMode::Preserve).unwrap()),
                 hex(bytes),
                 "{edn} ({})",
                 r.source
@@ -165,5 +184,5 @@ fn nans_inside_containers_keep_their_bytes() {
     rt(&bytes).unwrap();
     let text = print(&decode(&bytes).unwrap(), &PrintOptions::new()).text;
     let back = parse(&text).unwrap();
-    assert_eq!(encode(&back, EncodeMode::Preserve), bytes);
+    assert_eq!(encode(&back, EncodeMode::Preserve).unwrap(), bytes);
 }

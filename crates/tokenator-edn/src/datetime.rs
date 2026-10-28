@@ -344,7 +344,9 @@ impl Instant {
                 Ok(DateTimeForm {
                     form,
                     edn: self.to_edn(form)?,
-                    cbor: encode(&self.to_item(form)?, EncodeMode::Preserve),
+                    // Date/time items never hold a simple value.
+                    cbor: encode(&self.to_item(form)?, EncodeMode::Preserve)
+                        .map_err(|_| DateTimeError::UnsupportedItem)?,
                 })
             })
             .collect()

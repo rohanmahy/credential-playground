@@ -298,7 +298,7 @@ impl Redactor<'_> {
         if salt.len() != 16 && !self.warnings.contains(&warning) {
             self.warnings.push(warning);
         }
-        let d = encode_disclosure(&salt, value, key);
+        let d = encode_disclosure(&salt, value, key)?;
         let digest = disclosure_digest(self.hash, &d);
         self.disclosures.push(d);
         Ok(digest)
@@ -342,8 +342,13 @@ fn decoy_number(inner: &Item<'_>) -> Result<u64, CoseError> {
 /// Encodes a salted disclosure array (bstr contents) with preferred
 /// encoding for the array and salt and Preserve for `value` and `key`:
 /// `[salt]`, `[salt, value]`, or `[salt, value, key]`. A `key` without a
-/// `value` gives `[salt]`.
-pub fn encode_disclosure(salt: &[u8], value: Option<&Item<'_>>, key: Option<&Item<'_>>) -> Vec<u8> {
+/// `value` gives `[salt]`. Fails if `value` or `key` cannot be encoded
+/// (it holds a `simple(24..=31)`).
+pub fn encode_disclosure(
+    salt: &[u8],
+    value: Option<&Item<'_>>,
+    key: Option<&Item<'_>>,
+) -> Result<Vec<u8>, CoseError> {
     let n = match (value, key) {
         (Some(_), Some(_)) => 3,
         (Some(_), None) => 2,
@@ -353,12 +358,12 @@ pub fn encode_disclosure(salt: &[u8], value: Option<&Item<'_>>, key: Option<&Ite
     out.extend(head(2, len_u64(salt.len())));
     out.extend(salt);
     if let Some(v) = value {
-        out.extend(enc(v));
+        out.extend(enc(v)?);
         if let Some(k) = key {
-            out.extend(enc(k));
+            out.extend(enc(k)?);
         }
     }
-    out
+    Ok(out)
 }
 
 /// The digest of a disclosure given its bstr *contents*: `hash` over the
@@ -489,9 +494,9 @@ pub fn issue(
 
     let parts = Sign1Parts {
         tags: opts.tags.clone(),
-        protected: Cow::Owned(enc(&Item::map(prot))),
+        protected: Cow::Owned(enc(&Item::map(prot))?),
         unprotected: Item::map(unprot),
-        payload: Some(Cow::Owned(enc(&red.payload))),
+        payload: Some(Cow::Owned(enc(&red.payload)?)),
         signature: Cow::Borrowed(&[]),
     };
     let sign = SignOptions {

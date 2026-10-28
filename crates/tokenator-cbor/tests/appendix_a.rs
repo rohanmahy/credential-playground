@@ -8,8 +8,8 @@
 
 mod common;
 
-use common::{decode_diag, det, h};
-use tokenator_cbor::{decode, deterministic_findings, preferred_findings};
+use common::{decode_diag, det, h, plus};
+use tokenator_cbor::{decode, deterministic_findings, preferred_plus_findings};
 
 /// (encoded, expected diag) for examples already in deterministic encoding.
 const DETERMINISTIC: &[(&str, &str)] = &[
@@ -174,11 +174,32 @@ fn deterministic_examples_encode_unchanged() {
 }
 
 #[test]
+fn deterministic_examples_encode_preferred_plus_unchanged() {
+    for (input, _) in DETERMINISTIC {
+        assert_eq!(plus(input), *input, "PreferredPlus encoding of {input}");
+    }
+}
+
+#[test]
+fn non_preferred_examples_encode_preferred_plus() {
+    for (input, _, deterministic) in NON_PREFERRED {
+        // Preferred-plus keeps map order; the last example's keys are not
+        // sorted, so only Deterministic reorders them.
+        let expected = if *input == "bf6346756ef563416d7421ff" {
+            "a26346756ef563416d7421"
+        } else {
+            deterministic
+        };
+        assert_eq!(plus(input), expected, "PreferredPlus encoding of {input}");
+    }
+}
+
+#[test]
 fn deterministic_examples_have_no_findings() {
     for (input, _) in DETERMINISTIC {
         let bytes = h(input);
         let item = decode(&bytes).unwrap();
-        assert_eq!(preferred_findings(&item), vec![], "{input}");
+        assert_eq!(preferred_plus_findings(&item), vec![], "{input}");
         assert_eq!(deterministic_findings(&item), vec![], "{input}");
     }
 }
@@ -206,7 +227,7 @@ fn non_preferred_examples_have_findings() {
     for (input, _, _) in NON_PREFERRED {
         let bytes = h(input);
         let item = decode(&bytes).unwrap();
-        assert!(!preferred_findings(&item).is_empty(), "{input}");
+        assert!(!preferred_plus_findings(&item).is_empty(), "{input}");
         assert!(!deterministic_findings(&item).is_empty(), "{input}");
     }
 }

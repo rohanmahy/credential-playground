@@ -118,7 +118,9 @@ pub trait Sign1Backend {
     /// Encodes parts as a COSE_Sign1: the tags, a 4-element array, the
     /// protected bstr, the unprotected item (Preserve), the payload bstr or
     /// `nil`, and the signature bstr. Byte string heads are preferred.
-    fn assemble(&self, parts: &Sign1Parts<'_>) -> Vec<u8>;
+    /// Fails if the unprotected item cannot be encoded (it holds a
+    /// `simple(24..=31)`).
+    fn assemble(&self, parts: &Sign1Parts<'_>) -> Result<Vec<u8>, CoseError>;
 
     /// Signs `parts` (ignoring `parts.signature`) and returns the assembled
     /// COSE_Sign1. Without `rng`, signing is deterministic
@@ -140,13 +142,13 @@ pub trait Sign1Backend {
             Some(rng) => tokenator_crypto::sign(opts.alg, private, &tbs, rng)?,
             None => tokenator_crypto::sign_deterministic(opts.alg, private, &tbs)?,
         };
-        Ok(self.assemble(&Sign1Parts {
+        self.assemble(&Sign1Parts {
             tags: parts.tags.clone(),
             protected: Cow::Borrowed(&parts.protected),
             unprotected: parts.unprotected.clone(),
             payload: parts.payload.as_deref().map(Cow::Borrowed),
             signature: Cow::Owned(signature),
-        }))
+        })
     }
 
     /// Verifies `msg` with the public part of `key` and returns the
@@ -196,7 +198,8 @@ impl Sign1Backend for CborBackend {
     fn sig_structure(&self, protected: &[u8], external_aad: &[u8], payload: &[u8]) -> Vec<u8> {
         let mut out = Vec::with_capacity(protected.len() + external_aad.len() + payload.len() + 32);
         out.extend(head(4, 4));
-        out.extend(enc(&Item::text("Signature1")));
+        out.extend(head(3, 10));
+        out.extend(b"Signature1");
         for b in [protected, external_aad, payload] {
             out.extend(head(2, len_u64(b.len())));
             out.extend(b);
@@ -204,20 +207,20 @@ impl Sign1Backend for CborBackend {
         out
     }
 
-    fn assemble(&self, parts: &Sign1Parts<'_>) -> Vec<u8> {
+    fn assemble(&self, parts: &Sign1Parts<'_>) -> Result<Vec<u8>, CoseError> {
         let mut out = Vec::new();
         for t in &parts.tags {
             out.extend(head(6, *t));
         }
         out.extend(head(4, 4));
         push_bstr(&mut out, &parts.protected);
-        out.extend(enc(&parts.unprotected));
+        out.extend(enc(&parts.unprotected)?);
         match &parts.payload {
             Some(p) => push_bstr(&mut out, p),
             None => out.push(0xf6),
         }
         push_bstr(&mut out, &parts.signature);
-        out
+        Ok(out)
     }
 }
 

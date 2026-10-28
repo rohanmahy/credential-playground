@@ -27,7 +27,7 @@ fn ext_err(edn: &str) -> String {
         },
         Ok(item) => panic!(
             "{edn:?} parsed as {}",
-            hex(&encode(&item, EncodeMode::Preserve))
+            hex(&encode(&item, EncodeMode::Preserve).unwrap())
         ),
     }
 }
@@ -574,7 +574,7 @@ fn custom_extensions() {
     let parsed = parse_with("[upper'abc', upper<<\"d\">>, h'00']", &opts).unwrap();
     assert!(parsed.warnings.is_empty());
     assert_eq!(
-        hex(&encode(&parsed.items[0], EncodeMode::Preserve)),
+        hex(&encode(&parsed.items[0], EncodeMode::Preserve).unwrap()),
         hex(&enc("[\"ABC\", \"D\", h'00']"))
     );
     let e = parse_with("UPPER'abc'", &opts).unwrap_err();
@@ -631,7 +631,7 @@ fn empty_registry_makes_everything_opaque() {
     };
     let parsed = parse_with("h'00'", &opts).unwrap();
     assert_eq!(
-        hex(&encode(&parsed.items[0], EncodeMode::Preserve)),
+        hex(&encode(&parsed.items[0], EncodeMode::Preserve).unwrap()),
         hex(&enc("999([\"h\", [\"00\"]])"))
     );
     assert_eq!(
@@ -657,6 +657,6 @@ fn extension_results_roundtrip_through_the_printer() {
         common::rt(&bytes).unwrap_or_else(|e| panic!("{edn}: {e}"));
         let item = decode(&bytes).unwrap();
         let back = parse(&print(&item, &PrintOptions::new()).text).unwrap();
-        assert_eq!(encode(&back, EncodeMode::Preserve), bytes);
+        assert_eq!(encode(&back, EncodeMode::Preserve).unwrap(), bytes);
     }
 }

@@ -34,7 +34,7 @@ pub fn hex(bytes: &[u8]) -> String {
 /// Parses EDN (panicking with the error) and encodes it in Preserve mode.
 pub fn enc(edn: &str) -> Vec<u8> {
     match parse(edn) {
-        Ok(item) => encode(&item, EncodeMode::Preserve),
+        Ok(item) => encode(&item, EncodeMode::Preserve).unwrap(),
         Err(e) => panic!("parse({edn:?}) failed: {e:?}"),
     }
 }
@@ -84,7 +84,7 @@ pub fn rt(bytes: &[u8]) -> Result<(), String> {
         let rendered = print(&item, &opts);
         let back = parse(&rendered.text)
             .map_err(|e| format!("[{name}] reparse of {:?}: {e:?}", rendered.text))?;
-        let again = encode(&back, EncodeMode::Preserve);
+        let again = encode(&back, EncodeMode::Preserve).unwrap();
         if again != bytes {
             return Err(format!(
                 "[{name}] {} printed as {:?} re-encodes to {}",
@@ -150,7 +150,7 @@ pub fn rt_embedded(bytes: &[u8]) -> Result<(), String> {
         let rendered = print(&item, &opts);
         let back = parse(&rendered.text)
             .map_err(|e| format!("[embedded] reparse of {:?}: {e:?}", rendered.text))?;
-        let again = encode(&back, EncodeMode::Preserve);
+        let again = encode(&back, EncodeMode::Preserve).unwrap();
         if again != bytes {
             return Err(format!(
                 "[embedded] {} printed as {:?} re-encodes to {}",
@@ -290,9 +290,9 @@ pub fn check_span_map(item: &Item, bytes: Option<&[u8]>, r: &Rendered) -> Result
             .map_err(|e| format!("{path}: snippet {snippet:?} does not parse: {e:?}"))?;
         let want = match bytes {
             Some(b) if decoded => b[it.span.start..it.span.end].to_vec(),
-            _ => encode(it, EncodeMode::Preserve),
+            _ => encode(it, EncodeMode::Preserve).unwrap(),
         };
-        let got_bytes = encode(&reparsed, EncodeMode::Preserve);
+        let got_bytes = encode(&reparsed, EncodeMode::Preserve).unwrap();
         if got_bytes != want {
             return Err(format!(
                 "{path}: snippet {snippet:?} encodes to {}, want {}",

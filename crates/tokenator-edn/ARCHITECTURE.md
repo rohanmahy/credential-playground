@@ -43,14 +43,16 @@ covers the internals. Grammar decisions are listed in `TEST-PLAN.md`
   shows these values as plain tags. `float''` still rejects ellipses.
 - **Warnings** (`WarningKind`): `Ellipsis`, `Streamstring` (`(_ …)`),
   `ReservedEncodingIndicator` (anything except `_0`–`_3`, `_i`, and `_`),
-  `IgnoredEncodingIndicator` (on bignum literals), `EolCommentAtEof`, and
+  `IgnoredEncodingIndicator` (on bignum literals), `EolCommentAtEof`,
+  `NonCanonicalNaN` (#7: a NaN literal, after its indicator, that does not
+  encode as `f97e00`; checked by encoding the finished item), and
   `UnknownExtension`. All go through one `warn()` call. With
   `ParseOptions::strict` it fails at once with `EdnErrorKind::Strict(kind)`,
   except for unknown extensions, which `unknown_extensions` controls. So the
   strict error is the first warning the parser meets. That is source order,
   except inside `p<<…>>`, whose own warning is only known at `>>`.
 - **Print defaults** produce text that re-parses in strict mode with no
-  warnings: indefinite-length strings print as `ilbs<<…>>`/`ilts<<…>>`
+  warnings, except that non-canonical NaNs print as `float'…'` and so warn: indefinite-length strings print as `ilbs<<…>>`/`ilts<<…>>`
   (`IndefiniteStringStyle::AppExtension`). `Streamstring` keeps the old
   `(_ …)` syntax.
 - **Printer `Node`s** are either borrowed from the caller's tree or owned.

@@ -174,7 +174,7 @@ fn cose_bytes() -> impl Strategy<Value = Vec<u8>> {
                 .map(|(k, v)| (Item::int(k), v))
                 .collect(),
         );
-        tokenator_cbor::encode(&item, EncodeMode::Preserve)
+        tokenator_cbor::encode(&item, EncodeMode::Preserve).unwrap()
     })
 }
 

@@ -7,15 +7,21 @@ mod common;
 
 use std::borrow::Cow;
 
-use common::{decode_diag, det, h, hex};
-use tokenator_cbor::{EncodeMode, FloatWidth, Item, Value, Width, decode, decode_seq, encode};
+use common::{decode_diag, det, enc, h, hex, plus};
+use tokenator_cbor::{
+    EncodeError, EncodeMode, FloatWidth, Item, Value, Width, decode, decode_seq, encode,
+};
 
 fn preserve(item: &Item) -> String {
-    hex(&encode(item, EncodeMode::Preserve))
+    hex(&enc(item, EncodeMode::Preserve))
 }
 
 fn deterministic(item: &Item) -> String {
-    hex(&encode(item, EncodeMode::Deterministic))
+    hex(&enc(item, EncodeMode::Deterministic))
+}
+
+fn preferred_plus(item: &Item) -> String {
+    hex(&enc(item, EncodeMode::PreferredPlus))
 }
 
 // ---------------------------------------------------------------- arguments
@@ -69,6 +75,13 @@ fn long_arguments_encode_deterministically_to_preferred() {
 }
 
 #[test]
+fn long_arguments_encode_preferred_plus_to_shortest() {
+    for (input, _, expected) in LONG_ARGUMENTS {
+        assert_eq!(plus(input), *expected, "{input}");
+    }
+}
+
+#[test]
 fn recorded_widths() {
     let cases: &[(&str, Width)] = &[
         ("00", Width::Immediate),
@@ -103,7 +116,8 @@ const INDEFINITE: &[(&str, &str, &str)] = &[
     ("9f9fffff", "[_ [_ ]]", "8180"),
     ("bf9fff bfffff", "{_ [_ ]: {_ }}", "a180a0"),
     ("bf5fff7fffff", "{_ (_ ): (_ )}", "a14060"),
-    ("c25f4101ff", "2((_ h'01'))", "c24101"),
+    // the bignum 1, which preferred-plus (and so deterministic) writes as 01
+    ("c25f4101ff", "2((_ h'01'))", "01"),
 ];
 
 #[test]
@@ -117,6 +131,13 @@ fn indefinite_items_round_trip_exactly() {
 fn indefinite_items_encode_deterministically_as_definite() {
     for (input, _, expected) in INDEFINITE {
         assert_eq!(det(input), *expected, "{input}");
+    }
+}
+
+#[test]
+fn indefinite_items_encode_preferred_plus_as_definite() {
+    for (input, _, expected) in INDEFINITE {
+        assert_eq!(plus(input), *expected, "{input}");
     }
 }
 
@@ -162,23 +183,21 @@ const FLOATS: &[(&str, &str, &str)] = &[
     ("fb3ff199999999999a", "1.1_3", "fb3ff199999999999a"),
     ("fa3f800001", "1.0000001192092896_2", "fa3f800001"),
     ("f903ff", "6.097555160522461e-5_1", "f903ff"),
-    // NaN payloads (quiet and signaling) survive and shrink only losslessly
-    ("f97e01", "nan(0x7ff8040000000000)_1", "f97e01"),
-    ("fa7fc02000", "nan(0x7ff8040000000000)_2", "f97e01"),
-    ("fb7ff8040000000000", "nan(0x7ff8040000000000)_3", "f97e01"),
-    ("f97c01", "nan(0x7ff0040000000000)_1", "f97c01"),
-    ("fa7f800001", "nan(0x7ff0000020000000)_2", "fa7f800001"),
-    (
-        "fb7ff0000000000001",
-        "nan(0x7ff0000000000001)_3",
-        "fb7ff0000000000001",
-    ),
-    (
-        "fb7ff8000000000001",
-        "nan(0x7ff8000000000001)_3",
-        "fb7ff8000000000001",
-    ),
-    ("f9fe00", "nan(0xfff8000000000000)_1", "f9fe00"),
+    // Preserve keeps every NaN bit for bit (payloads, signaling NaNs, sign
+    // bit, wide encodings of the quiet NaN); preferred-plus and
+    // deterministic write only the canonical f97e00 (draft §4.1 rule 4).
+    ("f97e00", "NaN_1", "f97e00"),
+    ("fa7fc00000", "NaN_2", "f97e00"),
+    ("fb7ff8000000000000", "NaN_3", "f97e00"),
+    ("f97e01", "nan(0x7ff8040000000000)_1", "f97e00"),
+    ("fa7fc02000", "nan(0x7ff8040000000000)_2", "f97e00"),
+    ("fb7ff8040000000000", "nan(0x7ff8040000000000)_3", "f97e00"),
+    ("f97c01", "nan(0x7ff0040000000000)_1", "f97e00"),
+    ("fa7f800001", "nan(0x7ff0000020000000)_2", "f97e00"),
+    ("fb7ff0000000000001", "nan(0x7ff0000000000001)_3", "f97e00"),
+    ("fb7ff8000000000001", "nan(0x7ff8000000000001)_3", "f97e00"),
+    ("f9fe00", "nan(0xfff8000000000000)_1", "f97e00"),
+    ("faffc00000", "nan(0xfff8000000000000)_2", "f97e00"),
 ];
 
 #[test]
@@ -193,6 +212,27 @@ fn floats_encode_deterministically_to_shortest_exact_width() {
     for (input, _, expected) in FLOATS {
         assert_eq!(det(input), *expected, "{input}");
     }
+}
+
+#[test]
+fn floats_encode_preferred_plus_like_deterministic() {
+    for (input, _, expected) in FLOATS {
+        assert_eq!(plus(input), *expected, "{input}");
+    }
+}
+
+#[test]
+fn built_nans_follow_the_mode() {
+    let payload = Item::new(Value::Float(
+        f64::from_bits(0x7ff8_0400_0000_0000),
+        FloatWidth::F16,
+    ));
+    assert_eq!(preserve(&payload), "f97e01");
+    assert_eq!(preferred_plus(&payload), "f97e00");
+    assert_eq!(deterministic(&payload), "f97e00");
+    let negative = Item::new(Value::Float(-f64::NAN, FloatWidth::F64));
+    assert_eq!(preserve(&negative), "fbfff8000000000000");
+    assert_eq!(preferred_plus(&negative), "f97e00");
 }
 
 #[test]
@@ -270,6 +310,34 @@ fn preserve_keeps_unsorted_maps() {
     assert_eq!(decode_diag("a2 02 00 01 00"), "{2: 0, 1: 0}");
 }
 
+#[test]
+fn preferred_plus_keeps_arrival_order() {
+    assert_eq!(plus("a2 02 00 01 00"), "a202000100");
+    assert_eq!(plus("bf 02 00 01 00 ff"), "a202000100");
+    assert_eq!(plus("a2 1802 00 01 00"), "a202000100");
+    assert_eq!(
+        plus("81 a2 626161 00 617a 00"),
+        "81a26261610061 7a00".replace(' ', "")
+    );
+    // Duplicates are kept, in arrival order.
+    assert_eq!(plus("a3 01 00 00 00 01 01"), "a3010000000101");
+    // Keys that become equal after rewriting are kept too.
+    assert_eq!(plus("a2 c24101 00 01 01"), "a201000101");
+    assert_eq!(det("a2 01 01 c24101 00"), "a201010100");
+}
+
+#[test]
+fn preferred_plus_equals_deterministic_without_maps() {
+    // draft-ietf-cbor-serialization-11 §5.3.2
+    for input in [
+        "9f 1801 9f fa3fc00000 ff c240 ff",
+        "83 5f4101ff 7f6161ff fb7ff8000000000001",
+        "d9 0001 c3 4100",
+    ] {
+        assert_eq!(plus(input), det(input), "{input}");
+    }
+}
+
 // ---------------------------------------------------------------- sequences
 
 #[test]
@@ -279,7 +347,7 @@ fn decode_seq_round_trips() {
     assert_eq!(items.len(), 5);
     let mut out = Vec::new();
     for item in &items {
-        out.extend(encode(item, EncodeMode::Preserve));
+        out.extend(enc(item, EncodeMode::Preserve));
     }
     assert_eq!(hex(&out), hex(&input));
 }
@@ -510,4 +578,66 @@ fn appending_to_a_decoded_array() {
     };
     items.push(Item::int(2));
     assert_eq!(preserve(&item), "98020102");
+}
+
+// ------------------------------------------------------------ encode errors
+
+#[test]
+fn invalid_simple_values_fail_in_every_mode() {
+    for n in 24u8..=31 {
+        let item = Item::new(Value::Simple(n));
+        for mode in [
+            EncodeMode::Preserve,
+            EncodeMode::PreferredPlus,
+            EncodeMode::Deterministic,
+        ] {
+            assert_eq!(
+                encode(&item, mode),
+                Err(EncodeError::InvalidSimple(n)),
+                "simple({n}) {mode:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn nested_invalid_simple_values_fail() {
+    let bad = || Item::new(Value::Simple(24));
+    let cases = [
+        Item::array(vec![Item::int(1), bad()]),
+        Item::map(vec![(bad(), Item::int(0))]),
+        Item::map(vec![(Item::int(0), bad())]),
+        Item::tag(1, bad()),
+        Item::array(vec![Item::array(vec![bad()])]).with_width(Width::Indefinite),
+    ];
+    for item in &cases {
+        for mode in [
+            EncodeMode::Preserve,
+            EncodeMode::PreferredPlus,
+            EncodeMode::Deterministic,
+        ] {
+            assert_eq!(
+                encode(item, mode),
+                Err(EncodeError::InvalidSimple(24)),
+                "{item:?} {mode:?}"
+            );
+        }
+    }
+}
+
+#[test]
+fn valid_simple_values_encode_in_every_mode() {
+    for n in (0u8..24).chain(32..=255) {
+        let item = Item::new(Value::Simple(n));
+        for mode in [
+            EncodeMode::Preserve,
+            EncodeMode::PreferredPlus,
+            EncodeMode::Deterministic,
+        ] {
+            assert!(encode(&item, mode).is_ok(), "simple({n}) {mode:?}");
+        }
+    }
+    // Simple(20..=23) built directly encode like false/true/null/undefined.
+    assert_eq!(preserve(&Item::new(Value::Simple(20))), "f4");
+    assert_eq!(preserve(&Item::new(Value::Simple(23))), "f7");
 }
