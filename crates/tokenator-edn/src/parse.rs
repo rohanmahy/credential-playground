@@ -9,7 +9,7 @@ use std::ops::Range;
 use tokenator_cbor::{EncodeMode, FloatWidth, Item, MAX_DEPTH, Value, Width, encode};
 
 use crate::error::{EdnError, EdnErrorKind, Position, Warning, WarningKind};
-use crate::ext::{ELLIPSIS, Extensions, UNRESOLVED_EXTENSION_TAG};
+use crate::ext::{ELLIPSIS_TAG, Extensions, UNRESOLVED_EXTENSION_TAG};
 use crate::path::{Path, PathSegment};
 use crate::spans::{NodeSpan, SpanMap};
 
@@ -33,6 +33,12 @@ pub struct ParseOptions {
     pub unknown_extensions: UnknownExtensions,
     /// Parse a CBOR sequence (zero or more items) instead of exactly one item.
     pub sequence: bool,
+    /// Strict mode: every warning except
+    /// [`WarningKind::UnknownExtension`](crate::WarningKind::UnknownExtension)
+    /// (which [`ParseOptions::unknown_extensions`] controls) becomes an
+    /// [`EdnErrorKind::Strict`](crate::EdnErrorKind::Strict) error at the
+    /// warning's position.
+    pub strict: bool,
 }
 
 /// The result of [`parse_with`].
@@ -415,6 +421,15 @@ impl<'s, 'o> Parser<'s, 'o> {
         })
     }
 
+    /// Records a warning, or fails with it in strict mode.
+    fn warn(&mut self, offset: usize, kind: WarningKind) -> Res<()> {
+        if self.options.strict && !matches!(kind, WarningKind::UnknownExtension(_)) {
+            return self.fail(offset, EdnErrorKind::Strict(kind));
+        }
+        self.warnings.push((offset, kind));
+        Ok(())
+    }
+
     fn peek(&self) -> Option<u8> {
         self.b.get(self.pos).copied()
     }
@@ -447,9 +462,9 @@ impl<'s, 'o> Parser<'s, 'o> {
         while let Some(c) = self.peek() {
             match c {
                 b' ' | b'\t' | b'\n' | b'\r' => self.pos += 1,
-                b'#' => self.skip_line(),
+                b'#' => self.skip_line()?,
                 b'/' => match self.peek_at(1) {
-                    Some(b'/') => self.skip_line(),
+                    Some(b'/') => self.skip_line()?,
                     Some(b'*') => {
                         let from = self.pos + 2;
                         match self.find(from, b"*/") {
@@ -471,8 +486,16 @@ impl<'s, 'o> Parser<'s, 'o> {
         Ok(self.pos > start)
     }
 
-    fn skip_line(&mut self) {
-        self.pos = self.find(self.pos, b"\n").map_or(self.b.len(), |p| p + 1);
+    /// Skips an end-of-line comment, which warns if the input ends first.
+    fn skip_line(&mut self) -> Res<()> {
+        match self.find(self.pos, b"\n") {
+            Some(p) => self.pos = p + 1,
+            None => {
+                self.warn(self.pos, WarningKind::EolCommentAtEof)?;
+                self.pos = self.b.len();
+            }
+        }
+        Ok(())
     }
 
     fn find(&self, from: usize, needle: &[u8]) -> Option<usize> {
@@ -782,6 +805,7 @@ impl<'s, 'o> Parser<'s, 'o> {
                 if !self.skip_blank()? {
                     return self.unexpected();
                 }
+                self.warn(start, WarningKind::Streamstring)?;
                 Ok(Begun::Open(Kind::Stream(Vec::new()), None, 0))
             }
             b'"' => {
@@ -866,8 +890,7 @@ impl<'s, 'o> Parser<'s, 'o> {
         let bad = |p: &Self| p.fail(at, EdnErrorKind::InvalidEncodingIndicator);
         let width = match spec {
             Spec::Reserved(word) => {
-                self.warnings
-                    .push((at, WarningKind::ReservedEncodingIndicator(word)));
+                self.warn(at, WarningKind::ReservedEncodingIndicator(word))?;
                 return Ok(item);
             }
             Spec::Indefinite => {
@@ -1016,16 +1039,20 @@ impl<'s, 'o> Parser<'s, 'o> {
             if self.options.unknown_extensions == UnknownExtensions::Error {
                 return self.fail(start, EdnErrorKind::UnknownExtension(prefix.to_owned()));
             }
-            self.warnings
-                .push((start, WarningKind::UnknownExtension(prefix.to_owned())));
+            self.warn(start, WarningKind::UnknownExtension(prefix.to_owned()))?;
             return Ok(Item::tag(
                 UNRESOLVED_EXTENSION_TAG,
                 Item::array(vec![Item::text(prefix.to_owned()), Item::array(args)]),
             ));
         };
         match ext.evaluate(&args, uppercase) {
-            Ok(item) => Ok(item),
-            Err(e) if e.0 == ELLIPSIS => self.fail(start, EdnErrorKind::Ellipsis),
+            Ok(item) => {
+                // `h''` with an ellipsis gives the tag-888 form.
+                if matches!(item.value, Value::Tag(ELLIPSIS_TAG, _)) {
+                    self.warn(start, WarningKind::Ellipsis)?;
+                }
+                Ok(item)
+            }
             Err(e) => self.fail(
                 start,
                 EdnErrorKind::Extension {
@@ -1205,12 +1232,14 @@ impl<'s, 'o> Parser<'s, 'o> {
         let Some(number) = to_u64(magnitude) else {
             return self.fail(start, EdnErrorKind::OutOfRange);
         };
+        if number == ELLIPSIS_TAG {
+            self.warn(start, WarningKind::Ellipsis)?;
+        }
         let mut width = Width::preferred_for(number);
         match spec {
             None => {}
             Some((at, Spec::Reserved(word))) => {
-                self.warnings
-                    .push((at, WarningKind::ReservedEncodingIndicator(word)));
+                self.warn(at, WarningKind::ReservedEncodingIndicator(word))?;
             }
             Some((_, Spec::Width(w))) if fits(w, number) => width = w,
             Some((at, _)) => return self.fail(at, EdnErrorKind::InvalidEncodingIndicator),
@@ -1253,15 +1282,13 @@ impl<'s, 'o> Parser<'s, 'o> {
         };
         match spec {
             None => {}
-            Some((at, Spec::Reserved(word))) => self
-                .warnings
-                .push((at, WarningKind::ReservedEncodingIndicator(word))),
+            Some((at, Spec::Reserved(word))) => {
+                self.warn(at, WarningKind::ReservedEncodingIndicator(word))?
+            }
             Some((at, Spec::Indefinite)) => {
                 return self.fail(at, EdnErrorKind::InvalidEncodingIndicator);
             }
-            Some((at, Spec::Width(_))) => self
-                .warnings
-                .push((at, WarningKind::IgnoredEncodingIndicator)),
+            Some((at, Spec::Width(_))) => self.warn(at, WarningKind::IgnoredEncodingIndicator)?,
         }
         Ok(Item::tag(tag, Item::bytes(bytes)))
     }

@@ -80,11 +80,8 @@ fn h_errors() {
     assert_eq!(ext_err("h'00 /unterminated'"), "h");
     assert_eq!(ext_err("h<<1>>"), "h");
     assert_eq!(ext_err("H'00'"), "H");
-    assert_eq!(
-        parse("h'00 ... 01'").unwrap_err().kind,
-        EdnErrorKind::Ellipsis
-    );
-    assert_eq!(parse("h'...'").unwrap_err().kind, EdnErrorKind::Ellipsis);
+    // Ellipses are accepted with a warning since #14 (see warnings.rs).
+    assert!(parse("h'00 ... 01'").is_ok());
     assert!(parse("h '00'").is_err());
 }
 

@@ -7,7 +7,7 @@ mod common;
 
 use common::deep;
 use tokenator_cbor::{EncodeMode, MAX_DEPTH, decode, encode};
-use tokenator_edn::{EdnError, EdnErrorKind, Position, parse, parse_seq};
+use tokenator_edn::{EdnError, EdnErrorKind, Position, WarningKind, parse, parse_seq};
 
 fn err(edn: &str) -> EdnError {
     match parse(edn) {
@@ -120,8 +120,35 @@ fn extension_errors_point_at_the_literal() {
 }
 
 #[test]
-fn ellipsis_position() {
-    at("h'00 ...'", EdnErrorKind::Ellipsis, 0, 1, 1);
+fn strict_mode_positions() {
+    let strict = tokenator_edn::ParseOptions {
+        strict: true,
+        ..tokenator_edn::ParseOptions::default()
+    };
+    for (edn, kind, offset, line, column) in [
+        ("[1,\n h'00 ...']", WarningKind::Ellipsis, 5, 2, 2),
+        ("[1,\n (_ \"a\")]", WarningKind::Streamstring, 5, 2, 2),
+        (
+            "[1,\n 2_4]",
+            WarningKind::ReservedEncodingIndicator("4".into()),
+            6,
+            2,
+            3,
+        ),
+        ("[1]\n  # c", WarningKind::EolCommentAtEof, 6, 2, 3),
+    ] {
+        let e = tokenator_edn::parse_with(edn, &strict).unwrap_err();
+        assert_eq!(e.kind, EdnErrorKind::Strict(kind), "{edn:?}");
+        assert_eq!(
+            e.pos,
+            Position {
+                offset,
+                line,
+                column
+            },
+            "{edn:?}"
+        );
+    }
 }
 
 #[test]

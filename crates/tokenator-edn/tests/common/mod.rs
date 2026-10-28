@@ -70,10 +70,10 @@ pub fn roundtrip_options() -> Vec<(&'static str, PrintOptions<'static>)> {
             },
         ),
         (
-            "ascii+ilxs+literals",
+            "ascii+streamstrings+literals",
             PrintOptions {
                 ascii: true,
-                indefinite_strings: IndefiniteStringStyle::AppExtension,
+                indefinite_strings: IndefiniteStringStyle::Streamstring,
                 dt_literals: true,
                 ip_literals: true,
                 bytes: tokenator_edn::ByteStyle::Base64,

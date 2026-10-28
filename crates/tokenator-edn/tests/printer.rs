@@ -94,6 +94,15 @@ fn indented_indicators() {
     check(
         "(_ \"strea\", \"ming\")",
         &o,
+        "ilts<<\n  \"strea\",\n  \"ming\"\n>>",
+    );
+    let old = PrintOptions {
+        indefinite_strings: IndefiniteStringStyle::Streamstring,
+        ..PrintOptions::indented(2)
+    };
+    check(
+        "(_ \"strea\", \"ming\")",
+        &old,
         "(_\n  \"strea\",\n  \"ming\"\n)",
     );
 }
@@ -144,19 +153,22 @@ fn byte_styles() {
 
 #[test]
 fn indefinite_string_styles() {
-    let o = PrintOptions::new();
-    check("ilbs<<'a', h'00'>>", &o, "(_ h'61', h'00')");
-    check("''_", &o, "''_");
-    check("\"\"_", &o, "\"\"_");
-    let ilxs = PrintOptions {
-        indefinite_strings: IndefiniteStringStyle::AppExtension,
-        ..PrintOptions::new()
-    };
+    // Default since #14: the app-extension forms, which parse without warnings.
+    let ilxs = PrintOptions::new();
+    assert_eq!(ilxs.indefinite_strings, IndefiniteStringStyle::AppExtension);
     check("(_ \"a\", \"b\")", &ilxs, "ilts<<\"a\", \"b\">>");
     check("(_ \"a\"_0)", &ilxs, "ilts<<\"a\"_0>>");
     check("(_ h'01')", &ilxs, "ilbs<<h'01'>>");
     check("''_", &ilxs, "ilbs<<>>");
     check("\"\"_", &ilxs, "ilts<<>>");
+    // The deprecated streamstring syntax is still available.
+    let old = PrintOptions {
+        indefinite_strings: IndefiniteStringStyle::Streamstring,
+        ..PrintOptions::new()
+    };
+    check("ilbs<<'a', h'00'>>", &old, "(_ h'61', h'00')");
+    check("''_", &old, "''_");
+    check("\"\"_", &old, "\"\"_");
 }
 
 // ---------------------------------------------------------------- floats
@@ -255,7 +267,7 @@ fn embedded_any_item_mode() {
     check("h'0102'", &o, "h'0102'");
     check("<<\"IETF\">>", &o, "<<\"IETF\">>");
     check("<<1_0>>_0", &o, "<<1_0>>_0");
-    check("(_ h'01')", &o, "(_ h'01')");
+    check("(_ h'01')", &o, "ilbs<<h'01'>>");
 }
 
 #[test]

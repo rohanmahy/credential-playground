@@ -188,7 +188,20 @@ fn item() -> impl Strategy<Value = Item<'static>> {
             )
                 .prop_map(|(v, w)| Item::map(v).with_width(w)),
             (
-                select(vec![0u64, 1, 2, 3, 24, 63, 100, 999, 1004, 55799, u64::MAX]),
+                select(vec![
+                    0u64,
+                    1,
+                    2,
+                    3,
+                    24,
+                    63,
+                    100,
+                    888,
+                    999,
+                    1004,
+                    55799,
+                    u64::MAX
+                ]),
                 inner.clone(),
                 width()
             )
@@ -268,6 +281,26 @@ proptest! {
                 name,
                 text
             );
+        }
+    }
+
+    #[test]
+    fn default_output_parses_without_warnings(item in item()) {
+        let bytes = encode(&item, EncodeMode::Preserve);
+        // Tags 888 and 999 warn by design (ellipsis, unknown extension).
+        let decoded = decode(&bytes).unwrap();
+        prop_assume!(!common::nodes(&decoded).iter().any(|(_, i)| matches!(
+            i.value,
+            Value::Tag(888 | 999, _)
+        )));
+        let strict = ParseOptions { strict: true, ..ParseOptions::default() };
+        for opts in [PrintOptions::new(), PrintOptions::indented(2)] {
+            let text = print(&decoded, &opts).text;
+            let parsed = parse_with(&text, &strict);
+            prop_assert!(parsed.is_ok(), "{text:?}: {:?}", parsed.err());
+            let parsed = parsed.unwrap();
+            prop_assert!(parsed.warnings.is_empty(), "{text:?}: {:?}", parsed.warnings);
+            prop_assert_eq!(encode(&parsed.items[0], EncodeMode::Preserve), bytes.clone());
         }
     }
 

@@ -164,7 +164,7 @@ fn chunk_spans() {
     let bytes = h("7f 657374726561 646d696e67 ff");
     let item = decode(&bytes).unwrap();
     let r = print(&item, &PrintOptions::new());
-    assert_eq!(r.text, "(_ \"strea\", \"ming\")");
+    assert_eq!(r.text, "ilts<<\"strea\", \"ming\">>");
     assert_eq!(slice(&r, &p([Chunk(0)])), "\"strea\"");
     assert_eq!(slice(&r, &p([Chunk(1)])), "\"ming\"");
     assert_eq!(r.spans.get(&p([Chunk(0)])).unwrap().cbor, sp(1, 7, 1));
