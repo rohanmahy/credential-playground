@@ -942,6 +942,16 @@ version = "0.1.0"
 [[package]]
 name = "tokenator-cose"
 version = "0.1.0"
+dependencies = [
+ "hex",
+ "proptest",
+ "rand_chacha",
+ "serde_json",
+ "tokenator-cbor",
+ "tokenator-crypto",
+ "tokenator-keys",
+ "tokenator-registry",
+]
 
 [[package]]
 name = "tokenator-crypto"
@@ -985,6 +995,14 @@ dependencies = [
 [[package]]
 name = "tokenator-jose"
 version = "0.1.0"
+dependencies = [
+ "base64ct",
+ "proptest",
+ "rand_chacha",
+ "tokenator-crypto",
+ "tokenator-json",
+ "tokenator-keys",
+]
 
 [[package]]
 name = "tokenator-json"

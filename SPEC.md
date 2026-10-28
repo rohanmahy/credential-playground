@@ -98,10 +98,18 @@ and lets the user pick another through a "Detected as…" menu.
 - **Tree sync:** expanding or collapsing a node in either pane does the same in
   the other. Selecting a node highlights its counterpart. Collapse state
   survives re-renders and edits, because node IDs are path-based.
-- **Recursive decoding:** byte strings that parse as CBOR, base64 JSON, embedded
-  tokens, and X.509 certificates (`x5c`, `x5chain`) appear as an expandable
-  *decoded view* child. A decoded view can be toggled off per node or globally.
-  The hex alignment always stays on the original bytes.
+- **Embedded decoding at known locations only:** byte strings are decoded
+  automatically only where the format defines their content. Examples are the
+  COSE protected header and payload, SD-CWT disclosures, the `kcwt` inner
+  token, `cnf` keys, X.509 certificates (`x5c`, `x5chain`), and JOSE base64url
+  segments. In future, structures learned from CDDL will count too. The decoded
+  content appears as an expandable *decoded view* child. There is no automatic
+  guessing anywhere else (#15).
+- **Manual decode:** the user can select any other byte string and choose
+  *Decode as CBOR*. It decodes and warns if the bytes are not exactly one data
+  item (trailing or missing bytes).
+- A decoded view can be toggled off per node or globally. The hex alignment
+  always stays on the original bytes.
 - **SD views:** disclosures are listed with their digest, salt, claim name or
   array position, and value. Each one shows whether it matched a digest in the
   payload, and the matching redacted slot is linked in the tree. Decoys are
@@ -165,7 +173,7 @@ the source.
 | **Validate** | Any credential + options (§6) | Validation report |
 | **Edit & re-sign** | Credential edited in Live mode + a key | New signature over the edited content |
 | **Tamper** | Credential + tamper op | Deliberately broken credential, *not* re-signed |
-| **Re-encode** | Credential | Different outer encoding (base64url, base64, hex, raw binary; tagged or untagged CBOR; compact or JSON serialization) |
+| **Re-encode** | Credential | Different outer encoding (base64url, base64, hex, raw binary; tagged or untagged CBOR; compact or JSON serialization), and for CBOR a serialization: **as received**, **preferred-plus**, or **deterministic** (draft-ietf-cbor-serialization-11 §4 and §5) |
 | **Edit disclosures** | SD credential | Disclosures added, removed, reordered, or forged; decoys added or removed |
 
 **Live edit:** switching to Live edit turns the main pane into a text editor.
@@ -173,7 +181,14 @@ Every valid edit re-parses and updates the tree and raw pane. Once the content
 changes, the tab is marked **modified – signature stale**, and the user picks
 *Re-sign* (needs a key) or *Keep original signature* (a tamper). Unchanged
 regions keep their original bytes. Edited CBOR honors the EDN encoding
-indicators, so non-preferred encodings can be produced on purpose.
+indicators, so non-preferred encodings can be produced on purpose. Map keys
+keep their wire order unless the user re-sorts them while editing, or
+deterministic serialization is selected (which sorts them).
+
+**NaN:** when reading CBOR, every NaN except the canonical one (`f97e00`) is
+shown in EDN as `float'…'` with its exact bytes. Writing a non-canonical NaN
+works, with a warning. With preferred-plus or deterministic serialization, the
+canonical NaN is written instead (#7).
 
 **Tamper ops:** flip a bit in a chosen segment or byte, swap `alg` (including
 `none`), strip the signature, change or remove `kid`, truncate, duplicate a
@@ -208,12 +223,14 @@ links to the tree nodes it concerns.
 - Conformance lint (warnings and info only):
   - **Non-preferred CBOR encodings anywhere** (RFC 8949 §4.1): a longer-than-needed
     argument, a float that could be shorter without losing its value,
-    indefinite-length items. Each finding is located on the exact hex row and
-    shows the preferred bytes. These are reported as *info*, and raised to
-    *warn* where the spec requires deterministic encoding (e.g. inputs to
-    digests or the COSE Sig_structure).
+    indefinite-length items, a bignum (tag 2/3) that fits a plain integer,
+    and a non-canonical NaN. Each finding is located on the exact hex row and
+    shows the preferred bytes. The linter flags and suggests, but never modifies.
+    These are reported as *info*, and raised to *warn* where the spec requires
+    deterministic encoding (e.g. inputs to digests or the COSE Sig_structure).
   - Map keys that aren't in deterministic order, where that order is required.
-  - Duplicate map keys / JSON object members.
+  - Duplicate map keys / JSON object members. The CBOR and JSON libraries
+    detect them, and the linter warns.
   - **Alg/key consistency,** using the requirements table from
     `tokenator-crypto`: key type (`kty`), curve (`crv`), RSA minimum size,
     ML-DSA parameter set, and an `alg` field inside the JWK/COSE_Key that

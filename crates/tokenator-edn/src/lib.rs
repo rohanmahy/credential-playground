@@ -13,7 +13,14 @@
 //!   [`Path`] to its text range, line range, and CBOR byte span.
 //! - [`annotated_hex`]: one [`HexRow`] per encoded data item, aligned with
 //!   the printed lines by [`Path`].
+//! - [`decode_embedded`]: decodes a byte string the user picked by hand,
+//!   warning about trailing bytes. Otherwise byte strings are shown as
+//!   `<<…>>` only at paths the caller lists ([`EmbeddedCbor`]).
 //! - [`datetime`]: pure conversions for the date/time chit.
+//!
+//! Cargo feature `hash` (off by default) enables the `hash''`
+//! app-extension, which pulls in `sha2`. Without it, `hash''` is an
+//! extension error.
 //!
 //! ```
 //! use tokenator_cbor::{decode, encode, EncodeMode};
@@ -69,6 +76,7 @@
 
 mod annotate;
 pub mod datetime;
+mod embedded;
 mod error;
 mod ext;
 mod hex;
@@ -78,6 +86,7 @@ mod print;
 mod spans;
 
 pub use annotate::Annotator;
+pub use embedded::{EmbeddedView, EmbeddedWarning, decode_embedded};
 pub use error::{EdnError, EdnErrorKind, Position, Warning, WarningKind};
 pub use ext::{AppExtension, ELLIPSIS_TAG, ExtError, Extensions, UNRESOLVED_EXTENSION_TAG};
 pub use hex::{HexOptions, HexRow, HexRowKind, HexRows, annotated_hex};

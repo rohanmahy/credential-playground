@@ -4,6 +4,7 @@ use std::borrow::Cow;
 use std::fmt;
 use std::net::{Ipv4Addr, Ipv6Addr};
 
+#[cfg(feature = "hash")]
 use sha2::{Digest, Sha256, Sha384, Sha512};
 use tokenator_cbor::{Item, Value, Width, decode};
 
@@ -453,7 +454,15 @@ pub(crate) fn ip_text(bytes: &[u8]) -> Option<String> {
     Some(v6.to_string())
 }
 
+/// Without the `hash` feature, `hash''` is a built-in that always fails
+/// (issue #15), so it is not mistaken for an unknown extension.
+#[cfg(not(feature = "hash"))]
+fn hash(_: &[Item<'static>]) -> Result<Item<'static>, ExtError> {
+    err("hash'' needs the tokenator-edn `hash` feature")
+}
+
 /// `hash<<data[, alg]>>` (draft §3.4).
+#[cfg(feature = "hash")]
 fn hash(args: &[Item<'static>]) -> Result<Item<'static>, ExtError> {
     let (data, alg) = match args {
         [data] => (data, None),

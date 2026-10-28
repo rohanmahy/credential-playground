@@ -180,7 +180,7 @@ fn embedded_rows_use_absolute_offsets() {
     // [1, 24(<<[2, 3]>>)]
     let bytes = h("82 01 d818 43 820203");
     let opts = HexOptions {
-        embedded_cbor: EmbeddedCbor::Containers,
+        embedded_cbor: EmbeddedCbor::tagged(),
         ..HexOptions::default()
     };
     let r = rows(&bytes, &opts);
@@ -225,7 +225,7 @@ fn built_items_and_foreign_bytes_do_not_panic() {
 
 /// Hex rows and the indented printer's span map list the same nodes in the
 /// same order, and agree on where each node starts in the bytes.
-fn check_alignment(bytes: &[u8], embedded: EmbeddedCbor) {
+fn check_alignment(bytes: &[u8], embedded: EmbeddedCbor<'_>) {
     let item = decode(bytes).unwrap();
     let r = annotated_hex(
         &item,
@@ -272,9 +272,58 @@ fn rows_align_with_printed_lines() {
         "[[[[1]]]]",
         "{1: 1_1(2), [3]: {}}",
     ] {
-        let bytes = enc(edn);
-        check_alignment(&bytes, EmbeddedCbor::Off);
-        check_alignment(&bytes, EmbeddedCbor::Containers);
-        check_alignment(&bytes, EmbeddedCbor::AnyItem);
+        check_alignment(&enc(edn), EmbeddedCbor::OFF);
     }
+}
+
+const ALIGN_EMBEDDED: &[&str] = &[
+    "{1: 24(<<{1: 2, 3: [4]}>>), 2: <<[5]>>}",
+    "[<<1, [2]>>, 63(<<3, 4>>), <<[<<5>>]>>, h'ff', h'']",
+    "18([<<{1: -7}>>, {}, <<{1: \"iss\"}>>, h'00'])",
+];
+
+#[test]
+fn rows_align_with_embedded_views() {
+    for edn in ALIGN_EMBEDDED {
+        let bytes = enc(edn);
+        let item = decode(&bytes).unwrap();
+        let paths = common::all_bstr_paths(&item);
+        check_alignment(&bytes, EmbeddedCbor::tagged());
+        check_alignment(&bytes, EmbeddedCbor::at(&paths));
+        check_alignment(&bytes, EmbeddedCbor::at(&paths[..1]));
+    }
+}
+
+#[test]
+fn listed_sequence_rows() {
+    use HexRowKind::Item as I;
+    // {1: <<1, [2]>>}
+    let bytes = h("a1 01 43 01 81 02");
+    let paths = [p([Value(0)])];
+    let opts = HexOptions {
+        embedded_cbor: EmbeddedCbor::at(&paths),
+        ..HexOptions::default()
+    };
+    let r = rows(&bytes, &opts);
+    assert_eq!(
+        r.rows,
+        [
+            row(I, Path::root(), 0, 0..1, 1..1, "map(1)"),
+            row(I, p([Key(0)]), 1, 1..2, 2..2, "unsigned(1)"),
+            row(I, p([Value(0)]), 1, 2..3, 3..3, "bytes(3)"),
+            row(I, p([Value(0), Embedded(0)]), 2, 3..4, 4..4, "unsigned(1)"),
+            row(I, p([Value(0), Embedded(1)]), 2, 4..5, 5..5, "array(1)"),
+            row(
+                I,
+                p([Value(0), Embedded(1), Index(0)]),
+                3,
+                5..6,
+                6..6,
+                "unsigned(2)"
+            ),
+        ]
+    );
+    check_coverage(&r, bytes.len());
+    // Unlisted, the same bytes are one row.
+    assert_eq!(rows(&bytes, &HexOptions::default()).rows.len(), 3);
 }

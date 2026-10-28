@@ -6,10 +6,11 @@
 
 mod common;
 
-use common::{enc, h, rt};
+use common::{enc, h, p, rt};
 use tokenator_cbor::{EncodeMode, Item, Value, decode, encode};
 use tokenator_edn::{
-    ByteStyle, EmbeddedCbor, IndefiniteStringStyle, Path, PathSegment, PrintOptions, parse, print,
+    ByteStyle, EmbeddedCbor, IndefiniteStringStyle, Path, PathSegment, PathSegment::*,
+    PrintOptions, parse, print,
 };
 
 fn show(bytes: &[u8], opts: &PrintOptions) -> String {
@@ -223,7 +224,10 @@ fn printed_floats_always_reparse_as_floats() {
 
 // ---------------------------------------------------------------- embedded CBOR
 
-fn embedded(mode: EmbeddedCbor) -> PrintOptions<'static> {
+const COSE_SIGN1: &str = "d2 84 43 a10126 a1 04 42 3131 4c a2 01 63 697373 04 1a 5f5e1000 58 40 \
+     00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000";
+
+fn embedded(mode: EmbeddedCbor<'_>) -> PrintOptions<'_> {
     PrintOptions {
         embedded_cbor: mode,
         ..PrintOptions::new()
@@ -232,6 +236,8 @@ fn embedded(mode: EmbeddedCbor) -> PrintOptions<'static> {
 
 #[test]
 fn embedded_off_by_default() {
+    assert_eq!(PrintOptions::new().embedded_cbor, EmbeddedCbor::OFF);
+    assert_eq!(EmbeddedCbor::default(), EmbeddedCbor::OFF);
     check(
         "24(<<\"IETF\">>)",
         &PrintOptions::new(),
@@ -241,33 +247,92 @@ fn embedded_off_by_default() {
 }
 
 #[test]
-fn embedded_containers_mode() {
-    let o = embedded(EmbeddedCbor::Containers);
-    check("24(<<\"IETF\">>)", &o, "24(<<\"IETF\">>)");
-    check("63(<<1>>)", &o, "63(<<1>>)");
-    check("<<[1, 2]>>", &o, "<<[1, 2]>>");
-    check("<<{1: 2}>>", &o, "<<{1: 2}>>");
-    check("<<1(1)>>", &o, "<<1(1)>>");
-    check("h'01'", &o, "h'01'");
-    check("h'0102'", &o, "h'0102'");
-    check("h'ff'", &o, "h'ff'");
-    check("h''", &o, "h''");
-    check("h'8201'", &o, "h'8201'");
-    check("24(h'ff')", &o, "24(h'ff')");
-    check("24(h'0102')", &o, "24(h'0102')");
-    check("[<<[1]>>, h'00']", &o, "[<<[1]>>, h'00']");
-    check("<<<<[1]>>>>", &o, "h'428101'");
-    check("<<[<<[1]>>]>>", &o, "<<[<<[1]>>]>>");
+fn embedded_only_at_listed_paths() {
+    // No guessing (#15): unlisted byte strings stay h'' even if they decode.
+    let paths = [p([Index(0)]), p([Index(2)])];
+    let o = embedded(EmbeddedCbor::at(&paths));
+    check(
+        "[<<[1]>>, <<{1: 2}>>, <<1, 2>>, h'00']",
+        &o,
+        "[<<[1]>>, h'a10102', <<1, 2>>, h'00']",
+    );
+    // Listed content is shown as a CBOR sequence of any items.
+    check(
+        "[<<1>>, 0, <<\"a\", null>>]",
+        &o,
+        "[<<1>>, 0, <<\"a\", null>>]",
+    );
 }
 
 #[test]
-fn embedded_any_item_mode() {
-    let o = embedded(EmbeddedCbor::AnyItem);
-    check("h'01'", &o, "<<1>>");
-    check("h'0102'", &o, "h'0102'");
-    check("<<\"IETF\">>", &o, "<<\"IETF\">>");
-    check("<<1_0>>_0", &o, "<<1_0>>_0");
+fn listed_paths_fall_back_to_hex() {
+    let root = [Path::root()];
+    let o = embedded(EmbeddedCbor::at(&root));
+    check("h'ff'", &o, "h'ff'");
+    check("h'8201'", &o, "h'8201'");
+    check("h'01ff'", &o, "h'01ff'");
+    check("h''", &o, "h''");
+    check("1", &o, "1");
+    check("[<<1>>]", &o, "[h'01']");
     check("(_ h'01')", &o, "ilbs<<h'01'>>");
+}
+
+#[test]
+fn listed_paths_keep_encoding_details() {
+    let root = [Path::root()];
+    let o = embedded(EmbeddedCbor::at(&root));
+    check("<<1_0>>_0", &o, "<<1_0>>_0");
+    check("h'580101'", &o, "<<h'01'_0>>");
+    check("<<[_ 1]>>", &o, "<<[_ 1]>>");
+}
+
+#[test]
+fn nested_embedded_cbor_is_listed_explicitly() {
+    let outer = [Path::root()];
+    check(
+        "<<[<<[1]>>]>>",
+        &embedded(EmbeddedCbor::at(&outer)),
+        "<<[h'8101']>>",
+    );
+    let both = [Path::root(), p([Embedded(0), Index(0)])];
+    check(
+        "<<[<<[1]>>]>>",
+        &embedded(EmbeddedCbor::at(&both)),
+        "<<[<<[1]>>]>>",
+    );
+    // A path below a byte string that is not shown does nothing.
+    let inner_only = [p([Embedded(0), Index(0)])];
+    check(
+        "<<[<<[1]>>]>>",
+        &embedded(EmbeddedCbor {
+            paths: &inner_only,
+            tagged: false,
+        }),
+        "h'81428101'",
+    );
+}
+
+#[test]
+fn tags_24_and_63_are_defined_locations() {
+    let o = embedded(EmbeddedCbor::tagged());
+    check("24(<<\"IETF\">>)", &o, "24(<<\"IETF\">>)");
+    check("24(<<[1, 2]>>)", &o, "24(<<[1, 2]>>)");
+    check("24(h'0102')", &o, "24(h'0102')");
+    check("24(h'ff')", &o, "24(h'ff')");
+    check("63(<<1>>)", &o, "63(<<1>>)");
+    check("63(<<1, 2>>)", &o, "63(<<1, 2>>)");
+    check("63(h'01ff')", &o, "63(h'01ff')");
+    // Without the tag, nothing is guessed.
+    check("<<[1, 2]>>", &o, "h'820102'");
+    check("25(<<1>>)", &o, "25(h'01')");
+    // Tag content can also be listed by path, without `tagged`.
+    let content = [p([TagContent])];
+    let listed = embedded(EmbeddedCbor {
+        paths: &content,
+        tagged: false,
+    });
+    check("24(<<\"IETF\">>)", &listed, "24(<<\"IETF\">>)");
+    check("1(<<1>>)", &listed, "1(<<1>>)");
 }
 
 #[test]
@@ -275,11 +340,36 @@ fn embedded_indented() {
     check(
         "24(<<[1, 2]>>)",
         &PrintOptions {
-            embedded_cbor: EmbeddedCbor::Containers,
+            embedded_cbor: EmbeddedCbor::tagged(),
             ..PrintOptions::indented(2)
         },
         "24(<<\n  [\n    1,\n    2\n  ]\n>>)",
     );
+    let root = [Path::root()];
+    check(
+        "<<1, [2]>>",
+        &PrintOptions {
+            embedded_cbor: EmbeddedCbor::at(&root),
+            ..PrintOptions::indented(2)
+        },
+        "<<\n  1,\n  [\n    2\n  ]\n>>",
+    );
+}
+
+#[test]
+fn cose_sign1_locations() {
+    // 18([<<{1: -7}>>, {4: h'3131'}, <<{1: "iss", 4: 1600000000}>>, sig])
+    let bytes = h(COSE_SIGN1);
+    let paths = [p([TagContent, Index(0)]), p([TagContent, Index(2)])];
+    let text = show(&bytes, &embedded(EmbeddedCbor::at(&paths)));
+    assert_eq!(
+        text,
+        format!(
+            "18([<<{{1: -7}}>>, {{4: h'3131'}}, <<{{1: \"iss\", 4: 1600000000}}>>, h'{}'])",
+            "00".repeat(64)
+        )
+    );
+    common::rt_embedded(&bytes).unwrap();
 }
 
 // ---------------------------------------------------------------- DT'' and IP''
@@ -450,9 +540,5 @@ fn print_never_panics_on_odd_built_items() {
 #[test]
 fn rendered_text_roundtrips_for_mixed_document() {
     // A COSE_Sign1-like document with nested embedded CBOR.
-    let bytes = h(
-        "d2 84 43 a10126 a1 04 42 3131 4c a2 01 63 697373 04 1a 5f5e1000 \
-                   58 40 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000",
-    );
-    rt(&bytes).unwrap();
+    rt(&h(COSE_SIGN1)).unwrap();
 }
