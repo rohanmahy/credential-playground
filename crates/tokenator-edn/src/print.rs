@@ -71,13 +71,17 @@ pub enum ByteStyle {
 }
 
 /// How to print indefinite-length strings.
+///
+/// The default is [`IndefiniteStringStyle::AppExtension`], so that the
+/// printer's default output parses without warnings (issue #14).
 #[derive(Clone, Copy, Debug, Default, PartialEq, Eq)]
 pub enum IndefiniteStringStyle {
-    /// `(_ "a", "b")`; no chunks: `''_` / `""_`.
+    /// `ilts<<"a", "b">>` / `ilbs<<h'01'>>`; no chunks: `ilts<<>>` / `ilbs<<>>`.
     #[default]
-    Streamstring,
-    /// `ilts<<"a", "b">>` / `ilbs<<h'01'>>`.
     AppExtension,
+    /// The deprecated streamstring syntax `(_ "a", "b")`; no chunks: `''_` /
+    /// `""_`. Parsing it gives [`WarningKind::Streamstring`](crate::WarningKind::Streamstring).
+    Streamstring,
 }
 
 /// Options for [`print`]. [`Default`] is [`PrintOptions::new`].
@@ -111,7 +115,7 @@ pub struct PrintOptions<'a> {
 
 impl PrintOptions<'_> {
     /// The defaults: compact, indicators only where needed, `h''`,
-    /// streamstrings, UTF-8 text, no `DT''`/`IP''`, opaque extensions
+    /// `ilbs<<…>>`/`ilts<<…>>` for indefinite strings, UTF-8 text, no `DT''`/`IP''`, opaque extensions
     /// printed as prefixed literals, no annotator.
     pub fn new() -> Self {
         PrintOptions {
@@ -119,7 +123,7 @@ impl PrintOptions<'_> {
             encoding_indicators: EncodingIndicators::NonPreferred,
             embedded_cbor: EmbeddedCbor::Off,
             bytes: ByteStyle::Hex,
-            indefinite_strings: IndefiniteStringStyle::Streamstring,
+            indefinite_strings: IndefiniteStringStyle::AppExtension,
             ascii: false,
             dt_literals: false,
             ip_literals: false,

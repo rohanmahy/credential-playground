@@ -18,7 +18,7 @@ mod common;
 
 use common::{check_span_map, deep, hex, rt, vector_file};
 use tokenator_cbor::{EncodeMode, Item, Value, decode, encode};
-use tokenator_edn::{PrintOptions, parse, print};
+use tokenator_edn::{ParseOptions, PrintOptions, parse, parse_with, print};
 
 const FILES: &[&str] = &[
     "rfc8949-appendixA/mt0",
@@ -120,10 +120,18 @@ fn check_cbor_file_roundtrips(name: &str) {
     let bytes = vector_file(&format!("{name}.cbor"));
     rt(&bytes).unwrap_or_else(|e| panic!("{name}: {e}"));
     let item = decode(&bytes).unwrap();
+    let strict = ParseOptions {
+        strict: true,
+        ..ParseOptions::default()
+    };
     for opts in [PrintOptions::new(), PrintOptions::indented(2)] {
         let rendered = print(&item, &opts);
         check_span_map(&item, Some(&bytes), &rendered)
             .unwrap_or_else(|e| panic!("{name} ({:?}): {e}", opts.layout));
+        // The printer's default output parses without warnings (#14).
+        let parsed = parse_with(&rendered.text, &strict)
+            .unwrap_or_else(|e| panic!("{name} ({:?}) in strict mode: {e}", opts.layout));
+        assert!(parsed.warnings.is_empty(), "{name}: {:?}", parsed.warnings);
     }
 }
 

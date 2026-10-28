@@ -252,10 +252,10 @@ fn printer_emits_indicators_only_where_needed() {
         ("bfff", "{_ }"),
         ("9f0102ff", "[_ 1, 2]"),
         ("bf0102ff", "{_ 1: 2}"),
-        ("5fff", "''_"),
-        ("7fff", "\"\"_"),
-        ("5f40ff", "(_ h'')"),
-        ("7f780161ff", "(_ \"a\"_0)"),
+        ("5fff", "ilbs<<>>"),
+        ("7fff", "ilts<<>>"),
+        ("5f40ff", "ilbs<<h''>>"),
+        ("7f780161ff", "ilts<<\"a\"_0>>"),
         ("fb3ff199999999999a", "1.1"),
         ("f97c00", "Infinity"),
         ("fa7f800000", "Infinity_2"),
@@ -280,7 +280,7 @@ fn printer_with_indicators_always() {
         ("f5", "true"),
         ("f0", "simple(16)"),
         ("9f01ff", "[_ 1_i]"),
-        ("7f6161ff", "(_ \"a\"_i)"),
+        ("7f6161ff", "ilts<<\"a\"_i>>"),
         ("80", "[_i ]"),
     ] {
         assert_eq!(print_with(bytes, m), want, "printing {bytes}");

@@ -18,6 +18,16 @@ use crate::datetime::Instant;
 /// (`cri<<…>>`) has one argument per item, each with its encoding indicators.
 pub const UNRESOLVED_EXTENSION_TAG: u64 = 999;
 
+/// Tag number for elided content (draft-ietf-cbor-edn-literals-27 §5.2,
+/// "CPA888"; -28 dropped it, issue #14 keeps it).
+///
+/// `888(null)` stands for one ellipsis. An `h''` literal with ellipses
+/// between its bytes becomes `888([parts…])`, where the parts alternate
+/// between byte strings and `888(null)`, in order; adjacent ellipses
+/// count as one, and an `h''` holding only an ellipsis becomes `888(null)`.
+/// For example `h'4711...0815'` is `888([h'4711', 888(null), h'0815'])`.
+pub const ELLIPSIS_TAG: u64 = 888;
+
 /// Why an app-extension rejected its input.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct ExtError(pub String);

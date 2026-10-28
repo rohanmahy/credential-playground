@@ -33,6 +33,12 @@ pub struct ParseOptions {
     pub unknown_extensions: UnknownExtensions,
     /// Parse a CBOR sequence (zero or more items) instead of exactly one item.
     pub sequence: bool,
+    /// Strict mode: every warning except
+    /// [`WarningKind::UnknownExtension`](crate::WarningKind::UnknownExtension)
+    /// (which [`ParseOptions::unknown_extensions`] controls) becomes an
+    /// [`EdnErrorKind::Strict`](crate::EdnErrorKind::Strict) error at the
+    /// warning's position.
+    pub strict: bool,
 }
 
 /// The result of [`parse_with`].

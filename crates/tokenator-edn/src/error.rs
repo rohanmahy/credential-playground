@@ -57,6 +57,10 @@ pub enum EdnErrorKind {
     /// text strings, or a streamstring with no chunks.
     InvalidChunks,
     /// An ellipsis (`...`), which has no CBOR representation.
+    ///
+    /// No longer produced since issue #14: an ellipsis inside `h''` is
+    /// accepted with [`WarningKind::Ellipsis`] (or fails with
+    /// [`EdnErrorKind::Strict`] in strict mode).
     Ellipsis,
     /// A prefix that is not all lowercase or all uppercase, or a reserved
     /// word (`true`, `false`, `null`, `undefined`) used as a prefix.
@@ -75,6 +79,9 @@ pub enum EdnErrorKind {
     /// Arrays, maps, tags, and embedded sequences nested deeper than
     /// [`tokenator_cbor::MAX_DEPTH`].
     DepthLimit,
+    /// Something that is only a warning normally, rejected because
+    /// [`ParseOptions::strict`](crate::ParseOptions::strict) is set.
+    Strict(WarningKind),
 }
 
 impl fmt::Display for EdnError {
@@ -106,6 +113,7 @@ impl fmt::Display for EdnErrorKind {
             EdnErrorKind::UnknownExtension(p) => write!(f, "unknown app-extension {p:?}"),
             EdnErrorKind::Extension { prefix, message } => write!(f, "{prefix}'': {message}"),
             EdnErrorKind::DepthLimit => f.write_str("nesting too deep"),
+            EdnErrorKind::Strict(w) => write!(f, "{w:?} (strict mode)"),
         }
     }
 }
@@ -159,4 +167,16 @@ pub enum WarningKind {
     /// An encoding indicator that has no meaning here (for example on an
     /// integer literal that became a bignum); it was ignored.
     IgnoredEncodingIndicator,
+    /// An ellipsis inside `h''`, or a tag 888 written in the input. An
+    /// ellipsis becomes the draft-ietf-cbor-edn-literals-27 §5.2 "CPA888"
+    /// form (see [`ELLIPSIS_TAG`](crate::ELLIPSIS_TAG)). One warning per
+    /// literal or tag, at its first character.
+    Ellipsis,
+    /// The deprecated streamstring syntax `(_ …)`
+    /// (draft-ietf-cbor-edn-literals-28 §4.3); `ilbs<<…>>`/`ilts<<…>>`
+    /// replace it. At the `(`.
+    Streamstring,
+    /// An end-of-line comment (`#` or `//`) at the end of the input with no
+    /// line feed after it. At the `#` or `//`.
+    EolCommentAtEof,
 }

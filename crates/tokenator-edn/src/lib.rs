@@ -79,7 +79,7 @@ mod spans;
 
 pub use annotate::Annotator;
 pub use error::{EdnError, EdnErrorKind, Position, Warning, WarningKind};
-pub use ext::{AppExtension, ExtError, Extensions, UNRESOLVED_EXTENSION_TAG};
+pub use ext::{AppExtension, ELLIPSIS_TAG, ExtError, Extensions, UNRESOLVED_EXTENSION_TAG};
 pub use hex::{HexOptions, HexRow, HexRowKind, HexRows, annotated_hex};
 pub use parse::{ParseOptions, Parsed, UnknownExtensions, parse, parse_seq, parse_with};
 pub use path::{Path, PathParseError, PathSegment};
