@@ -129,7 +129,7 @@ fn forge_uses_the_style() {
     .unwrap();
     assert_eq!(
         String::from_utf8(b64d(split_sd(&out).1[10])).unwrap(),
-        r#"["s", "n", "é"]"#
+        r#"["s", "n", "\u00e9"]"#
     );
 }
 

@@ -272,7 +272,7 @@ fn json_envelope_problems_are_diagnostics() {
 #[test]
 fn escaped_json_strings_are_unescaped() {
     // "e30" written with a \u escape: text is unescaped, span covers the source.
-    let input = r#"{"payload":"e30","protected":"eyJhbGciOiJub25lIn0","signature":""}"#;
+    let input = r#"{"payload":"e\u00330","protected":"eyJhbGciOiJub25lIn0","signature":""}"#;
     let parsed = parse(input).unwrap();
     let jws = parsed.token.jws();
     assert_eq!(jws.payload.text(), "e30");

@@ -10,7 +10,7 @@
 
 mod common;
 
-use common::{b64d, issuer_key, json, rng, segment_json, segments, split_sd, str_of};
+use common::{b64d, issuer_key, json, rng, segment_json, segments, str_of};
 use tokenator_crypto::{Alg, CryptoError, HashAlg};
 use tokenator_jose::{
     Cnf, DecoyDigests, DecoySpec, DigestOrder, IssueOptions, JoseError, JsonStyle, PartRef,
@@ -19,8 +19,9 @@ use tokenator_jose::{
 use tokenator_json::Node;
 use tokenator_keys::to_public;
 
+/// The decoded payload of a JWT or SD-JWT.
 fn payload_of(token: &str) -> String {
-    let (jwt, _, _) = split_sd(token);
+    let jwt = token.split('~').next().unwrap();
     segment_json(segments(jwt)[1])
 }
 
@@ -95,7 +96,7 @@ fn spaced_style_and_ascii_escapes() {
     let issued = issue(&claims, &opts, &mut rng(1)).unwrap();
     assert_eq!(
         payload_of(&issued.token),
-        r#"{"n": "Möbius 😀", "k": [1, {"a": null}]}"#
+        r#"{"n": "M\u00f6bius \ud83d\ude00", "k": [1, {"a": null}]}"#
     );
     opts.style = JsonStyle::Spaced { ascii_only: false };
     let issued = issue(&claims, &opts, &mut rng(1)).unwrap();
