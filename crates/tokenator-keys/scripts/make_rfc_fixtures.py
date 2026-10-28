@@ -11,6 +11,7 @@ Writes:
   rfc7517/   JWK Sets of RFC 7517 Appendix A.1-A.3 and the JWK of Appendix B.
   rfc7638/   the RFC 7638 Section 3.1 JWK.
   rfc8037/   the RFC 8037 Appendix A.1 / A.2 JWKs.
+  rfc8410/   the RFC 8410 Section 10.1 / 10.3 Ed25519 PEMs (v1 and v2 PKCS#8).
   rfc8152/   the COSE_KeySets of RFC 8152 Appendix C.7.1 / C.7.2 (binary CBOR).
   rfc9679/   the RFC 9679 Section 6 COSE_Key (binary CBOR).
   rfc9964/   the RFC 9964 Appendix A JWKs (private and public) and COSE_Keys
@@ -160,6 +161,17 @@ def rfc8037(rfcdir, out):
     write(out / "rfc8037" / "ed25519-public.json", pub + "\n")
 
 
+def rfc8410(rfcdir, out):
+    lines = rfc_lines(rfcdir, 8410)
+    pub = pem_blocks(lines, "10.1.  Example Ed25519 Public Key", "10.2.  Example X25519 Certificate")
+    assert len(pub) == 1, len(pub)
+    write(out / "rfc8410" / "ed25519-public.pem", pub[0])
+    priv = pem_blocks(lines, "10.3.  Examples of Ed25519 Private Key", "11.  IANA Considerations")
+    assert len(priv) == 2, len(priv)
+    write(out / "rfc8410" / "ed25519-private.pem", priv[0])
+    write(out / "rfc8410" / "ed25519-private-v2.pem", priv[1])
+
+
 def h(s):
     return bytes.fromhex(s)
 
@@ -259,6 +271,7 @@ def main():
     rfc7638(rfcdir, out)
     rfc8037(rfcdir, out)
     rfc8152(rfcdir, out)
+    rfc8410(rfcdir, out)
     rfc9679(rfcdir, out)
     rfc9964(out.parent / "rfc9964", out)
 

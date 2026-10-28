@@ -37,6 +37,7 @@ from the RFC texts at `https://www.rfc-editor.org/rfc/rfcNNNN.txt`
 | `rfc7517/` | RFC 7517 Appendix A.1 (public JWK Set), A.2 (private JWK Set), A.3 (symmetric JWK Set), Appendix B (RSA JWK with `x5c`) |
 | `rfc7638/rsa.json` | RFC 7638 Section 3.1 JWK (thumbprint `NzbLsXh8uDCcd-6MNwXF4W_7noWXFZAfHkxZsRGC9Xs`) |
 | `rfc8037/` | RFC 8037 Appendix A.1 (private) and A.2 (public) Ed25519 JWKs |
+| `rfc8410/` | RFC 8410 Section 10.1 Ed25519 SPKI and Section 10.3 PKCS#8 private keys (v1, and v2 with an attribute and the public key) |
 | `rfc8152/` | RFC 8152 Appendix C.7.1 (public) and C.7.2 (private) COSE_KeySets, binary CBOR (481 and 816 bytes, as stated in the RFC) |
 | `rfc9679/ec2-p256.cbor` | RFC 9679 Section 6 COSE_Key (thumbprint `496bd8af…253ec`) |
 | `rfc9881/` | RFC 9881 Appendix C.1 private keys (seed, expanded, both; seed `000102…1f`), C.2 public keys, C.4 inconsistent private keys (1: seed and expanded disagree; 2: `tr` does not match; 3: `t0` does not match) |
