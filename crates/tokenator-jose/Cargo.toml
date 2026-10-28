@@ -8,6 +8,14 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
+tokenator-crypto = { path = "../tokenator-crypto" }
+tokenator-json = { path = "../tokenator-json" }
+tokenator-keys = { path = "../tokenator-keys" }
+
+[dev-dependencies]
+base64ct = { version = "1.8", features = ["alloc"] }
+proptest = "1"
+rand_chacha = { version = "0.10", default-features = false }
 
 [lints]
 workspace = true
