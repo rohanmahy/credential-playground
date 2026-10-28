@@ -7,6 +7,20 @@
 //! XML and embedded with `include_bytes!`. [`Registry::merge_iana`] merges a
 //! refreshed fetch over it. The library performs no I/O: fetching and caching
 //! are the caller's job.
+//!
+//! [`Registry::shared`] parses the bundled snapshot once and returns a
+//! `&'static Registry`; [`Registry::bundled`] returns an owned copy to merge
+//! into. [`Annotator`] maps keys and values to display names by context.
+//!
+//! ```
+//! use tokenator_registry::{EntryKind, Registry};
+//!
+//! let reg = Registry::shared()?;
+//! assert_eq!(reg.cose_header(4).unwrap().name, "kid");
+//! assert_eq!(reg.by_name(EntryKind::CoseAlg, "ML-DSA-65").unwrap().label, (-49).into());
+//! assert_eq!(reg.jwt_to_cwt("cnf"), Some(&8.into()));
+//! # Ok::<(), tokenator_registry::RegistryError>(())
+//! ```
 
 mod annotate;
 mod entry;

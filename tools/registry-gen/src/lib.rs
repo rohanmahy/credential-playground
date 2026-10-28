@@ -13,7 +13,7 @@
 use std::fmt;
 use std::path::PathBuf;
 
-use tokenator_registry::{Registry, RegistryError, RegistryId};
+use tokenator_registry::{LocalAdditions, Registry, RegistryError, RegistryId};
 
 /// The generator inputs, already read into memory.
 #[derive(Clone, Copy, Debug)]
@@ -33,14 +33,35 @@ pub struct Inputs<'a> {
 /// Builds the registry from `inputs` and returns its snapshot bytes.
 /// Deterministic: the same inputs always produce the same bytes.
 pub fn generate(inputs: &Inputs<'_>) -> Result<Vec<u8>, GenError> {
-    let _ = inputs;
-    unimplemented!()
+    build(inputs)?
+        .to_snapshot()
+        .map_err(|source| GenError::Registry {
+            registry: None,
+            source,
+        })
 }
 
 /// Builds the [`Registry`] from `inputs` (what [`generate`] serializes).
 pub fn build(inputs: &Inputs<'_>) -> Result<Registry, GenError> {
-    let _ = inputs;
-    unimplemented!()
+    let local =
+        LocalAdditions::parse(inputs.local_additions).map_err(|source| GenError::Registry {
+            registry: None,
+            source,
+        })?;
+    let iana = [
+        (RegistryId::Cwt, inputs.cwt),
+        (RegistryId::Cose, inputs.cose),
+        (RegistryId::Jwt, inputs.jwt),
+        (RegistryId::Jose, inputs.jose),
+    ];
+    Registry::build(&iana, local).map_err(|source| GenError::Registry {
+        registry: match &source {
+            RegistryError::Xml { registry, .. } => Some(*registry),
+            RegistryError::WrongRegistry { expected, .. } => Some(*expected),
+            RegistryError::Snapshot(_) | RegistryError::LocalAdditions(_) => None,
+        },
+        source,
+    })
 }
 
 /// Command-line arguments.
@@ -66,16 +87,61 @@ impl Args {
     where
         I: IntoIterator<Item = String>,
     {
-        let _ = args.into_iter();
-        unimplemented!()
+        let root = PathBuf::from(Self::WORKSPACE_ROOT);
+        let mut parsed = Self {
+            input_dir: root.join("testdata/iana"),
+            local_additions: root.join("crates/tokenator-registry/data/local-additions.json"),
+            out: root.join("crates/tokenator-registry/data/snapshot.json"),
+        };
+        let mut args = args.into_iter();
+        while let Some(flag) = args.next() {
+            let slot = match flag.as_str() {
+                "--input-dir" => &mut parsed.input_dir,
+                "--local" => &mut parsed.local_additions,
+                "--out" => &mut parsed.out,
+                other => return Err(GenError::Usage(format!("unexpected argument {other:?}"))),
+            };
+            *slot = args
+                .next()
+                .map(PathBuf::from)
+                .ok_or_else(|| GenError::Usage(format!("{flag} needs a value")))?;
+        }
+        Ok(parsed)
     }
 }
 
 /// Reads the inputs named by `args`, generates, and writes the snapshot.
 /// Returns the number of entries written.
 pub fn run(args: &Args) -> Result<usize, GenError> {
-    let _ = args;
-    unimplemented!()
+    let read = |path: PathBuf| std::fs::read(&path).map_err(|source| GenError::Io { path, source });
+    let cwt = read(args.input_dir.join("cwt.xml"))?;
+    let cose = read(args.input_dir.join("cose.xml"))?;
+    let jwt = read(args.input_dir.join("jwt.xml"))?;
+    let jose = read(args.input_dir.join("jose.xml"))?;
+    let local = read(args.local_additions.clone())?;
+    let local_additions = std::str::from_utf8(&local).map_err(|e| GenError::Io {
+        path: args.local_additions.clone(),
+        source: std::io::Error::new(std::io::ErrorKind::InvalidData, e),
+    })?;
+    let inputs = Inputs {
+        cwt: &cwt,
+        cose: &cose,
+        jwt: &jwt,
+        jose: &jose,
+        local_additions,
+    };
+    let registry = build(&inputs)?;
+    let bytes = registry
+        .to_snapshot()
+        .map_err(|source| GenError::Registry {
+            registry: None,
+            source,
+        })?;
+    std::fs::write(&args.out, bytes).map_err(|source| GenError::Io {
+        path: args.out.clone(),
+        source,
+    })?;
+    Ok(registry.len())
 }
 
 /// Generator errors.

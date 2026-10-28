@@ -1,7 +1,10 @@
 //! Registry entry types.
 
+use serde::{Deserialize, Serialize};
+
 /// One of the four IANA registry groups that can be fetched and merged.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum RegistryId {
     /// CBOR Web Token (CWT) claims and confirmation methods.
     Cwt,
@@ -59,7 +62,8 @@ impl RegistryId {
 
 /// What an entry describes. Together with [`Label`] (and, for
 /// [`EntryKind::CoseKeyTypeParam`], [`Entry::key_type`]) it identifies an entry.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
 pub enum EntryKind {
     /// JWS/JWE header parameter (`jose.xml#web-signature-encryption-header-parameters`).
     JoseHeader,
@@ -100,7 +104,8 @@ pub enum EntryKind {
 }
 
 /// An integer or text label/value.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(untagged)]
 pub enum Label {
     /// Integer label, e.g. COSE header `4` or alg `-7`.
     Int(i64),
@@ -127,7 +132,8 @@ impl From<String> for Label {
 }
 
 /// Where an entry came from. Precedence: `Refreshed` > `Iana` > `Local`.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
 pub enum Source {
     /// From the bundled snapshot of the IANA registries.
     Iana,
@@ -138,16 +144,21 @@ pub enum Source {
 }
 
 /// A specification reference.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct SpecRef {
     /// Human-readable text, e.g. `RFC 7519, Section 4.1.1`.
     pub text: String,
     /// Link, e.g. `https://www.rfc-editor.org/rfc/rfc7519#section-4.1.1`.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub url: Option<String>,
 }
 
 /// One registered codepoint.
-#[derive(Clone, Debug, PartialEq, Eq)]
+///
+/// The serde form is the one used in the snapshot and in
+/// `data/local-additions.json`: `kind` in snake_case, `label` as a JSON
+/// number or string, and empty/default fields omitted.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Entry {
     /// What this entry describes.
     pub kind: EntryKind,
@@ -157,18 +168,33 @@ pub struct Entry {
     /// such as `(type)` or `(TEMPORARY - …)` are stripped.
     pub name: String,
     /// Plain-text description (markup flattened, whitespace collapsed).
+    #[serde(default, skip_serializing_if = "String::is_empty")]
     pub description: String,
     /// Value type as given by the registry (e.g. `bstr`, `int / tstr`), if any.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub value_type: Option<String>,
     /// Specification references.
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
     pub reference: Vec<SpecRef>,
     /// Provenance.
+    #[serde(default = "local_source")]
     pub source: Source,
     /// IANA marks the registration as TEMPORARY (early allocation).
+    #[serde(default, skip_serializing_if = "is_false")]
     pub temporary: bool,
     /// For [`EntryKind::CoseKeyTypeParam`]: the kty value the label belongs to.
     /// For [`EntryKind::JwkParam`]: the key type from the `usage` column (`EC`, `*`, …).
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub key_type: Option<Label>,
     /// For CWT claims and CWT cnf methods: the JWT name of the same claim or member.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
     pub jwt_name: Option<String>,
+}
+
+fn local_source() -> Source {
+    Source::Local
+}
+
+fn is_false(b: &bool) -> bool {
+    !*b
 }
