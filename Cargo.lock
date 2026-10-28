@@ -397,6 +397,9 @@ dependencies = [
 [[package]]
 name = "tokenator-cbor"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+]
 
 [[package]]
 name = "tokenator-core"
