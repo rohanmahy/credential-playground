@@ -34,14 +34,24 @@ covers the internals. Grammar decisions are listed in `TEST-PLAN.md`
   encoding at the target width: tokenator-cbor's bit-exact float helpers are
   `pub(crate)`, and its encoder silently widens a value that does not fit.
 - **Extensions** receive `&[Item]`; a string literal arrives as one text
-  string. Unknown prefixes become `999([prefix, [args]])`. The built-in `h`
-  turns ellipses into the tag-888 form; the parser warns when any
-  extension returns tag 888, and when the input opens a tag 888.
-- **Warnings** go through one `warn()` call, which fails at once with
-  `EdnErrorKind::Strict` in strict mode (except unknown extensions, which
-  have their own option). So the strict error is the first warning the
-  parser meets; that is source order except inside `p<<…>>`, whose own
-  warning is only known at `>>`.
+  string. Unknown prefixes become `999([prefix, [args]])`.
+- **Ellipses** in `h''` are accepted (issue #14) in the -27 "CPA888" form:
+  `h'4711...0815'` is `888([h'4711', 888(null), h'0815'])`, `h'...'` is
+  `888(null)`, and adjacent ellipses merge. The parser warns when an
+  extension returns tag 888 and when the input opens a tag 888. The printer
+  shows these values as plain tags. `float''` still rejects ellipses.
+- **Warnings** (`WarningKind`): `Ellipsis`, `Streamstring` (`(_ …)`),
+  `ReservedEncodingIndicator` (anything except `_0`–`_3`, `_i`, and `_`),
+  `IgnoredEncodingIndicator` (on bignum literals), `EolCommentAtEof`, and
+  `UnknownExtension`. All go through one `warn()` call. With
+  `ParseOptions::strict` it fails at once with `EdnErrorKind::Strict(kind)`,
+  except for unknown extensions, which `unknown_extensions` controls. So the
+  strict error is the first warning the parser meets. That is source order,
+  except inside `p<<…>>`, whose own warning is only known at `>>`.
+- **Print defaults** produce text that re-parses in strict mode with no
+  warnings: indefinite-length strings print as `ilbs<<…>>`/`ilts<<…>>`
+  (`IndefiniteStringStyle::AppExtension`). `Streamstring` keeps the old
+  `(_ …)` syntax.
 - **Printer `Node`s** are either borrowed from the caller's tree or owned.
   Owned nodes come from decoding an embedded byte string; they are taken
   apart by value as they are printed, so no self-referential storage is
