@@ -153,7 +153,7 @@ disclosure matching. Each returns a structured model **plus** references to the
 original byte ranges.
 
 `tokenator-cose` puts its COSE_Sign1 handling behind a `Sign1Backend` trait
-(`parse`, `sig_structure`, `build`). The span-preserving implementation built on
+(`parse`, `sig_structure`, `assemble`, plus default `sign`/`verify`). The span-preserving implementation built on
 `tokenator-cbor` is the default. Because of this seam, a `coset`/`esdicawt`
 backend could be swapped in for signing and validation without touching the
 display model. Displays always come from `tokenator-cbor`.

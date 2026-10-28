@@ -19,7 +19,7 @@ Phase 2
 
 Phase 3
 - [x] `tokenator-jose`: JWS, JWT, SD-JWT, KB-JWT
-- [ ] `tokenator-cose`: COSE_Sign1, CWT, SD-CWT, SD-KBT
+- [x] `tokenator-cose`: COSE_Sign1, CWT, SD-CWT, SD-KBT
 
 Phase 4
 - [ ] `tokenator-core`: Engine facade, document model, actions, lint, datetime
