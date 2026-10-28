@@ -946,6 +946,12 @@ dependencies = [
 [[package]]
 name = "tokenator-detect"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+ "tokenator-cbor",
+ "tokenator-json",
+ "tokenator-registry",
+]
 
 [[package]]
 name = "tokenator-edn"

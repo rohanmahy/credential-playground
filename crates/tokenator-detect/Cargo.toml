@@ -8,6 +8,12 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
+tokenator-cbor = { path = "../tokenator-cbor" }
+tokenator-json = { path = "../tokenator-json" }
+tokenator-registry = { path = "../tokenator-registry" }
 
 [lints]
 workspace = true
+
+[dev-dependencies]
+proptest = "1"

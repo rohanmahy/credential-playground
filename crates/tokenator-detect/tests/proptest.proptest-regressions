@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc b0ea566f8b7fe746f79218dc36eeead53ddeba31c1e3169e3f43f6a285c82e10 # shrinks to layers = [Hex { upper: false, separator: Some(' '), wrap: Some(1) }]
