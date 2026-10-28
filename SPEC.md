@@ -75,6 +75,11 @@ and lets the user pick another through a "Detected as…" menu.
   clipboard, URL, pasted, generated, or *derived from tab N via action X*.
   Derived tabs show a breadcrumb back to their parent.
 - **Light/dark theme,** following the OS by default.
+- **Map order:** maps and objects are always displayed in the order their items
+  arrived in the input, never re-sorted, in both the main and raw panes. Sorting
+  is a future option (#1).
+- **Tool chits:** small floating utilities you can open from the toolbar or from
+  a node's context menu (§4.3).
 
 ### 4.1 Credential tab
 
@@ -117,6 +122,8 @@ Operations:
   PKCS#1, and the LAMPS ML-DSA forms with seed, expanded, or both), JWK, JWK
   Set, COSE_Key, and COSE_KeySet (binary CBOR or EDN). A set imports as several
   keys.
+- **Convert:** view any key as a JWK or as a CWK (COSE_Key, shown in EDN and
+  hex), public or private, side by side.
 - **Export** to file or clipboard in any of those formats, public or private.
   Exporting a private key needs an explicit choice, and its clipboard copy is
   labeled.
@@ -127,6 +134,22 @@ Operations:
 - **Fetch from URL:** an explicit, user-confirmed fetch of a JWK Set, COSE_KeySet,
   or `/.well-known/jwt-vc-issuer` metadata. On the web, a CORS failure shows a
   clear explanation and offers to paste the content instead or use the desktop app.
+
+### 4.3 Date/time chit
+
+A small converter between time representations. All fields stay in sync, and
+editing any one of them updates the rest:
+
+- NumericDate / epoch seconds (integer or fractional), plus milliseconds.
+- RFC 3339 in UTC and in the local time zone, with the relative offset from
+  the clock ("in 3 h 12 m", "expired 2 d ago").
+- CBOR: tag 1 (epoch, int or float), tag 0 (RFC 3339 text), tag 100 and
+  tag 1004 (date only, RFC 8943). Shown as EDN (including `dt''`) and as hex.
+
+Opening the chit from a time-valued node (`exp`, `nbf`, `iat`, a tag 0/1 item,
+or a `dt''`) pre-fills it. In Live edit, **Insert** writes the chosen form back
+into that node. A "Use as clock" button sets the validation clock override (§6).
+Time claims in the tree also show an inline human-readable date.
 
 ## 5. Actions
 
@@ -182,10 +205,22 @@ links to the tree nodes it concerns.
   inside disclosures.
 - Key binding: KB signature against the `cnf` key, `sd_hash` (or the SD-CWT
   equivalent), `aud`, `nonce`, and `iat` freshness.
-- Conformance lint (warnings only): missing or unexpected `typ`, alg/key
-  mismatch, non-deterministic CBOR in places that must be deterministic,
-  duplicate map keys, a critical header that isn't understood, `alg: none`,
-  and a weak RSA key size.
+- Conformance lint (warnings and info only):
+  - **Non-preferred CBOR encodings anywhere** (RFC 8949 §4.1): a longer-than-needed
+    argument, a float that could be shorter without losing its value,
+    indefinite-length items. Each finding is located on the exact hex row and
+    shows the preferred bytes. These are reported as *info*, and raised to
+    *warn* where the spec requires deterministic encoding (e.g. inputs to
+    digests or the COSE Sig_structure).
+  - Map keys that aren't in deterministic order, where that order is required.
+  - Duplicate map keys / JSON object members.
+  - **Alg/key consistency,** using the requirements table from
+    `tokenator-crypto`: key type (`kty`), curve (`crv`), RSA minimum size,
+    ML-DSA parameter set, and an `alg` field inside the JWK/COSE_Key that
+    doesn't agree with the header `alg`. This applies both to signing keys and
+    to `cnf` keys.
+  - Missing or unexpected `typ`, a critical header that isn't understood,
+    and `alg: none`.
 
 ## 7. Claims and headers registry
 
@@ -224,7 +259,7 @@ A parser and printer for draft-ietf-cbor-edn:
 
 - **Web:** a static build on GitHub Pages.
 - **macOS:** a `.app` bundle attached to GitHub releases, unsigned for now.
-  *Follow-up issue:* produce an unsigned DMG. Signing and notarization come later.
+  *Follow-up (#2):* produce an unsigned DMG. Signing and notarization come later.
 
 ## 11. Testing
 
@@ -243,4 +278,5 @@ A parser and printer for draft-ietf-cbor-edn:
 CDDL / JSON Schema validation and variant identification (WIMSE, SCITT); a CLI
 (the core is built to support one); plugin formats (WebAuthn, Privacy Pass,
 EUDI wallet, mdoc, W3C VC/VP); encryption (JWE / COSE_Encrypt); X.509 chain
-validation; Linux and Windows desktop builds; signed DMG.
+validation; Linux and Windows desktop builds; signed DMG; an option to
+display maps/objects sorted (deterministic CBOR order, or alphabetical for JSON).

@@ -80,9 +80,16 @@ pub enum Value<'a> { Uint(u64), Nint(u64), Bytes(Cow<'a,[u8]>), Text(Cow<'a,str>
                      Array(Vec<Item<'a>>), Map(Vec<(Item<'a>, Item<'a>)>),
                      Tag(u64, Box<Item<'a>>), Simple(u8), Float(f64, FloatWidth), ... }
 ```
-Maps are kept as ordered vectors, so duplicate keys are preserved and linted
-rather than rejected. Unknown simple values and tags are kept as-is, which
-covers SD-CWT's custom simple value.
+Maps are kept as ordered vectors **in arrival order**, so duplicate keys are
+preserved and linted rather than rejected. `EncodeMode::Preserve` and the EDN
+printer emit map entries in that order. Only `Deterministic` re-sorts.
+Unknown simple values and tags are kept as-is, which covers SD-CWT's custom
+simple value.
+
+```rust
+pub fn preferred_findings(item: &Item) -> Vec<EncodingFinding>; // non-preferred args/floats/indefinite, with span + preferred bytes
+pub fn deterministic_findings(item: &Item) -> Vec<EncodingFinding>; // adds map key order
+```
 
 ### tokenator-edn
 `parse(&str) -> Result<Item<'static>, EdnError>` and
@@ -92,8 +99,8 @@ covers SD-CWT's custom simple value.
 Application-extensions are a trait with built-ins for h, b64, dt, ip, and hash.
 
 ### tokenator-json
-A small JSON parser that keeps key order, duplicate keys, number lexemes, and
-the byte range of every node. It's needed because the JOSE raw pane and the
+A small JSON parser that keeps member order as it arrived, duplicate keys,
+number lexemes, and the byte range of every node. The printer never sorts. It's needed because the JOSE raw pane and the
 tree must point into the exact decoded JSON bytes, which serde_json's `Value`
 can't do. Printing reuses the original bytes when a node is unedited.
 
@@ -104,7 +111,21 @@ pub enum Alg { ES256, ES384, ES512, EdDSA, Ed25519, RS256, RS384, RS512,
 pub fn sign(alg: Alg, key: &PrivateKey, msg: &[u8], rng: &mut dyn CryptoRngCore) -> Result<Vec<u8>, CryptoError>;
 pub fn verify(alg: Alg, key: &PublicKey, msg: &[u8], sig: &[u8]) -> Result<(), CryptoError>;
 pub fn digest(h: HashAlg, data: &[u8]) -> Vec<u8>;
+
+// Key requirements, consumed by the linter and by keys/validation
+pub struct KeyRequirements { jwk_kty: &'static str, cose_kty: i64,
+                             crv: Option<Curve>,           // JWK name + COSE label
+                             akp_param_set: Option<MlDsaParams>,
+                             min_rsa_bits: Option<u32> }
+pub fn requirements(alg: Alg) -> KeyRequirements;
+pub fn algs_for_key(params: &KeyParams) -> Vec<Alg>;      // which algs this key may use
+pub fn check_key(alg: Alg, params: &KeyParams) -> Vec<KeyMismatch>; // kty/crv/size/alg-field mismatches
+pub fn alg_from_jose(name: &str) -> Option<Alg>;  pub fn alg_from_cose(label: i64) -> Option<Alg>;
 ```
+`KeyParams` is a format-neutral description of a key (kty, crv, RSA bits,
+ML-DSA set, and an optional declared `alg`). `tokenator-keys` produces one from
+a JWK or CWK without needing key material. That's how the linter checks `cnf`
+keys and key cards.
 Backends: `p256`/`p384`/`p521`/`ecdsa`, `ed25519-dalek`, `rsa`, `ml-dsa`, and
 `sha2`, all pure Rust. These are the only crates that touch key material.
 
@@ -115,6 +136,10 @@ separate from the formats.
 pub fn import(input: &[u8], hint: Option<KeyFormat>) -> Result<Vec<Key>, KeyError>; // sets → many
 pub fn export(key: &Key, fmt: KeyFormat, visibility: Visibility) -> Result<Vec<u8>, KeyError>;
 pub fn to_public(key: &Key) -> Key;
+pub fn to_jwk(key: &Key, visibility: Visibility) -> Result<Jwk, KeyError>;   // structured; serialize separately
+pub fn to_cwk(key: &Key, visibility: Visibility) -> Result<CoseKey, KeyError>; // COSE_Key as cbor Item
+pub fn from_jwk(jwk: &Jwk) -> Result<Key, KeyError>;  pub fn from_cwk(cwk: &CoseKey) -> Result<Key, KeyError>;
+pub fn params(key: &Key) -> KeyParams;               // for tokenator-crypto::check_key
 pub fn generate(spec: KeySpec, seed: Option<&[u8]>) -> Result<Key, KeyError>;
 pub fn thumbprint(key: &Key, kind: ThumbprintKind, h: HashAlg) -> Vec<u8>;    // Jwk | Cose
 ```
@@ -166,6 +191,10 @@ fn tamper(doc: Bytes, kind: Kind, op: TamperOp) -> Document;
 fn reencode(doc: Bytes, layers: Vec<Layer>) -> Bytes;
 fn edit_disclosures(doc: Bytes, kind: Kind, ops: Vec<DisclosureOp>) -> Document;
 fn key_import / key_export / key_public / key_generate / key_thumbprint (...);
+fn key_to_jwk(key: KeyBytes, vis: Visibility) -> String;          // JSON text
+fn key_to_cwk(key: KeyBytes, vis: Visibility) -> Document;        // EDN + hex views
+fn datetime(input: DateTimeInput) -> DateTimeForms;  // epoch/RFC3339/tag 0,1,100,1004 ↔ all forms (EDN + hex)
+fn lint(doc: Bytes, kind: Kind) -> Vec<Finding>;     // also folded into validate()
 fn registry_lookup(q: RegistryQuery) -> Vec<RegistryEntry>;
 fn registry_merge(xml: Bytes, which: RegistryId) -> RegistryStats;
 ```
@@ -223,6 +252,10 @@ collapse state survive re-renders.
   verbatim, so a "harmless" edit to one claim does not reformat the others.
   Re-signing still produces new signature bytes (ECDSA and ML-DSA are
   randomized unless seeded).
+- **Arrival order is semantic for display, not for crypto.** Maps and objects
+  render in input order. Deterministic order is computed only when the linter
+  checks it or an encoder is explicitly asked for it. Sorting in the display is
+  a tracked issue, and has to be a view option that never touches the bytes.
 - **Registry cache is the single persisted artifact.** A stale or poisoned
   cache affects only annotations, never validation results.
 - **Native vs WASM parity is a test obligation, not a guarantee.** Any
