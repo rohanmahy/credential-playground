@@ -13,7 +13,10 @@
 use std::panic::catch_unwind;
 use std::path::PathBuf;
 
-use tokenator_json::{ErrorKind, PrintStyle, parse, print};
+use tokenator_json::{
+    ErrorKind, ParseOptions, PrintOptions, PrintStyle, Value, WarningKind, parse,
+    parse_with_options, print, print_bytes,
+};
 
 fn suite_dir() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../testdata/JSONTestSuite/test_parsing")
@@ -49,12 +52,31 @@ fn trim_ws(b: &[u8]) -> &[u8] {
 }
 
 /// Expected outcome for implementation-defined cases.
-/// `Ok(())` = accept, `Err(kind)` = reject with that kind.
-fn i_expectation(name: &str) -> Result<(), ErrorKind> {
-    use ErrorKind::*;
+#[derive(Debug, PartialEq)]
+enum Expect {
+    /// Accepted with exactly these warnings (offset, kind), in order.
+    Accept(Vec<(usize, WarningKind)>),
+    /// Rejected with this error kind.
+    Reject(ErrorKind),
+}
+
+fn i_expectation(name: &str) -> Expect {
+    use Expect::*;
+    use WarningKind::*;
+    let utf8 = |offs: &[usize]| Accept(offs.iter().map(|&o| (o, InvalidUtf8)).collect());
     match name {
-        // Numbers: lexemes are kept verbatim and never range-checked.
-        n if n.starts_with("i_number_") => Ok(()),
+        // Numbers: lexemes kept verbatim; JavaScript-range warnings (#3).
+        "i_number_double_huge_neg_exp.json" | "i_number_real_underflow.json" => {
+            Accept(vec![(1, NumberUnderflow)])
+        }
+        "i_number_huge_exp.json"
+        | "i_number_neg_int_huge_exp.json"
+        | "i_number_pos_double_huge_exp.json"
+        | "i_number_real_neg_overflow.json"
+        | "i_number_real_pos_overflow.json" => Accept(vec![(1, NumberOverflow)]),
+        "i_number_too_big_neg_int.json"
+        | "i_number_too_big_pos_int.json"
+        | "i_number_very_big_negative_int.json" => Accept(vec![(1, UnsafeInteger)]),
         // Lone, truncated, or inverted surrogate escapes.
         "i_object_key_lone_2nd_surrogate.json"
         | "i_string_1st_surrogate_but_2nd_missing.json"
@@ -65,24 +87,55 @@ fn i_expectation(name: &str) -> Result<(), ErrorKind> {
         | "i_string_invalid_lonely_surrogate.json"
         | "i_string_invalid_surrogate.json"
         | "i_string_inverted_surrogates_U+1D11E.json"
-        | "i_string_lone_second_surrogate.json" => Err(LoneSurrogate),
-        // Raw bytes that are not UTF-8 (including UTF-16 input and encoded surrogates).
-        "i_string_UTF-16LE_with_BOM.json"
-        | "i_string_UTF-8_invalid_sequence.json"
-        | "i_string_UTF8_surrogate_U+D800.json"
-        | "i_string_invalid_utf-8.json"
+        | "i_string_lone_second_surrogate.json" => Reject(ErrorKind::LoneSurrogate),
+        // Invalid UTF-8 inside a string: accepted, one warning per U+FFFD
+        // (same replacement policy as String::from_utf8_lossy).
+        "i_string_UTF-8_invalid_sequence.json" => utf8(&[7]),
+        "i_string_UTF8_surrogate_U+D800.json" => utf8(&[2, 3, 4]),
+        "i_string_invalid_utf-8.json"
         | "i_string_iso_latin_1.json"
-        | "i_string_lone_utf8_continuation_byte.json"
-        | "i_string_not_in_unicode_range.json"
-        | "i_string_overlong_sequence_2_bytes.json"
-        | "i_string_overlong_sequence_6_bytes.json"
-        | "i_string_overlong_sequence_6_bytes_null.json"
-        | "i_string_truncated-utf-8.json"
-        | "i_string_utf16BE_no_BOM.json"
-        | "i_string_utf16LE_no_BOM.json" => Err(InvalidUtf8),
-        "i_structure_500_nested_arrays.json" => Err(DepthLimitExceeded),
-        "i_structure_UTF-8_BOM_empty_object.json" => Err(ByteOrderMark),
+        | "i_string_lone_utf8_continuation_byte.json" => utf8(&[2]),
+        "i_string_not_in_unicode_range.json" => utf8(&[2, 3, 4, 5]),
+        "i_string_overlong_sequence_2_bytes.json" | "i_string_truncated-utf-8.json" => {
+            utf8(&[2, 3])
+        }
+        "i_string_overlong_sequence_6_bytes.json"
+        | "i_string_overlong_sequence_6_bytes_null.json" => utf8(&[2, 3, 4, 5, 6, 7]),
+        // UTF-16 input: fails at the first NUL or non-UTF-8 byte outside a string.
+        "i_string_UTF-16LE_with_BOM.json" | "i_string_utf16BE_no_BOM.json" => {
+            Reject(ErrorKind::UnexpectedCharacter)
+        }
+        "i_string_utf16LE_no_BOM.json" => Reject(ErrorKind::UnexpectedCharacter),
+        "i_structure_500_nested_arrays.json" => Reject(ErrorKind::DepthLimitExceeded),
+        "i_structure_UTF-8_BOM_empty_object.json" => Reject(ErrorKind::ByteOrderMark),
         other => panic!("no decision recorded for {other}; add it here and to TEST-PLAN.md"),
+    }
+}
+
+/// Run the i_ file and describe the outcome in the same shape as [`Expect`].
+fn i_outcome(bytes: &[u8]) -> Result<Expect, String> {
+    match parse_with_options(bytes, &ParseOptions::default()) {
+        Err(e) => Ok(Expect::Reject(e.kind)),
+        Ok(parsed) => {
+            let node = &parsed.node;
+            let core = trim_ws(bytes);
+            if node.raw_bytes() != Some(core) {
+                return Err("raw_bytes() != trimmed input".into());
+            }
+            let exact = print_bytes(node, &PrintOptions::default());
+            if exact != core {
+                return Err("print_bytes(Original) != trimmed input".into());
+            }
+            // Strings decode lossily; the raw text stays exact.
+            if let Some(Value::String(s)) = node.index(0).map(|n| n.value()) {
+                let inner = &core[2..core.len() - 2];
+                if s.as_ref() != String::from_utf8_lossy(inner) {
+                    return Err(format!("decoded {s:?} != lossy decoding"));
+                }
+            }
+            let w = parsed.warnings.iter().map(|w| (w.offset, w.kind)).collect();
+            Ok(Expect::Accept(w))
+        }
     }
 }
 
@@ -91,7 +144,12 @@ fn y_files_parse_and_round_trip() {
     let mut failures = Vec::new();
     for (name, bytes) in files("y_") {
         let r = catch_unwind(|| {
-            let node = parse(&bytes).map_err(|e| format!("rejected: {e}"))?;
+            let parsed = parse_with_options(&bytes, &ParseOptions::default())
+                .map_err(|e| format!("rejected: {e}"))?;
+            if !parsed.warnings.is_empty() {
+                return Err(format!("unexpected warnings {:?}", parsed.warnings));
+            }
+            let node = parsed.node;
             let core = trim_ws(&bytes);
             let span = node.span().ok_or("root has no span")?;
             if &bytes[span.start..span.end] != core {
@@ -149,9 +207,10 @@ fn i_files_match_documented_choice() {
     let mut failures = Vec::new();
     for (name, bytes) in files("i_") {
         let want = i_expectation(&name);
-        match catch_unwind(|| parse(&bytes).map(|_| ()).map_err(|e| e.kind)) {
-            Ok(got) if got == want => {}
-            Ok(got) => failures.push(format!("{name}: want {want:?}, got {got:?}")),
+        match catch_unwind(|| i_outcome(&bytes)) {
+            Ok(Ok(got)) if got == want => {}
+            Ok(Ok(got)) => failures.push(format!("{name}: want {want:?}, got {got:?}")),
+            Ok(Err(msg)) => failures.push(format!("{name}: {msg}")),
             Err(_) => failures.push(format!("{name}: PANIC")),
         }
     }

@@ -114,8 +114,10 @@ pub enum ErrorKind {
     ControlCharacterInString,
     /// `\uD800`-`\uDFFF` escape not part of a valid pair. Offset is the `\`.
     LoneSurrogate,
-    /// Input is not valid UTF-8. Offset is the first invalid byte. The whole
-    /// input is checked (after the BOM check) before any grammar error.
+    /// Formerly: input is not valid UTF-8. Since issue #3 invalid UTF-8
+    /// inside strings is a [`WarningKind::InvalidUtf8`], and outside strings
+    /// it is an [`ErrorKind::UnexpectedCharacter`].
+    // TODO(impl): remove once parse.rs no longer produces it.
     InvalidUtf8,
     /// Nesting exceeds [`ParseOptions::max_depth`]. Offset is the `[` or `{`.
     DepthLimitExceeded,
@@ -139,6 +141,44 @@ impl fmt::Display for JsonError {
 }
 
 impl std::error::Error for JsonError {}
+
+/// Something suspicious that did not stop the parse.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[non_exhaustive]
+pub enum WarningKind {
+    /// Invalid UTF-8 inside a string or key. The decoded value has U+FFFD in
+    /// its place, exactly as [`String::from_utf8_lossy`] would produce. One
+    /// warning per U+FFFD. Offset is the first byte of the invalid sequence.
+    InvalidUtf8,
+    /// Integer lexeme (no fraction, no exponent) with magnitude above
+    /// 2^53 - 1 (`Number.MAX_SAFE_INTEGER`), so JavaScript loses precision.
+    /// Offset is the start of the number.
+    UnsafeInteger,
+    /// The number's magnitude rounds to infinity as an `f64`. Takes
+    /// precedence over `UnsafeInteger`. Offset is the start of the number.
+    NumberOverflow,
+    /// A lexeme with a non-zero digit rounds to zero as an `f64`. Offset is
+    /// the start of the number.
+    NumberUnderflow,
+}
+
+/// A parse warning with the byte offset it refers to.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub struct Warning {
+    /// Byte offset into the input.
+    pub offset: usize,
+    /// Kind of warning.
+    pub kind: WarningKind,
+}
+
+/// Result of [`parse_with_options`]: the tree plus warnings in offset order.
+#[derive(Debug, Clone)]
+pub struct Parsed<'a> {
+    /// Root node.
+    pub node: Node<'a>,
+    /// Warnings, sorted by offset.
+    pub warnings: Vec<Warning>,
+}
 
 /// A JSON value. Containers hold child [`Node`]s.
 #[derive(Debug, Clone)]
@@ -183,9 +223,18 @@ impl<'a> Node<'a> {
         self.span
     }
 
-    /// The original source text of this node. `None` for synthesized nodes.
+    /// The original source text of this node. `None` for synthesized nodes,
+    /// and also `None` when the source bytes are not valid UTF-8 (see
+    /// [`Node::raw_bytes`]).
     pub fn raw(&self) -> Option<&'a str> {
         self.raw
+    }
+
+    /// The exact original source bytes of this node, even when they are not
+    /// valid UTF-8. `None` for synthesized nodes.
+    pub fn raw_bytes(&self) -> Option<&'a [u8]> {
+        // TODO(impl): store bytes so this works for invalid UTF-8 input.
+        self.raw.map(str::as_bytes)
     }
 
     /// The value.
@@ -346,9 +395,16 @@ impl<'a> Member<'a> {
         self.key_span
     }
 
-    /// Original key text including quotes. `None` if synthesized.
+    /// Original key text including quotes. `None` if synthesized or if the
+    /// source bytes are not valid UTF-8 (see [`Member::key_raw_bytes`]).
     pub fn key_raw(&self) -> Option<&'a str> {
         self.key_raw
+    }
+
+    /// Exact original key bytes including quotes. `None` if synthesized.
+    pub fn key_raw_bytes(&self) -> Option<&'a [u8]> {
+        // TODO(impl): store bytes so this works for invalid UTF-8 input.
+        self.key_raw.map(str::as_bytes)
     }
 
     /// Replace the key. Marks the key as edited.
@@ -374,22 +430,50 @@ impl<'a> Member<'a> {
 }
 
 /// Output layout for [`print()`].
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub enum PrintStyle {
     /// Copy original bytes (including inner whitespace) for every unedited
-    /// region. Only edited parts are newly emitted, and synthesized
-    /// subtrees are emitted as [`PrintStyle::Compact`].
+    /// region. Only edited parts are newly emitted, laid out according to
+    /// [`PrintOptions::inserted`].
+    #[default]
     Original,
     /// No insignificant whitespace.
     Compact,
-    /// Two-space indent, `": "` separator, `{}`/`[]` when empty.
+    /// Two-space indent, `": "` separator, `{}`/`[]` when empty. String and
+    /// key escapes are normalized: U+0020..=U+007E print literally except
+    /// `\"` and `\\`, controls use `\b\f\n\r\t` or lowercase `\u00xx`, and
+    /// characters above U+007E keep their original (escaped or literal) form.
     Pretty,
+}
+
+/// Layout of synthesized or inserted content under [`PrintStyle::Original`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InsertedLayout {
+    /// Synthesized subtrees have no insignificant whitespace; separators
+    /// around inserted children are borrowed from neighbouring gaps.
+    #[default]
+    Compact,
+    /// Canonical spacing (`", "`, `": "`) and indentation that follows the
+    /// enclosing container (falling back to two spaces).
+    Canonical,
+}
+
+/// Options for [`print_with`] and [`print_bytes`].
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub struct PrintOptions {
+    /// Overall style.
+    pub style: PrintStyle,
+    /// Layout of new content; only used with [`PrintStyle::Original`].
+    pub inserted: InsertedLayout,
 }
 
 /// Parse a single JSON text (RFC 8259) with [`ParseOptions::default`].
 ///
-/// The input must be valid UTF-8 without a BOM. Leading and trailing
-/// whitespace is allowed but falls outside the root node's span.
+/// A leading BOM is rejected. Invalid UTF-8 inside strings is accepted
+/// (see [`WarningKind::InvalidUtf8`]); anywhere else it is an
+/// [`ErrorKind::UnexpectedCharacter`], which is also how UTF-16 input fails.
+/// Warnings are discarded; use [`parse_with_options`] to see them. Leading
+/// and trailing whitespace is allowed but falls outside the root node's span.
 ///
 /// ```
 /// let root = tokenator_json::parse(b" [1, \"two\"] ")?;
@@ -398,15 +482,19 @@ pub enum PrintStyle {
 /// # Ok::<(), tokenator_json::JsonError>(())
 /// ```
 pub fn parse(input: &[u8]) -> Result<Node<'_>, JsonError> {
-    parse_with_options(input, &ParseOptions::default())
+    parse_with_options(input, &ParseOptions::default()).map(|p| p.node)
 }
 
-/// Parse with explicit options.
+/// Parse with explicit options, also returning [`Warning`]s.
 pub fn parse_with_options<'a>(
     input: &'a [u8],
     options: &ParseOptions,
-) -> Result<Node<'a>, JsonError> {
-    parse::parse(input, options)
+) -> Result<Parsed<'a>, JsonError> {
+    // TODO(impl): collect warnings (issue #3).
+    parse::parse(input, options).map(|node| Parsed {
+        node,
+        warnings: Vec::new(),
+    })
 }
 
 /// Serialize `node`. Member order is never changed.
@@ -415,6 +503,24 @@ pub fn parse_with_options<'a>(
 /// New strings use minimal escaping.
 pub fn print(node: &Node<'_>, style: PrintStyle) -> String {
     print::print(node, style)
+}
+
+/// Serialize with explicit [`PrintOptions`]. Source bytes that are not
+/// valid UTF-8 come out as U+FFFD; use [`print_bytes`] for exact output.
+pub fn print_with(node: &Node<'_>, options: &PrintOptions) -> String {
+    match options.inserted {
+        InsertedLayout::Compact => print::print(node, options.style),
+        // TODO(impl): issue #4.3/#4.4.
+        #[allow(clippy::unimplemented)]
+        InsertedLayout::Canonical => unimplemented!(),
+    }
+}
+
+/// Like [`print_with`], but copies original bytes exactly, even when they
+/// are not valid UTF-8.
+pub fn print_bytes(node: &Node<'_>, options: &PrintOptions) -> Vec<u8> {
+    // TODO(impl): exact bytes for invalid UTF-8 sources.
+    print_with(node, options).into_bytes()
 }
 
 /// Split an RFC 6901 pointer into unescaped reference tokens. `None` if it
