@@ -98,10 +98,18 @@ and lets the user pick another through a "Detected as…" menu.
 - **Tree sync:** expanding or collapsing a node in either pane does the same in
   the other. Selecting a node highlights its counterpart. Collapse state
   survives re-renders and edits, because node IDs are path-based.
-- **Recursive decoding:** byte strings that parse as CBOR, base64 JSON, embedded
-  tokens, and X.509 certificates (`x5c`, `x5chain`) appear as an expandable
-  *decoded view* child. A decoded view can be toggled off per node or globally.
-  The hex alignment always stays on the original bytes.
+- **Embedded decoding at known locations only:** byte strings are decoded
+  automatically only where the format defines their content. Examples are the
+  COSE protected header and payload, SD-CWT disclosures, the `kcwt` inner
+  token, `cnf` keys, X.509 certificates (`x5c`, `x5chain`), and JOSE base64url
+  segments. In future, structures learned from CDDL will count too. The decoded
+  content appears as an expandable *decoded view* child. There is no automatic
+  guessing anywhere else (#15).
+- **Manual decode:** the user can select any other byte string and choose
+  *Decode as CBOR*. It decodes and warns if the bytes are not exactly one data
+  item (trailing or missing bytes).
+- A decoded view can be toggled off per node or globally. The hex alignment
+  always stays on the original bytes.
 - **SD views:** disclosures are listed with their digest, salt, claim name or
   array position, and value. Each one shows whether it matched a digest in the
   payload, and the matching redacted slot is linked in the tree. Decoys are
