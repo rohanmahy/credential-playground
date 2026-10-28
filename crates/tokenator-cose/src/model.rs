@@ -1,11 +1,27 @@
 //! The parsed COSE_Sign1 model.
-#![allow(clippy::unimplemented)]
-
 use std::borrow::Cow;
 
-use tokenator_cbor::{DecodeError, Item, Span};
+use tokenator_cbor::{DecodeError, Item, Span, Value, Width};
 use tokenator_crypto::DeclaredAlg;
 use tokenator_keys::Label;
+
+use crate::codepoints::{
+    HDR_ALG, HDR_CONTENT_TYPE, HDR_CRIT, HDR_KCWT, HDR_KID, HDR_SD_ALG, HDR_SD_CLAIMS, HDR_TYP,
+    MEDIA_SD_CWT, SIMPLE_REDACTED_KEYS, TAG_REDACTED_ELEMENT, TYP_SD_CWT,
+};
+use crate::util::{bytes_of, declared_alg, entries, label_of, map_get, walk};
+
+/// The decoded form of a zero-length protected header.
+static EMPTY_MAP: Item<'static> = Item {
+    value: Value::Map(Vec::new()),
+    span: Span {
+        start: 0,
+        end: 0,
+        head_len: 0,
+    },
+    width: Width::Immediate,
+    chunks: Vec::new(),
+};
 
 /// Which part of a token something refers to.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -87,7 +103,7 @@ impl Bstr<'_> {
     /// Offset of the first content byte in the bytes the bstr was parsed
     /// from (`span.start + span.head_len`).
     pub fn content_offset(&self) -> usize {
-        unimplemented!()
+        self.span.start + self.span.head_len
     }
 }
 
@@ -176,52 +192,127 @@ impl<'a> Sign1<'a> {
     /// The decoded protected header map. A zero-length protected header is
     /// an empty map; a header that is not a map is `None`.
     pub fn protected_header(&self) -> Option<&Item<'a>> {
-        unimplemented!()
+        match &self.protected.as_ref()?.decoded {
+            None => Some(&EMPTY_MAP),
+            Some(Ok(item)) if matches!(item.value, Value::Map(_)) => Some(item),
+            Some(_) => None,
+        }
     }
 
     /// The value of header parameter `label`, protected bucket first.
     pub fn header(&self, label: i64) -> Option<(Bucket, &Item<'a>)> {
-        let _ = label;
-        unimplemented!()
+        if let Some(v) = self.protected_header().and_then(|m| map_get(m, label)) {
+            return Some((Bucket::Protected, v));
+        }
+        let v = map_get(self.unprotected.as_ref()?, label)?;
+        Some((Bucket::Unprotected, v))
     }
 
     /// The `alg` header parameter (protected first, then unprotected).
     pub fn alg(&self) -> Option<DeclaredAlg> {
-        unimplemented!()
+        declared_alg(self.header(HDR_ALG)?.1)
     }
 
     /// The `kid` header parameter bytes (protected first, then unprotected).
     pub fn kid(&self) -> Option<&[u8]> {
-        unimplemented!()
+        bytes_of(self.header(HDR_KID)?.1)
     }
 
     /// The `typ` header parameter.
     pub fn typ(&self) -> Option<ContentType> {
-        unimplemented!()
+        content_type_of(self.header(HDR_TYP)?.1)
     }
 
     /// The `content type` header parameter.
     pub fn content_type(&self) -> Option<ContentType> {
-        unimplemented!()
+        content_type_of(self.header(HDR_CONTENT_TYPE)?.1)
     }
 
     /// The labels listed in `crit`, if present and an array.
     pub fn crit(&self) -> Option<Vec<Label>> {
-        unimplemented!()
+        match &self.header(HDR_CRIT)?.1.value {
+            Value::Array(a) => Some(a.iter().filter_map(label_of).collect()),
+            _ => None,
+        }
     }
 
     /// The attached payload bytes (`None` when detached or malformed).
     pub fn payload_bytes(&self) -> Option<&[u8]> {
-        unimplemented!()
+        match &self.payload {
+            Payload::Attached(b) => Some(&b.raw),
+            _ => None,
+        }
     }
 
     /// The decoded payload, when attached and well-formed CBOR.
     pub fn payload_item(&self) -> Option<&Item<'a>> {
-        unimplemented!()
+        match &self.payload {
+            Payload::Attached(Bstr {
+                decoded: Some(Ok(item)),
+                ..
+            }) => Some(item),
+            _ => None,
+        }
     }
 
     /// What this token is (see [`TokenKind`]).
     pub fn kind(&self) -> TokenKind {
-        unimplemented!()
+        if self
+            .protected_header()
+            .and_then(|m| map_get(m, HDR_KCWT))
+            .is_some()
+        {
+            return TokenKind::SdKbt;
+        }
+        let sd_typ = matches!(self.typ(), Some(ContentType::Uint(TYP_SD_CWT)))
+            || matches!(self.typ(), Some(ContentType::Text(t)) if t == MEDIA_SD_CWT);
+        if self.header(HDR_SD_CLAIMS).is_some() || self.header(HDR_SD_ALG).is_some() || sd_typ {
+            return TokenKind::SdCwt;
+        }
+        match self.payload_item() {
+            Some(claims) if entries(claims).is_some() => {
+                if has_sd_markers(claims) {
+                    TokenKind::SdCwt
+                } else {
+                    TokenKind::Cwt
+                }
+            }
+            _ => TokenKind::Sign1,
+        }
+    }
+}
+
+/// A `typ` / `content type` value.
+pub(crate) fn content_type_of(item: &Item<'_>) -> Option<ContentType> {
+    match &item.value {
+        Value::Uint(n) => Some(ContentType::Uint(*n)),
+        Value::Text(t) => Some(ContentType::Text(t.to_string())),
+        _ => None,
+    }
+}
+
+/// Redacted claim keys (`simple(59)` map keys) or redacted elements
+/// (`60(bstr)`) anywhere in `claims`.
+fn has_sd_markers(claims: &Item<'_>) -> bool {
+    let mut found = false;
+    walk(claims, |item| match &item.value {
+        Value::Map(m) => {
+            found |= m
+                .iter()
+                .any(|(k, _)| k.value == Value::Simple(SIMPLE_REDACTED_KEYS));
+        }
+        Value::Tag(TAG_REDACTED_ELEMENT, inner) => {
+            found |= matches!(inner.value, Value::Bytes(_));
+        }
+        _ => {}
+    });
+    found
+}
+
+/// A `typ` / `content type` value as an item.
+pub(crate) fn content_type_item(t: &ContentType) -> Item<'static> {
+    match t {
+        ContentType::Uint(n) => Item::new(Value::Uint(*n)),
+        ContentType::Text(s) => Item::text(s.clone()),
     }
 }

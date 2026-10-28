@@ -149,7 +149,8 @@ fn undisclosed_digests_in_document_order() {
         ),
         redacted_keys(&[vec![3; 32]]),
     ]);
-    let tok = simple_token(&payload, &[]);
+    // No sd_claims at all: an empty sd_claims array is invalid (§9 step 2).
+    let tok = token_with(&sd_protected(), &payload, None);
     let r = report(&tok);
     let got: Vec<_> = r
         .undisclosed

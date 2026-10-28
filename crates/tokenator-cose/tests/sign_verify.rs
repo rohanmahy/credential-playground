@@ -70,9 +70,9 @@ fn sig_structure_layout() {
 fn sig_structure_uses_preferred_heads() {
     let payload = vec![0u8; 300];
     let tbs = B.sig_structure(b"", b"", &payload);
-    assert_eq!(&tbs[..15], h("84 6a 5369676e617475726531 40 40"));
-    assert_eq!(&tbs[15..18], h("59012c"));
-    assert_eq!(tbs.len(), 18 + 300);
+    assert_eq!(&tbs[..14], h("84 6a 5369676e617475726531 40 40"));
+    assert_eq!(&tbs[14..17], h("59012c"));
+    assert_eq!(tbs.len(), 17 + 300);
 }
 
 #[test]

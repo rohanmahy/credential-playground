@@ -27,6 +27,7 @@ pub mod kbt;
 pub mod lint;
 mod model;
 pub mod sd;
+mod util;
 
 pub use backend::{CborBackend, Sign1Backend, Sign1Parts, SignOptions, VerifyOptions};
 pub use error::{CoseError, RedactionError};

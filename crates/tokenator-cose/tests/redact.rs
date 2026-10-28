@@ -642,7 +642,9 @@ fn issue_external_aad() {
 
 #[test]
 fn issue_errors_and_warnings() {
-    let claims = claims_of(vec![(tbr(int(8)), int(1))]);
+    // cti (7): the standard claims already hold cnf (8), and k with 58(k)
+    // is a duplicate key.
+    let claims = claims_of(vec![(tbr(int(7)), bs(b"cti"))]);
     let key = key_for(Alg::ES256, 1);
     let out = issue(
         &B,
@@ -653,7 +655,7 @@ fn issue_errors_and_warnings() {
         None,
     )
     .unwrap();
-    assert_eq!(out.warnings, [RedactWarning::NeverRedactedClaim(8)]);
+    assert_eq!(out.warnings, [RedactWarning::NeverRedactedClaim(7)]);
 
     assert!(matches!(
         issue(
