@@ -13,7 +13,7 @@ Phase 1: foundations
 - [x] `tokenator-registry`: IANA snapshot generator + lookups
 
 Phase 2
-- [ ] `tokenator-edn`: EDN parser/printer with span maps
+- [x] `tokenator-edn`: EDN parser/printer with span maps
 - [x] `tokenator-keys`: PEM/JWK/CWK, to_jwk/to_cwk, thumbprints, keygen
 - [x] `tokenator-detect`: unwrapping chain + classification
 
