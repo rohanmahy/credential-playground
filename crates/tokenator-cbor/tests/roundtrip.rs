@@ -116,7 +116,8 @@ const INDEFINITE: &[(&str, &str, &str)] = &[
     ("9f9fffff", "[_ [_ ]]", "8180"),
     ("bf9fff bfffff", "{_ [_ ]: {_ }}", "a180a0"),
     ("bf5fff7fffff", "{_ (_ ): (_ )}", "a14060"),
-    ("c25f4101ff", "2((_ h'01'))", "c24101"),
+    // the bignum 1, which preferred-plus (and so deterministic) writes as 01
+    ("c25f4101ff", "2((_ h'01'))", "01"),
 ];
 
 #[test]
@@ -135,14 +136,8 @@ fn indefinite_items_encode_deterministically_as_definite() {
 
 #[test]
 fn indefinite_items_encode_preferred_plus_as_definite() {
-    // c25f4101ff is the bignum 1, which preferred-plus writes as 01.
     for (input, _, expected) in INDEFINITE {
-        let expected = if *input == "c25f4101ff" {
-            "01"
-        } else {
-            expected
-        };
-        assert_eq!(plus(input), expected, "{input}");
+        assert_eq!(plus(input), *expected, "{input}");
     }
 }
 

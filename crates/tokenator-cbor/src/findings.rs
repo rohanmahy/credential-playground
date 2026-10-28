@@ -2,7 +2,11 @@
 //! and §5) and duplicate map key detection. These only report; they never
 //! modify the item.
 
-use crate::encode::{Mode, effective_width, encode_mode, write_head};
+use std::collections::HashMap;
+
+use crate::encode::{
+    CANONICAL_NAN, Mode, bignum, effective_width, encode_mode, write_bignum, write_head,
+};
 use crate::item::len_u64;
 use crate::{FloatWidth, Item, Span, Value, Width, float};
 
@@ -119,10 +123,61 @@ pub struct DuplicateKey {
 /// Each later occurrence is paired with the first one, so a key that appears
 /// three times gives two results. Results are in document order: by map
 /// (outer before inner, then by position), then by `duplicate`.
-#[allow(clippy::unimplemented)]
 pub fn duplicate_keys(item: &Item) -> Vec<DuplicateKey> {
-    let _ = item;
-    unimplemented!()
+    let mut found = Vec::new();
+    let mut path = Vec::new();
+    find_duplicates(item, &mut path, &mut found);
+    found
+}
+
+/// Reports the duplicates of `item` (if it is a map), then those of its
+/// children in order. `path` leads from the root to `item`.
+fn find_duplicates(item: &Item, path: &mut Vec<PathStep>, found: &mut Vec<DuplicateKey>) {
+    match &item.value {
+        Value::Array(items) => {
+            for (i, child) in items.iter().enumerate() {
+                path.push(PathStep::Index(i));
+                find_duplicates(child, path, found);
+                path.pop();
+            }
+        }
+        Value::Map(entries) => {
+            // First entry index for each deterministic key encoding.
+            let mut first: HashMap<Vec<u8>, usize> = HashMap::with_capacity(entries.len());
+            for (i, (k, _)) in entries.iter().enumerate() {
+                let Ok(key) = encode_mode(k, Mode::Deterministic) else {
+                    continue;
+                };
+                match first.get(&key) {
+                    Some(&f) => found.push(DuplicateKey {
+                        path: path.clone(),
+                        map: item.span,
+                        first: f,
+                        duplicate: i,
+                        first_key: entries.get(f).map_or(Span::default(), |(fk, _)| fk.span),
+                        duplicate_key: k.span,
+                    }),
+                    None => {
+                        first.insert(key, i);
+                    }
+                }
+            }
+            for (i, (k, v)) in entries.iter().enumerate() {
+                path.push(PathStep::Key(i));
+                find_duplicates(k, path, found);
+                path.pop();
+                path.push(PathStep::Value(i));
+                find_duplicates(v, path, found);
+                path.pop();
+            }
+        }
+        Value::Tag(_, inner) => {
+            path.push(PathStep::TagContent);
+            find_duplicates(inner, path, found);
+            path.pop();
+        }
+        _ => {}
+    }
 }
 
 fn collect(item: &Item, key_order: bool) -> Vec<EncodingFinding> {
@@ -165,11 +220,12 @@ fn walk(item: &Item, key_order: bool, out: &mut Vec<EncodingFinding>) {
             Value::Bytes(_) | Value::Text(_) | Value::Array(_) | Value::Map(_)
         )
     {
-        out.push(EncodingFinding {
-            span: item.span,
-            kind: FindingKind::IndefiniteLength,
-            preferred_bytes: encode_mode(item, Mode::Preferred),
-        });
+        push_whole(
+            item,
+            FindingKind::IndefiniteLength,
+            Mode::PreferredPlus,
+            out,
+        );
     }
     match &item.value {
         Value::Uint(n) => check_argument(item, 0, *n, out),
@@ -194,11 +250,7 @@ fn walk(item: &Item, key_order: bool, out: &mut Vec<EncodingFinding>) {
                 check_argument(item, 5, len_u64(entries.len()), out);
             }
             if key_order && !keys_sorted(entries) {
-                out.push(EncodingFinding {
-                    span: item.span,
-                    kind: FindingKind::MapKeyOrder,
-                    preferred_bytes: encode_mode(item, Mode::Deterministic),
-                });
+                push_whole(item, FindingKind::MapKeyOrder, Mode::Deterministic, out);
             }
             for (k, v) in entries {
                 walk(k, key_order, out);
@@ -207,7 +259,29 @@ fn walk(item: &Item, key_order: bool, out: &mut Vec<EncodingFinding>) {
         }
         Value::Tag(tag, inner) => {
             check_argument(item, 6, *tag, out);
+            if let Some(magnitude) = bignum(*tag, inner)
+                && (magnitude.first() == Some(&0) || magnitude.len() <= 8)
+            {
+                let mut bytes = Vec::with_capacity(9);
+                write_bignum(&mut bytes, *tag, magnitude);
+                out.push(EncodingFinding {
+                    span: item.span,
+                    kind: FindingKind::NonPreferredBignum,
+                    preferred_bytes: bytes,
+                });
+            }
             walk(inner, key_order, out);
+        }
+        Value::Float(f, width) if f.is_nan() => {
+            let mut used = Vec::with_capacity(9);
+            float::write(&mut used, *f, *width);
+            if used != CANONICAL_NAN {
+                out.push(EncodingFinding {
+                    span: item.span,
+                    kind: FindingKind::NonCanonicalNaN,
+                    preferred_bytes: CANONICAL_NAN.to_vec(),
+                });
+            }
         }
         Value::Float(f, width) => {
             if float::effective_width(*f, *width) != float::shortest_width(*f) {
@@ -224,12 +298,27 @@ fn walk(item: &Item, key_order: bool, out: &mut Vec<EncodingFinding>) {
     }
 }
 
+/// Reports `item` as a whole, with its encoding in `mode` as the
+/// replacement. Omitted if that encoding fails (an invalid simple value).
+fn push_whole(item: &Item, kind: FindingKind, mode: Mode, out: &mut Vec<EncodingFinding>) {
+    if let Ok(preferred_bytes) = encode_mode(item, mode) {
+        out.push(EncodingFinding {
+            span: item.span,
+            kind,
+            preferred_bytes,
+        });
+    }
+}
+
 /// Whether the deterministic encodings of the keys are in non-decreasing
-/// bytewise order (equal keys are not a violation).
+/// bytewise order (equal keys are not a violation). A key that cannot be
+/// encoded counts as sorted, since no replacement could be suggested.
 fn keys_sorted(entries: &[(Item, Item)]) -> bool {
     let mut prev: Option<Vec<u8>> = None;
     for (k, _) in entries {
-        let key = encode_mode(k, Mode::Deterministic);
+        let Ok(key) = encode_mode(k, Mode::Deterministic) else {
+            return true;
+        };
         if prev.as_ref().is_some_and(|p| *p > key) {
             return false;
         }

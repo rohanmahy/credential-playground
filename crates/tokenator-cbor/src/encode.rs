@@ -34,12 +34,12 @@ pub enum EncodeMode {
     Deterministic,
 }
 
-/// Encoding modes, including the internal "preferred serialization" mode
-/// (Deterministic without map sorting) used for findings.
+/// [`EncodeMode`] without the public API's stability concerns; findings use
+/// it to build replacement bytes.
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub(crate) enum Mode {
     Preserve,
-    Preferred,
+    PreferredPlus,
     Deterministic,
 }
 
@@ -67,24 +67,19 @@ pub(crate) enum Mode {
 /// # Ok::<(), tokenator_cbor::EncodeError>(())
 /// ```
 pub fn encode(item: &Item, mode: EncodeMode) -> Result<Vec<u8>, EncodeError> {
-    // TODO(#7, #8): PreferredPlus/Deterministic must canonicalize NaNs and
-    // rewrite bignums, and every mode must reject Simple(24..=31). Until
-    // then this maps onto the old internal modes.
     let mode = match mode {
         EncodeMode::Preserve => Mode::Preserve,
-        EncodeMode::PreferredPlus => Mode::Preferred,
+        EncodeMode::PreferredPlus => Mode::PreferredPlus,
         EncodeMode::Deterministic => Mode::Deterministic,
     };
-    let mut out = Vec::new();
-    write_item(&mut out, item, mode);
-    Ok(out)
+    encode_mode(item, mode)
 }
 
 /// Encodes an item in the given internal mode.
-pub(crate) fn encode_mode(item: &Item, mode: Mode) -> Vec<u8> {
+pub(crate) fn encode_mode(item: &Item, mode: Mode) -> Result<Vec<u8>, EncodeError> {
     let mut out = Vec::new();
-    write_item(&mut out, item, mode);
-    out
+    write_item(&mut out, item, mode)?;
+    Ok(out)
 }
 
 /// The width the encoder actually uses for an argument: the recorded one if
@@ -116,7 +111,7 @@ pub(crate) fn write_head(out: &mut Vec<u8>, major: u8, arg: u64, width: Width) {
     out.extend_from_slice(be.get(8 - len..).unwrap_or(&be));
 }
 
-fn write_item(out: &mut Vec<u8>, item: &Item, mode: Mode) {
+fn write_item(out: &mut Vec<u8>, item: &Item, mode: Mode) -> Result<(), EncodeError> {
     let indefinite = mode == Mode::Preserve && item.width == Width::Indefinite;
     let head = |out: &mut Vec<u8>, major: u8, arg: u64| {
         write_head(out, major, arg, effective_width(item.width, arg, mode));
@@ -140,7 +135,7 @@ fn write_item(out: &mut Vec<u8>, item: &Item, mode: Mode) {
                 head(out, 4, len_u64(items.len()));
             }
             for i in items {
-                write_item(out, i, mode);
+                write_item(out, i, mode)?;
             }
             if indefinite {
                 out.push(0xff);
@@ -153,53 +148,97 @@ fn write_item(out: &mut Vec<u8>, item: &Item, mode: Mode) {
                 head(out, 5, len_u64(entries.len()));
             }
             if mode == Mode::Deterministic {
-                write_sorted_entries(out, entries);
+                write_sorted_entries(out, entries)?;
             } else {
                 for (k, v) in entries {
-                    write_item(out, k, mode);
-                    write_item(out, v, mode);
+                    write_item(out, k, mode)?;
+                    write_item(out, v, mode)?;
                 }
             }
             if indefinite {
                 out.push(0xff);
             }
         }
-        Value::Tag(tag, inner) => {
-            head(out, 6, *tag);
-            write_item(out, inner, mode);
-        }
+        Value::Tag(tag, inner) => match bignum(*tag, inner) {
+            Some(magnitude) if mode != Mode::Preserve => write_bignum(out, *tag, magnitude),
+            _ => {
+                head(out, 6, *tag);
+                write_item(out, inner, mode)?;
+            }
+        },
         Value::Bool(false) => out.push(0xf4),
         Value::Bool(true) => out.push(0xf5),
         Value::Null => out.push(0xf6),
         Value::Undefined => out.push(0xf7),
+        Value::Simple(n @ 24..=31) => return Err(EncodeError::InvalidSimple(*n)),
         Value::Simple(n) => write_head(out, 7, u64::from(*n), Width::preferred_for(u64::from(*n))),
         Value::Float(f, width) => {
-            let width = if mode == Mode::Preserve {
-                *width
+            if mode == Mode::Preserve {
+                float::write(out, *f, *width);
+            } else if f.is_nan() {
+                out.extend_from_slice(&CANONICAL_NAN);
             } else {
                 // The narrowest width; `write` widens it as far as needed.
-                FloatWidth::F16
-            };
-            float::write(out, *f, width);
+                float::write(out, *f, FloatWidth::F16);
+            }
         }
+    }
+    Ok(())
+}
+
+/// The only NaN encoding that preferred-plus serialization allows
+/// (draft-ietf-cbor-serialization-11 §4.1 rule 4).
+pub(crate) const CANONICAL_NAN: [u8; 3] = [0xf9, 0x7e, 0x00];
+
+/// If `tag` and `inner` form a bignum (tag 2 or 3 over a byte string), its
+/// big-endian magnitude bytes, leading zeros included.
+pub(crate) fn bignum<'i>(tag: u64, inner: &'i Item) -> Option<&'i [u8]> {
+    match (tag, &inner.value) {
+        (2 | 3, Value::Bytes(b)) => Some(b),
+        _ => None,
     }
 }
 
-/// Writes map entries in RFC 8949 §4.2.1 order: sorted by the bytewise order
-/// of the deterministically encoded keys, duplicates in arrival order.
-fn write_sorted_entries(out: &mut Vec<u8>, entries: &[(Item, Item)]) {
+/// Writes a bignum in preferred-plus form (§4.1 rule 5): as major type 0
+/// (tag 2) or 1 (tag 3) when it fits in 64 bits, otherwise as the tag over
+/// its bytes without leading zeros, all with preferred heads.
+pub(crate) fn write_bignum(out: &mut Vec<u8>, tag: u64, magnitude: &[u8]) {
+    let first = magnitude
+        .iter()
+        .position(|b| *b != 0)
+        .unwrap_or(magnitude.len());
+    let digits = magnitude.get(first..).unwrap_or_default();
+    if digits.len() <= 8 {
+        let n = digits
+            .iter()
+            .fold(0u64, |acc, b| (acc << 8) | u64::from(*b));
+        let major = if tag == 3 { 1 } else { 0 };
+        write_head(out, major, n, Width::preferred_for(n));
+    } else {
+        write_head(out, 6, tag, Width::preferred_for(tag));
+        let len = len_u64(digits.len());
+        write_head(out, 2, len, Width::preferred_for(len));
+        out.extend_from_slice(digits);
+    }
+}
+
+/// Writes map entries in deterministic order (§5.1 rule 2): sorted by the
+/// bytewise order of the deterministically encoded keys, duplicates in
+/// arrival order.
+fn write_sorted_entries(out: &mut Vec<u8>, entries: &[(Item, Item)]) -> Result<(), EncodeError> {
     // A plain loop: iterator adapters add several frames per nesting level
     // in debug builds.
     let mut sorted: Vec<(Vec<u8>, &Item)> = Vec::with_capacity(entries.len());
     for (k, v) in entries {
-        sorted.push((encode_mode(k, Mode::Deterministic), v));
+        sorted.push((encode_mode(k, Mode::Deterministic)?, v));
     }
     // Stable, so duplicate keys keep their arrival order.
     sorted.sort_by(|a, b| a.0.cmp(&b.0));
     for (key, value) in sorted {
         out.extend_from_slice(&key);
-        write_item(out, value, Mode::Deterministic);
+        write_item(out, value, Mode::Deterministic)?;
     }
+    Ok(())
 }
 
 /// Writes an indefinite-length string, using the recorded chunks if they

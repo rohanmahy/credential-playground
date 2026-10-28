@@ -28,13 +28,20 @@ Span-preserving, zero-copy CBOR decoder/encoder. See the top-level
   only when no bit is lost; "preferred" means the shortest exact width.
 - **Encoder fallbacks** instead of errors: a too-narrow width becomes the
   preferred width, a too-narrow float width the shortest exact one, and stale
-  chunks are replaced by the value as one chunk.
-- **Findings** reuse the encoder: `IndefiniteLength` bytes come from the
-  internal `Preferred` mode (no key sorting), `MapKeyOrder` bytes from
-  `Deterministic`. Key order compares deterministic key encodings; equal keys
-  are not a violation. Results are sorted stably by `(start, kind)`.
+  chunks are replaced by the value as one chunk. The only encode error is
+  `Simple(24..=31)`, rejected in every mode.
+- **PreferredPlus / Deterministic** (draft-ietf-cbor-serialization-11 §4.1,
+  §5.1) share one code path: shortest heads, definite lengths, shortest exact
+  floats, every NaN as `f97e00`, and bignums rewritten (no leading zeros;
+  major type 0/1 when they fit in 64 bits). Only Deterministic sorts map
+  entries, by their deterministic key encodings, stably.
+- **Findings** only report. They reuse the encoder: `IndefiniteLength` and
+  `NonPreferredBignum` bytes come from PreferredPlus, `MapKeyOrder` bytes
+  from Deterministic. A finding whose replacement cannot be encoded is
+  dropped. Results are sorted stably by `(start, kind)`.
+- **Duplicates.** `duplicate_keys` walks the tree in pre-order and, per map,
+  keeps a hash map from deterministic key encoding to the first entry index.
 - **Stack use.** Encoding, findings, and drop recurse once per level.
-  `into_owned` uses an explicit stack. At `MAX_DEPTH` everything fits in
-  1 MiB in release builds and 2 MiB in debug builds (a unit test checks
-  this). The derived `Clone` is the one exception: in debug builds it needs
-  close to 2 MiB at that depth.
+  `into_owned` uses an explicit stack. At `MAX_DEPTH` (512) everything,
+  including the derived `Clone`, fits in 1 MiB in release builds and 2 MiB
+  in debug builds (a unit test checks this).
