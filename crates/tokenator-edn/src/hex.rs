@@ -190,13 +190,16 @@ pub fn annotated_hex(item: &Item<'_>, bytes: &[u8], options: &HexOptions<'_>) ->
             });
         }
         if let Some(inner) = inner {
-            stack.push(Task::Node {
-                node: Node::Own(inner),
-                path: path.child(PathSegment::Embedded(0)),
-                base: embedded_base(it, base),
-                parent_tag: None,
-                chunk: false,
-            });
+            let inner_base = embedded_base(it, base);
+            for (i, item) in inner.into_iter().enumerate().rev() {
+                stack.push(Task::Node {
+                    node: Node::Own(item),
+                    path: path.child(PathSegment::Embedded(i)),
+                    base: inner_base,
+                    parent_tag: None,
+                    chunk: false,
+                });
+            }
             continue;
         }
         let tag = match it.value {

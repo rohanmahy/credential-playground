@@ -1,15 +1,18 @@
 //! Items to EDN text.
 
+use std::borrow::Cow;
 use std::fmt;
 use std::fmt::Write as _;
 use std::ops::Range;
 
-use tokenator_cbor::{EncodeMode, FloatWidth, Item, Span, Value, Width, encode};
+use tokenator_cbor::{
+    EncodeMode, FloatWidth, Item, MAX_DEPTH, Span, Value, Width, decode_seq, encode,
+};
 
 use crate::annotate::Annotator;
 use crate::datetime::{EpochValue, Instant};
 use crate::ext::{Extensions, UNRESOLVED_EXTENSION_TAG, dt, ip, ip_text};
-use crate::parse::{CANONICAL_NAN, LineIndex, fits, float_fits, push_children};
+use crate::parse::{CANONICAL_NAN, LineIndex, fits, float_fits, height, push_children};
 use crate::path::{Path, PathSegment};
 use crate::spans::{NodeSpan, SpanMap};
 
@@ -354,15 +357,48 @@ pub(crate) fn embedded<'r>(
     parent_tag: Option<u64>,
     mode: EmbeddedCbor<'_>,
     depth: usize,
-) -> Option<Item<'r>> {
+) -> Option<Vec<Item<'r>>> {
     if mode == EmbeddedCbor::OFF || node.item().width == Width::Indefinite {
         return None;
     }
-    // Issue #15: show only the listed paths (their content as a CBOR
-    // sequence: one `Embedded(i)` child per item) and, with `tagged`, the
+    // Issue #15: only listed paths (a CBOR sequence) and, with `tagged`, the
     // content of tag 24 (exactly one item) or tag 63 (a sequence).
-    let _ = (path, parent_tag, depth);
-    unimplemented!("issue #15 embedded-CBOR selection")
+    let listed = mode.paths.contains(path);
+    let tagged = mode.tagged && matches!(parent_tag, Some(24 | 63));
+    if !listed && !tagged {
+        return None;
+    }
+    let (items, content): (Vec<Item<'r>>, &[u8]) = match node {
+        Node::Ref(item) => match &item.value {
+            Value::Bytes(b) => (decode_seq(b.as_ref()).ok()?, b),
+            _ => return None,
+        },
+        Node::Own(item) => match &item.value {
+            Value::Bytes(Cow::Borrowed(b)) => (decode_seq(b).ok()?, b),
+            Value::Bytes(Cow::Owned(b)) => (
+                decode_seq(b)
+                    .ok()?
+                    .into_iter()
+                    .map(Item::into_owned)
+                    .collect(),
+                b,
+            ),
+            _ => return None,
+        },
+    };
+    if items.is_empty() || (!listed && parent_tag == Some(24) && items.len() != 1) {
+        return None;
+    }
+    let deepest = items.iter().map(height).max().unwrap_or(0);
+    if depth + 1 + deepest > MAX_DEPTH {
+        return None;
+    }
+    // Shown only where the text re-encodes to exactly these bytes.
+    let mut again = Vec::with_capacity(content.len());
+    for item in &items {
+        again.extend(encode(item, EncodeMode::Preserve));
+    }
+    (again == content).then_some(items)
 }
 
 /// The CBOR span of `item` in the outermost bytes, given the offset its
@@ -1014,17 +1050,22 @@ impl<'o> Printer<'o> {
                     )
                 {
                     let ind = self.int_ind(item.width, len_u64(b.len()));
-                    let kid = Child {
-                        node: Node::Own(inner),
-                        path: child.path.child(PathSegment::Embedded(0)),
-                        base: embedded_base(item, child.base),
-                        prefix: Prefix::Element,
-                        level: child.level + 1,
-                        parent_tag: None,
-                        chunk: false,
-                    };
+                    let base = embedded_base(item, child.base);
+                    let kids = inner
+                        .into_iter()
+                        .enumerate()
+                        .map(|(i, it)| Child {
+                            node: Node::Own(it),
+                            path: child.path.child(PathSegment::Embedded(i)),
+                            base,
+                            prefix: Prefix::Element,
+                            level: child.level + 1,
+                            parent_tag: None,
+                            chunk: false,
+                        })
+                        .collect();
                     return self.open(
-                        vec![kid],
+                        kids,
                         "<<",
                         "",
                         format!(">>{ind}"),

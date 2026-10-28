@@ -8,9 +8,10 @@ covers the internals. Grammar decisions are listed in `TEST-PLAN.md`
 | Module | Contents |
 |---|---|
 | `parse.rs` | `parse`, `parse_seq`, `parse_with`; lexer, frame stack, encoding indicators, numbers |
-| `print.rs` | `print`, `PrintOptions`; `Node` (borrowed or owned item), embedded-CBOR detection |
+| `print.rs` | `print`, `PrintOptions`, `EmbeddedCbor`; `Node` (borrowed or owned item), embedded-CBOR selection |
+| `embedded.rs` | `decode_embedded` (manual decoding) |
 | `hex.rs` | `annotated_hex` |
-| `ext.rs` | `AppExtension`, `Extensions`, the built-ins |
+| `ext.rs` | `AppExtension`, `Extensions`, the built-ins (`hash''` behind the `hash` feature) |
 | `datetime.rs` | `Instant` and the date/time chit's forms |
 | `spans.rs`, `path.rs` | `SpanMap`, `Path` |
 | `error.rs`, `annotate.rs` | errors, warnings, positions; `Annotator` |
@@ -64,7 +65,22 @@ covers the internals. Grammar decisions are listed in `TEST-PLAN.md`
 - **Span maps** are built in pre-order: an entry is pushed when a node
   starts and its end is filled in when it closes. Lines come from a table
   of newline offsets. `SpanMap::get` uses a hash index.
-- **Embedded detection** (`print::embedded`) is shared by the printer and
-  the hex view so their rows line up. It also requires that the decoded
-  item re-encodes to the exact bytes and that the expansion stays within
-  `MAX_DEPTH`.
+- **Embedded CBOR, no guessing** (#15, SPEC §4.1). `print::embedded`
+  is shared by the printer and the hex view so their rows line up. It
+  expands a definite, non-empty byte string only at a path listed in
+  `EmbeddedCbor::paths` (a CBOR sequence of one or more items, as
+  `Embedded(i)` children), or with `tagged`, as the content of tag 24
+  (exactly one item) or tag 63 (a sequence). It also requires an exact
+  re-encoding and that the expansion stays within `MAX_DEPTH`. Otherwise
+  the byte string stays `h''`. Paths are matched with a linear scan (the
+  lists are short).
+- **Manual decoding** (`decode_embedded`) decodes one item of a byte
+  string's content and returns it with spans shifted (iteratively) to be
+  absolute in the outer input. It borrows that input. When the decoder
+  reports `TrailingBytes` at offset k, the first k bytes are decoded again
+  and the rest becomes an `EmbeddedWarning::TrailingBytes`. Other decode
+  errors get absolute offsets.
+- **`hash` feature** (off by default) adds the optional `sha2` dependency,
+  the same version tokenator-crypto uses. Without it, `hash` stays a
+  built-in name, so it is never treated as an opaque unknown extension, and
+  evaluating it fails with an error that names the feature.
