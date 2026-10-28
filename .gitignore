@@ -1,0 +1,10 @@
+/target
+/.worktrees
+node_modules/
+/app/dist
+/app/src-tauri/target
+/crates/tokenator-wasm/pkg
+/fuzz/target
+/fuzz/corpus
+/fuzz/artifacts
+.DS_Store

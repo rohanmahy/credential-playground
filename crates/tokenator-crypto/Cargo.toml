@@ -1,0 +1,13 @@
+[package]
+name = "tokenator-crypto"
+description = "Signing, verification, digests, and algorithm/key requirements"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[dependencies]
+
+[lints]
+workspace = true
