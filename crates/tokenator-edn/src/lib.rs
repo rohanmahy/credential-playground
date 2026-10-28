@@ -15,7 +15,7 @@
 //!   the printed lines by [`Path`].
 //! - [`datetime`]: pure conversions for the date/time chit.
 //!
-//! ```ignore
+//! ```
 //! use tokenator_cbor::{decode, encode, EncodeMode};
 //! use tokenator_edn::{parse, print, PrintOptions};
 //!
@@ -24,6 +24,47 @@
 //! let rendered = print(&item, &PrintOptions::default());
 //! assert_eq!(rendered.text, "[1_0, [_ ]]");
 //! assert_eq!(encode(&parse(&rendered.text)?, EncodeMode::Preserve), bytes);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! A custom app-extension, unknown prefixes kept as opaque values with a
+//! warning, and printing them back:
+//!
+//! ```
+//! use tokenator_cbor::{encode, EncodeMode, Item, Value};
+//! use tokenator_edn::{
+//!     parse_with, print, AppExtension, ExtError, Extensions, ParseOptions, PrintOptions,
+//!     WarningKind,
+//! };
+//!
+//! /// `rev'abc'` is the text string "cba".
+//! struct Rev;
+//!
+//! impl AppExtension for Rev {
+//!     fn name(&self) -> &str {
+//!         "rev"
+//!     }
+//!
+//!     fn evaluate(&self, args: &[Item<'static>], _upper: bool) -> Result<Item<'static>, ExtError> {
+//!         match args {
+//!             [Item { value: Value::Text(t), .. }] => Ok(Item::text(t.chars().rev().collect::<String>())),
+//!             _ => Err(ExtError("expected one text string".into())),
+//!         }
+//!     }
+//! }
+//!
+//! let mut extensions = Extensions::builtin();
+//! extensions.register(Box::new(Rev));
+//! let options = ParseOptions { extensions, ..ParseOptions::default() };
+//! let parsed = parse_with("[rev'abc', cri'https://example.com']", &options)?;
+//! assert_eq!(parsed.warnings[0].kind, WarningKind::UnknownExtension("cri".into()));
+//!
+//! let item = &parsed.items[0];
+//! let text = print(item, &PrintOptions::new()).text;
+//! assert_eq!(text, r#"["cba", cri'https://example.com']"#);
+//! let Value::Array(items) = &item.value else { unreachable!() };
+//! assert_eq!(encode(&items[1], EncodeMode::Preserve)[..3], [0xd9, 0x03, 0xe7]); // tag 999
+//! # Ok::<(), tokenator_edn::EdnError>(())
 //! ```
 
 mod annotate;

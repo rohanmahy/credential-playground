@@ -1546,20 +1546,56 @@ pub(crate) fn push_children<'i, 'a>(
 
 /// Digits in `radix` as a minimal big-endian magnitude (empty for zero).
 fn big_uint(digits: &str, radix: u32) -> Vec<u8> {
-    // Little-endian 32-bit limbs.
-    let mut limbs: Vec<u32> = Vec::new();
-    for d in digits.chars().filter_map(|c| c.to_digit(radix)) {
-        let mut carry = u64::from(d);
-        for limb in &mut limbs {
-            let v = u64::from(*limb) * u64::from(radix) + carry;
-            *limb = v as u32;
-            carry = v >> 32;
+    let values = digits.chars().filter_map(|c| c.to_digit(radix));
+    let mut out: Vec<u8> = if radix.is_power_of_two() {
+        // Pack bits from the least significant digit up: linear time.
+        let bits = radix.trailing_zeros();
+        let mut out = Vec::new();
+        let (mut acc, mut n) = (0u32, 0u32);
+        for d in values.rev() {
+            acc |= d << n;
+            n += bits;
+            while n >= 8 {
+                out.push(acc as u8);
+                acc >>= 8;
+                n -= 8;
+            }
         }
-        if carry > 0 {
-            limbs.push(carry as u32);
+        if n > 0 {
+            out.push(acc as u8);
         }
-    }
-    let mut out: Vec<u8> = limbs.iter().rev().flat_map(|l| l.to_be_bytes()).collect();
+        out.reverse();
+        out
+    } else {
+        // Little-endian 32-bit limbs, nine decimal digits at a time.
+        let mut limbs: Vec<u32> = Vec::new();
+        let mut chunk = (0u64, 1u64);
+        let flush = |limbs: &mut Vec<u32>, (value, scale): (u64, u64)| {
+            let mut carry = value;
+            for limb in limbs.iter_mut() {
+                let v = u64::from(*limb) * scale + carry;
+                *limb = v as u32;
+                carry = v >> 32;
+            }
+            if carry > 0 {
+                limbs.push(carry as u32);
+            }
+        };
+        for d in values {
+            chunk = (
+                chunk.0 * u64::from(radix) + u64::from(d),
+                chunk.1 * u64::from(radix),
+            );
+            if chunk.1 >= 1_000_000_000 {
+                flush(&mut limbs, chunk);
+                chunk = (0, 1);
+            }
+        }
+        if chunk.1 > 1 {
+            flush(&mut limbs, chunk);
+        }
+        limbs.iter().rev().flat_map(|l| l.to_be_bytes()).collect()
+    };
     let zeros = out.iter().take_while(|&&b| b == 0).count();
     out.drain(..zeros);
     out
