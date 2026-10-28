@@ -31,6 +31,8 @@ transformation of a published example, described below.
 | `rfc8392-a3-signed-cwt.cbor` | RFC 8392 A.3, signed CWT: COSE_Sign1 with tag 18 (binary) |
 | `rfc8392-a3-signed-cwt.hex` | RFC 8392 A.3, the same as hex text, with the RFC's line breaks (65 hex digits per line, breaking mid-byte) |
 | `rfc8392-a4-maced-cwt-tag61.cbor` | RFC 8392 A.4, MACed CWT: tag 61 + tag 17 COSE_Mac0 (unsupported, must not be classified as COSE_Sign1) |
+| `rfc8392-a5-encrypted-cwt.cbor` | RFC 8392 A.5, encrypted CWT: tag 16 COSE_Encrypt0 (unsupported, must not be classified as COSE_Sign1) |
+| `rfc8392-a7-maced-cwt-float.cbor` | RFC 8392 A.7, MACed CWT (tag 17 COSE_Mac0) whose payload has a floating-point `iat` (`1443944944.5`) |
 | `derived-rfc8392-a3-untagged.cbor` | RFC 8392 A.3 with the leading tag-18 byte `d2` removed (untagged COSE_Sign1) |
 | `derived-rfc8392-a3-tag61.cbor` | RFC 8392 A.3 with the CWT tag head `d8 3d` prepended (tag 61 + tag 18) |
 | `rfc9052-c2.1-sign1.cbor` | RFC 9052 C.2.1, COSE_Sign1 whose payload is the text `This is the content.` (not a CWT). Encoded from the RFC's EDN; 98 bytes as the RFC states |
@@ -38,8 +40,16 @@ transformation of a published example, described below.
 | `sd-cwt-08-sd-kbt.cbor` | draft-ietf-spice-sd-cwt-08 §14.1 Figure 26, SD-KBT wrapping the SD-CWT in `kcwt`, from `examples/kbt.cbor`. Both signatures match the -08 text |
 | `sd-cwt-08-nested-issuer-sd-cwt.cbor` | draft-ietf-spice-sd-cwt-08 §14.2, nested issuer SD-CWT, from `examples/nested_issuer_cwt.cbor` |
 | `sd-cwt-08-nested-sd-kbt.cbor` | draft-ietf-spice-sd-cwt-08 §14.2, nested SD-KBT, from `examples/nested_kbt.cbor` |
+| `sd-cwt-08-decoy-sd-cwt.cbor` | draft-ietf-spice-sd-cwt-08 §10 Figure 20, issuer SD-CWT with two decoy digests, from `examples/decoy.cbor`. The signature (`a96d92f3…`) matches Figure 20 |
 | `sd-cwt-08-fig4-claims.edn` | draft-ietf-spice-sd-cwt-08 §3.1 Figure 4, CWT claims set in EDN (comments, integer keys, `h''`, trailing commas) |
 
 The draft repository has no `-08` tag. The CBOR files were taken from `main`
 and checked against the `-08` text: the SD-KBT's issuer and KBT signatures
 (`12bdb013…`, `ca38c411…`) match Figure 26.
+
+Disclosure digests in the SD-CWT files are SHA-256 over the *encoded byte
+string* (bstr head + contents), as in the draft repository's
+`bare_disclosure_to_hash` and Appendix G. Figures 8 and 9 of the -08 text
+(`d9df03da…`) hash the contents only and do not match the digest carried by
+the signed payloads in Figures 5, 26, and 28 (`af375dc3…`); see
+`crates/tokenator-cose/TEST-PLAN.md`.

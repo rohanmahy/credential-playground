@@ -16,6 +16,7 @@ re-joined. Text files end with a single `\n`.
 | `rfc9901-a5-ec-p256-public.jwk.json` | RFC 9901 A.5, issuer EC P-256 public JWK |
 | `sd-cwt-08-c1-holder-private.jwk.json` | draft-ietf-spice-sd-cwt-08 C.1, holder EC P-256 private JWK |
 | `sd-cwt-08-c1-holder-private.cosekey.cbor` | draft-ietf-spice-sd-cwt-08 C.1, holder COSE_Key, encoded from the EDN in arrival order |
+| `sd-cwt-08-c2-issuer-private.cosekey.cbor` | draft-ietf-spice-sd-cwt-08 C.2, issuer EC2 P-384 private COSE_Key (kid `https://issuer.example/cwk3.cbor`, alg -51 ESP384), encoded from the EDN in arrival order. Used by `tokenator-cose` to verify the -08 examples, whose protected header says ES384 (-35) |
 | `rfc8392-a2.1-symmetric128.cosekey.cbor` | RFC 8392 A.2.1, symmetric COSE_Key. Its last byte is `0x0a` (alg 10), which a naive whitespace trim would strip |
 | `rfc8392-a2.3-ec-p256.cosekey.cbor` | RFC 8392 A.2.3, EC2 P-256 private COSE_Key |
 | `rfc8152-c7.1-public.cosekeyset.cbor` | RFC 8152 / RFC 9052 C.7.1, public COSE_KeySet (four EC2 keys), encoded from the EDN; 481 bytes as the RFC states |
