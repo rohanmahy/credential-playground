@@ -7,7 +7,7 @@ web and macOS (Tauri). See [SPEC.md](SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE
 ## Progress
 
 Phase 1: foundations
-- [ ] `tokenator-cbor`: span-preserving CBOR, preferred/deterministic findings
+- [x] `tokenator-cbor`: span-preserving CBOR, preferred/deterministic findings
 - [x] `tokenator-json`: span- and order-preserving JSON
 - [ ] `tokenator-crypto`: sign/verify/digest, alg ↔ key requirements
 - [x] `tokenator-registry`: IANA snapshot generator + lookups
