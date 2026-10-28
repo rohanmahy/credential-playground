@@ -7,7 +7,27 @@ rust-version.workspace = true
 license-file.workspace = true
 repository.workspace = true
 
+# All backends are pure-Rust RustCrypto crates from one version generation
+# (rand_core 0.10, signature 3, digest/sha2 0.11). See TEST-PLAN.md.
 [dependencies]
+rand_core = "0.10"
+signature = "3"
+sha2 = "0.11"
+ecdsa = "0.17"
+p256 = { version = "0.14", default-features = false, features = ["ecdsa", "alloc"] }
+p384 = { version = "0.14", default-features = false, features = ["ecdsa", "alloc"] }
+p521 = { version = "0.14", default-features = false, features = ["ecdsa", "alloc"] }
+ed25519-dalek = { version = "3", default-features = false, features = ["alloc", "fast", "rand_core", "zeroize"] }
+# rsa 0.10 is the only release on the rand_core 0.10 / signature 3 generation; still RC.
+rsa = { version = "=0.10.0-rc.19", default-features = false, features = ["sha2"] }
+ml-dsa = { version = "0.1.1", default-features = false, features = ["alloc", "rand_core", "zeroize"] }
+# Drives EC/RSA generation in generate_from_seed().
+rand_chacha = { version = "0.10", default-features = false }
+
+[dev-dependencies]
+hex = "0.4"
+serde_json = "1"
+base64ct = { version = "1.8", features = ["alloc"] }
 
 [lints]
 workspace = true
