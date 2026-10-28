@@ -316,10 +316,10 @@ fn builders_produce_preferred_encoding() {
         (Item::array(vec![Item::int(1), Item::int(2)]), "820102"),
         (
             Item::map(vec![
-                (Item::int(2), Item::int(0)),
                 (Item::int(1), Item::int(0)),
+                (Item::int(2), Item::int(0)),
             ]),
-            "a202000100",
+            "a201000200",
         ),
         (Item::tag(1, Item::int(0)), "c100"),
         (Item::tag(1000, Item::int(0)), "d903e800"),
@@ -344,6 +344,13 @@ fn builders_produce_preferred_encoding() {
         assert_eq!(preserve(item), *expected, "{item:?}");
         assert_eq!(deterministic(item), *expected, "{item:?}");
     }
+    // Map entries stay in the given order; only Deterministic sorts them.
+    let unsorted = Item::map(vec![
+        (Item::int(2), Item::int(0)),
+        (Item::int(1), Item::int(0)),
+    ]);
+    assert_eq!(preserve(&unsorted), "a202000100");
+    assert_eq!(deterministic(&unsorted), "a201000200");
     let long = Item::bytes(&[0u8; 24][..]);
     assert_eq!(preserve(&long), format!("5818{}", "00".repeat(24)));
 }

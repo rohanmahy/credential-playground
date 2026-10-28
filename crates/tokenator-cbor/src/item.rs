@@ -3,6 +3,8 @@
 
 use std::borrow::Cow;
 
+use crate::float;
+
 /// Byte range of an encoded data item within the decoder's input.
 ///
 /// `start..end` covers the whole item: its head, its content, any nested
@@ -52,8 +54,26 @@ pub enum Width {
 impl Width {
     /// The shortest width that can hold `arg` (the preferred serialization).
     pub fn preferred_for(arg: u64) -> Width {
-        let _ = arg;
-        unimplemented!()
+        match arg {
+            0..=23 => Width::Immediate,
+            24..=0xff => Width::U8,
+            0x100..=0xffff => Width::U16,
+            0x1_0000..=0xffff_ffff => Width::U32,
+            _ => Width::U64,
+        }
+    }
+
+    /// Whether an argument of `arg` can be written with this width.
+    /// `Indefinite` holds no argument, so it never fits.
+    pub(crate) fn fits(self, arg: u64) -> bool {
+        match self {
+            Width::Immediate => arg < 24,
+            Width::U8 => arg <= 0xff,
+            Width::U16 => arg <= 0xffff,
+            Width::U32 => arg <= 0xffff_ffff,
+            Width::U64 => true,
+            Width::Indefinite => false,
+        }
     }
 }
 
@@ -139,77 +159,242 @@ pub enum Value<'a> {
 
 impl<'a> Item<'a> {
     /// Wraps a value with its preferred encoding: the shortest argument width,
-    /// definite length, the shortest exact float width, and a default span.
+    /// definite length, and a default span. A float keeps the width stored in
+    /// [`Value::Float`]; use [`Item::float`] for the shortest exact width.
     pub fn new(value: Value<'a>) -> Item<'a> {
-        let _ = value;
-        unimplemented!()
+        let width = match &value {
+            Value::Uint(n) | Value::Nint(n) | Value::Tag(n, _) => Width::preferred_for(*n),
+            Value::Bytes(b) => Width::preferred_for(len_u64(b.len())),
+            Value::Text(t) => Width::preferred_for(len_u64(t.len())),
+            Value::Array(a) => Width::preferred_for(len_u64(a.len())),
+            Value::Map(m) => Width::preferred_for(len_u64(m.len())),
+            Value::Simple(n) => Width::preferred_for(u64::from(*n)),
+            Value::Bool(_) | Value::Null | Value::Undefined => Width::Immediate,
+            Value::Float(_, FloatWidth::F16) => Width::U16,
+            Value::Float(_, FloatWidth::F32) => Width::U32,
+            Value::Float(_, FloatWidth::F64) => Width::U64,
+        };
+        Item {
+            value,
+            span: Span::default(),
+            width,
+            chunks: Vec::new(),
+        }
     }
 
     /// An integer item (`Uint` or `Nint`), preferred width.
     pub fn int(n: i64) -> Item<'a> {
-        let _ = n;
-        unimplemented!()
+        Item::new(match u64::try_from(n) {
+            Ok(u) => Value::Uint(u),
+            // -1 - n == !n, which is non-negative here.
+            Err(_) => Value::Nint((!n).unsigned_abs()),
+        })
     }
 
     /// A byte string item, preferred width.
     pub fn bytes(b: impl Into<Cow<'a, [u8]>>) -> Item<'a> {
-        let _ = b.into();
-        unimplemented!()
+        Item::new(Value::Bytes(b.into()))
     }
 
     /// A text string item, preferred width.
     pub fn text(s: impl Into<Cow<'a, str>>) -> Item<'a> {
-        let _ = s.into();
-        unimplemented!()
+        Item::new(Value::Text(s.into()))
     }
 
     /// An array item, preferred (definite) length.
     pub fn array(items: Vec<Item<'a>>) -> Item<'a> {
-        let _ = items;
-        unimplemented!()
+        Item::new(Value::Array(items))
     }
 
     /// A map item, preferred (definite) length, entries in the given order.
     pub fn map(entries: Vec<(Item<'a>, Item<'a>)>) -> Item<'a> {
-        let _ = entries;
-        unimplemented!()
+        Item::new(Value::Map(entries))
     }
 
     /// A tagged item, preferred tag-number width.
     pub fn tag(tag: u64, item: Item<'a>) -> Item<'a> {
-        let _ = (tag, item);
-        unimplemented!()
+        Item::new(Value::Tag(tag, Box::new(item)))
     }
 
     /// A float item with the shortest width that represents `f` exactly.
     pub fn float(f: f64) -> Item<'a> {
-        let _ = f;
-        unimplemented!()
+        Item::new(Value::Float(f, float::shortest_width(f)))
     }
 
     /// A simple value. 20..=23 become `Bool`/`Null`/`Undefined`.
     pub fn simple(n: u8) -> Item<'a> {
-        let _ = n;
-        unimplemented!()
+        Item::new(match n {
+            20 => Value::Bool(false),
+            21 => Value::Bool(true),
+            22 => Value::Null,
+            23 => Value::Undefined,
+            _ => Value::Simple(n),
+        })
     }
 
     /// An indefinite-length byte or text string built from definite-length
     /// chunks, which must all be `Bytes` or all be `Text`. `value` becomes
     /// their concatenation. With no chunks, an empty indefinite byte string.
+    ///
+    /// The first chunk decides the string type. Chunks of the other type are
+    /// left out of `value`, so the encoder then ignores the chunks.
     pub fn indefinite_string(chunks: Vec<Item<'a>>) -> Item<'a> {
-        let _ = chunks;
-        unimplemented!()
+        let value = match chunks.first().map(|c| &c.value) {
+            Some(Value::Text(_)) => Value::Text(Cow::Owned(
+                chunks
+                    .iter()
+                    .filter_map(|c| match &c.value {
+                        Value::Text(t) => Some(t.as_ref()),
+                        _ => None,
+                    })
+                    .collect(),
+            )),
+            _ => Value::Bytes(Cow::Owned(
+                chunks
+                    .iter()
+                    .filter_map(|c| match &c.value {
+                        Value::Bytes(b) => Some(b.as_ref()),
+                        _ => None,
+                    })
+                    .flatten()
+                    .copied()
+                    .collect(),
+            )),
+        };
+        Item {
+            value,
+            span: Span::default(),
+            width: Width::Indefinite,
+            chunks,
+        }
     }
 
     /// Replaces the recorded argument width, e.g. to produce a non-preferred
     /// encoding on purpose (EDN encoding indicators `_0`..`_3`, `_i`).
     pub fn with_width(self, width: Width) -> Item<'a> {
-        let _ = width;
-        unimplemented!()
+        Item { width, ..self }
     }
 
     /// Copies all borrowed data so the item no longer borrows the input.
+    ///
+    /// Works with an explicit stack, so deep nesting costs heap rather than
+    /// call stack.
     pub fn into_owned(self) -> Item<'static> {
-        unimplemented!()
+        let mut tasks = vec![Task::Visit(self)];
+        let mut done: Vec<Item<'static>> = Vec::new();
+        while let Some(task) = tasks.pop() {
+            match task {
+                Task::Visit(item) => {
+                    let Item {
+                        value,
+                        span,
+                        width,
+                        chunks,
+                    } = item;
+                    let (shape, children) = match value {
+                        Value::Array(items) => (Shape::Array, items),
+                        Value::Map(entries) => {
+                            let mut flat = Vec::with_capacity(entries.len() * 2);
+                            for (k, v) in entries {
+                                flat.push(k);
+                                flat.push(v);
+                            }
+                            (Shape::Map, flat)
+                        }
+                        Value::Tag(tag, inner) => (Shape::Tag(tag), vec![*inner]),
+                        leaf => (Shape::Leaf(leaf.into_owned_leaf()), Vec::new()),
+                    };
+                    tasks.push(Task::Build {
+                        shape,
+                        span,
+                        width,
+                        chunks: chunks.len(),
+                        children: children.len(),
+                    });
+                    // Reversed, so they finish in order.
+                    tasks.extend(children.into_iter().rev().map(Task::Visit));
+                    tasks.extend(chunks.into_iter().rev().map(Task::Visit));
+                }
+                Task::Build {
+                    shape,
+                    span,
+                    width,
+                    chunks,
+                    children,
+                } => {
+                    let mut kids = done.split_off(done.len().saturating_sub(chunks + children));
+                    let rest = kids.split_off(chunks.min(kids.len()));
+                    let value = match shape {
+                        Shape::Leaf(value) => value,
+                        Shape::Array => Value::Array(rest),
+                        Shape::Map => {
+                            let mut entries = Vec::with_capacity(rest.len() / 2);
+                            let mut it = rest.into_iter();
+                            while let (Some(k), Some(v)) = (it.next(), it.next()) {
+                                entries.push((k, v));
+                            }
+                            Value::Map(entries)
+                        }
+                        Shape::Tag(tag) => match rest.into_iter().next() {
+                            Some(inner) => Value::Tag(tag, Box::new(inner)),
+                            None => Value::Null,
+                        },
+                    };
+                    done.push(Item {
+                        value,
+                        span,
+                        width,
+                        chunks: kids,
+                    });
+                }
+            }
+        }
+        done.pop().unwrap_or_else(|| Item::new(Value::Null))
     }
+}
+
+/// Work items for [`Item::into_owned`].
+enum Task<'a> {
+    /// Convert this item: schedule its children, then its `Build`.
+    Visit(Item<'a>),
+    /// Assemble an item from the last `chunks + children` finished items.
+    Build {
+        shape: Shape,
+        span: Span,
+        width: Width,
+        chunks: usize,
+        children: usize,
+    },
+}
+
+enum Shape {
+    Leaf(Value<'static>),
+    Array,
+    Map,
+    Tag(u64),
+}
+
+impl Value<'_> {
+    /// An owned copy of a value without child items. Containers become empty.
+    fn into_owned_leaf(self) -> Value<'static> {
+        match self {
+            Value::Uint(n) => Value::Uint(n),
+            Value::Nint(n) => Value::Nint(n),
+            Value::Bytes(b) => Value::Bytes(Cow::Owned(b.into_owned())),
+            Value::Text(t) => Value::Text(Cow::Owned(t.into_owned())),
+            Value::Array(_) => Value::Array(Vec::new()),
+            Value::Map(_) => Value::Map(Vec::new()),
+            Value::Tag(..) | Value::Null => Value::Null,
+            Value::Bool(b) => Value::Bool(b),
+            Value::Undefined => Value::Undefined,
+            Value::Simple(n) => Value::Simple(n),
+            Value::Float(f, w) => Value::Float(f, w),
+        }
+    }
+}
+
+/// A length as a CBOR argument. `usize` is at most 64 bits on every
+/// supported target.
+pub(crate) fn len_u64(len: usize) -> u64 {
+    u64::try_from(len).unwrap_or(u64::MAX)
 }
