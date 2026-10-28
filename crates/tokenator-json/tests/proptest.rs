@@ -10,7 +10,10 @@
 mod common;
 use common::assert_same;
 use proptest::prelude::*;
-use tokenator_json::{PrintStyle, Value, parse, print};
+use tokenator_json::{
+    ParseOptions, PrintOptions, PrintStyle, Value, WarningKind, parse, parse_with_options, print,
+    print_bytes,
+};
 
 fn ws() -> impl Strategy<Value = String> {
     "[ \t\n\r]{0,2}"
@@ -78,12 +81,43 @@ proptest! {
             Err(e) => prop_assert!(e.offset <= bytes.len()),
             Ok(node) => {
                 let span = node.span().unwrap();
-                let out = print(&node, PrintStyle::Original);
-                prop_assert_eq!(out.as_bytes(), &bytes[span.start..span.end]);
+                let out = print_bytes(&node, &PrintOptions::default());
+                prop_assert_eq!(&out[..], &bytes[span.start..span.end]);
+                let _ = print(&node, PrintStyle::Original);
                 let _ = print(&node, PrintStyle::Compact);
                 let _ = print(&node, PrintStyle::Pretty);
             }
         }
+    }
+
+    #[test]
+    fn arbitrary_bytes_inside_a_string_decode_lossily(
+        inner in prop::collection::vec(
+            any::<u8>().prop_filter("no quote, backslash or control", |b| *b >= 0x20 && *b != b'"' && *b != b'\\'),
+            0..64,
+        )
+    ) {
+        let mut input = b"[\"".to_vec();
+        input.extend_from_slice(&inner);
+        input.extend_from_slice(b"\"]");
+        let parsed = parse_with_options(&input, &ParseOptions::default())
+            .map_err(|e| TestCaseError::fail(format!("{e}")))?;
+        let node = &parsed.node;
+        let Value::String(s) = node.index(0).unwrap().value() else {
+            return Err(TestCaseError::fail("not a string"));
+        };
+        let lossy = String::from_utf8_lossy(&inner);
+        prop_assert_eq!(s.as_ref(), lossy.as_ref());
+        prop_assert_eq!(parsed.warnings.is_empty(), std::str::from_utf8(&inner).is_ok());
+        let mut prev = None;
+        for w in &parsed.warnings {
+            prop_assert_eq!(w.kind, WarningKind::InvalidUtf8);
+            prop_assert!(w.offset >= 2 && w.offset < input.len() - 2);
+            prop_assert!(prev < Some(w.offset));
+            prev = Some(w.offset);
+        }
+        prop_assert_eq!(node.index(0).unwrap().raw_bytes(), Some(&input[1..input.len() - 1]));
+        prop_assert_eq!(print_bytes(node, &PrintOptions::default()), input.clone());
     }
 
     #[test]

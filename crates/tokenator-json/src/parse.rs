@@ -3,7 +3,9 @@
 
 use std::borrow::Cow;
 
-use crate::{ErrorKind, JsonError, Member, Node, ParseOptions, Span, Value};
+use crate::{
+    ErrorKind, JsonError, Member, Node, ParseOptions, Parsed, Span, Value, Warning, WarningKind,
+};
 
 const BOM: &[u8] = b"\xEF\xBB\xBF";
 
@@ -11,22 +13,21 @@ pub(crate) fn is_ws(b: u8) -> bool {
     matches!(b, b' ' | b'\t' | b'\n' | b'\r')
 }
 
-pub(crate) fn parse<'a>(input: &'a [u8], options: &ParseOptions) -> Result<Node<'a>, JsonError> {
+/// Largest integer JavaScript represents exactly (`Number.MAX_SAFE_INTEGER`).
+const MAX_SAFE_INTEGER: f64 = 9_007_199_254_740_991.0;
+
+pub(crate) fn parse<'a>(input: &'a [u8], options: &ParseOptions) -> Result<Parsed<'a>, JsonError> {
     if input.starts_with(BOM) {
         return Err(JsonError {
             offset: 0,
             kind: ErrorKind::ByteOrderMark,
         });
     }
-    let src = std::str::from_utf8(input).map_err(|e| JsonError {
-        offset: e.valid_up_to(),
-        kind: ErrorKind::InvalidUtf8,
-    })?;
     let mut p = Parser {
-        src,
         bytes: input,
         pos: 0,
         max_depth: options.max_depth,
+        warnings: Vec::new(),
     };
     p.skip_ws();
     let root = p.value(0)?;
@@ -34,14 +35,52 @@ pub(crate) fn parse<'a>(input: &'a [u8], options: &ParseOptions) -> Result<Node<
     if p.pos < input.len() {
         return Err(p.err(ErrorKind::TrailingCharacters, p.pos));
     }
-    Ok(root)
+    Ok(Parsed {
+        node: root,
+        // Produced left to right, so already sorted by offset.
+        warnings: p.warnings,
+    })
+}
+
+/// Text of a byte range the parser has already validated as UTF-8.
+fn text(bytes: &[u8]) -> &str {
+    std::str::from_utf8(bytes).unwrap_or_default()
+}
+
+/// Range warning for a number lexeme, if any.
+fn number_warning(lexeme: &str) -> Option<WarningKind> {
+    let has_exp = lexeme.contains(['e', 'E']);
+    // Short plain lexemes are always within range: |x| < 1e15, x >= 1e-13.
+    if !has_exp && lexeme.len() <= 15 {
+        return None;
+    }
+    let v: f64 = lexeme.parse().ok()?;
+    let mantissa = lexeme.split(['e', 'E']).next().unwrap_or_default();
+    if v.is_infinite() {
+        Some(WarningKind::NumberOverflow)
+    } else if !has_exp && !lexeme.contains('.') && v.abs() > MAX_SAFE_INTEGER {
+        Some(WarningKind::UnsafeInteger)
+    } else if v == 0.0 && mantissa.bytes().any(|b| matches!(b, b'1'..=b'9')) {
+        Some(WarningKind::NumberUnderflow)
+    } else {
+        None
+    }
+}
+
+/// Length of the UTF-8 sequence led by `lead` (assumed valid).
+fn utf8_len(lead: u8) -> usize {
+    match lead {
+        0xC0..=0xDF => 2,
+        0xE0..=0xEF => 3,
+        _ => 4,
+    }
 }
 
 struct Parser<'a> {
-    src: &'a str,
     bytes: &'a [u8],
     pos: usize,
     max_depth: usize,
+    warnings: Vec<Warning>,
 }
 
 impl<'a> Parser<'a> {
@@ -68,10 +107,12 @@ impl<'a> Parser<'a> {
         }
     }
 
-    /// Slice of the source. Callers only pass offsets at ASCII bytes or the
-    /// ends of the input, which are always char boundaries.
-    fn slice(&self, start: usize, end: usize) -> &'a str {
-        self.src.get(start..end).unwrap_or_default()
+    fn slice(&self, start: usize, end: usize) -> &'a [u8] {
+        self.bytes.get(start..end).unwrap_or_default()
+    }
+
+    fn warn(&mut self, kind: WarningKind, offset: usize) {
+        self.warnings.push(Warning { offset, kind });
     }
 
     fn node(&self, start: usize, value: Value<'a>) -> Node<'a> {
@@ -160,11 +201,16 @@ impl<'a> Parser<'a> {
             }
             self.require_digit()?;
         }
-        let lexeme = self.slice(start, self.pos);
+        let lexeme = text(self.slice(start, self.pos));
+        if let Some(kind) = number_warning(lexeme) {
+            self.warn(kind, start);
+        }
         Ok(self.node(start, Value::Number(Cow::Borrowed(lexeme))))
     }
 
-    /// Parse a string at the opening quote. Borrows unless it has escapes.
+    /// Parse a string at the opening quote. Borrows unless it has escapes
+    /// or invalid UTF-8 (which decodes to U+FFFD, like
+    /// [`String::from_utf8_lossy`], with one warning per replacement).
     fn string(&mut self) -> Result<Cow<'a, str>, JsonError> {
         self.pos += 1;
         let mut run = self.pos;
@@ -172,7 +218,7 @@ impl<'a> Parser<'a> {
         loop {
             match self.need()? {
                 b'"' => {
-                    let tail = self.slice(run, self.pos);
+                    let tail = text(self.slice(run, self.pos));
                     self.pos += 1;
                     return Ok(match buf {
                         None => Cow::Borrowed(tail),
@@ -184,12 +230,30 @@ impl<'a> Parser<'a> {
                 }
                 b'\\' => {
                     let s = buf.get_or_insert_with(String::new);
-                    s.push_str(self.slice(run, self.pos));
+                    s.push_str(text(self.slice(run, self.pos)));
                     s.push(self.escape()?);
                     run = self.pos;
                 }
                 0..=0x1f => return Err(self.err(ErrorKind::ControlCharacterInString, self.pos)),
-                _ => self.pos += 1,
+                0x20..=0x7f => self.pos += 1,
+                lead => {
+                    let window =
+                        self.slice(self.pos, self.pos.saturating_add(4).min(self.bytes.len()));
+                    match std::str::from_utf8(window) {
+                        Ok(_) => self.pos += utf8_len(lead),
+                        Err(e) if e.valid_up_to() > 0 => self.pos += utf8_len(lead),
+                        // Incomplete sequence at the end of the input.
+                        Err(e) => {
+                            let bad = e.error_len().ok_or_else(|| self.end())?;
+                            let s = buf.get_or_insert_with(String::new);
+                            s.push_str(text(self.slice(run, self.pos)));
+                            s.push(char::REPLACEMENT_CHARACTER);
+                            self.warn(WarningKind::InvalidUtf8, self.pos);
+                            self.pos += bad;
+                            run = self.pos;
+                        }
+                    }
+                }
             }
         }
     }
