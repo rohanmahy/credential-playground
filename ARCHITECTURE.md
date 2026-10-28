@@ -69,20 +69,23 @@ A zero-copy decoder that produces `Item<'a>` trees borrowing from the input,
 where every item carries `Span { start, end, head_len }`. It records the
 encoding details needed for an exact round trip: argument width, indefinite
 length, and the chunks of an indefinite-length string. The encoder preserves
-those details by default and can also emit deterministic encoding (RFC 8949
-§4.2). It also checks whether an item is deterministic.
+those details by default. It can also emit preferred-plus or deterministic
+serialization (draft-ietf-cbor-serialization-11 §4 and §5), and it checks
+whether an item conforms to either. Nesting is limited to `MAX_DEPTH = 512`.
 
 ```rust
-pub fn decode(bytes: &[u8]) -> Result<Item<'_>, DecodeError>;      // single item
+pub fn decode(bytes: &[u8]) -> Result<Item<'_>, DecodeError>;      // single item; trailing bytes are an error
 pub fn decode_seq(bytes: &[u8]) -> Result<Vec<Item<'_>>, DecodeError>;
-pub fn encode(item: &Item, mode: EncodeMode) -> Vec<u8>;           // Preserve | Deterministic
+pub fn encode(item: &Item, mode: EncodeMode) -> Result<Vec<u8>, EncodeError>; // Preserve | PreferredPlus | Deterministic; Err on invalid simple values
+pub fn duplicate_keys(item: &Item) -> Vec<DuplicateKey>;          // detection only; the linter warns
 pub enum Value<'a> { Uint(u64), Nint(u64), Bytes(Cow<'a,[u8]>), Text(Cow<'a,str>),
                      Array(Vec<Item<'a>>), Map(Vec<(Item<'a>, Item<'a>)>),
                      Tag(u64, Box<Item<'a>>), Simple(u8), Float(f64, FloatWidth), ... }
 ```
 Maps are kept as ordered vectors **in arrival order**, so duplicate keys are
-preserved and linted rather than rejected. `EncodeMode::Preserve` and the EDN
-printer emit map entries in that order. Only `Deterministic` re-sorts.
+preserved and linted rather than rejected. `EncodeMode::Preserve`,
+`PreferredPlus`, and the EDN printer emit map entries in that order. Only
+`Deterministic` re-sorts.
 Unknown simple values and tags are kept as-is, which covers SD-CWT's custom
 simple value.
 
