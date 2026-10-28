@@ -1,0 +1,174 @@
+//! Registry entry types.
+
+/// One of the four IANA registry groups that can be fetched and merged.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum RegistryId {
+    /// CBOR Web Token (CWT) claims and confirmation methods.
+    Cwt,
+    /// COSE header parameters, algorithms, key types, curves, key parameters.
+    Cose,
+    /// JSON Web Token claims and confirmation methods.
+    Jwt,
+    /// JOSE header parameters, algorithms, JWK types, curves, parameters.
+    Jose,
+}
+
+impl RegistryId {
+    /// All four registries, in snapshot order.
+    pub const ALL: [RegistryId; 4] = [Self::Cwt, Self::Cose, Self::Jwt, Self::Jose];
+
+    /// The `id` attribute of the root `<registry>` element in the IANA XML.
+    pub fn xml_id(self) -> &'static str {
+        match self {
+            Self::Cwt => "cwt",
+            Self::Cose => "cose",
+            Self::Jwt => "jwt",
+            Self::Jose => "jose",
+        }
+    }
+
+    /// URL of the IANA XML for this registry.
+    pub fn url(self) -> &'static str {
+        match self {
+            Self::Cwt => "https://www.iana.org/assignments/cwt/cwt.xml",
+            Self::Cose => "https://www.iana.org/assignments/cose/cose.xml",
+            Self::Jwt => "https://www.iana.org/assignments/jwt/jwt.xml",
+            Self::Jose => "https://www.iana.org/assignments/jose/jose.xml",
+        }
+    }
+
+    /// The entry kinds populated from this registry (and replaced by a merge).
+    pub fn kinds(self) -> &'static [EntryKind] {
+        use EntryKind::*;
+        match self {
+            Self::Cwt => &[CwtClaim, CwtCnfMethod],
+            Self::Cose => &[
+                CoseHeader,
+                CoseHeaderAlgParam,
+                CoseAlg,
+                CoseKeyParam,
+                CoseKeyTypeParam,
+                CoseKty,
+                CoseCrv,
+            ],
+            Self::Jwt => &[JwtClaim, JwtCnfMethod],
+            Self::Jose => &[JoseHeader, JoseAlg, JwkKty, JwkCrv, JwkParam],
+        }
+    }
+}
+
+/// What an entry describes. Together with [`Label`] (and, for
+/// [`EntryKind::CoseKeyTypeParam`], [`Entry::key_type`]) it identifies an entry.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum EntryKind {
+    /// JWS/JWE header parameter (`jose.xml#web-signature-encryption-header-parameters`).
+    JoseHeader,
+    /// JWS/JWE algorithm (`jose.xml#web-signature-encryption-algorithms`).
+    JoseAlg,
+    /// JWK `kty` value (`jose.xml#web-key-types`).
+    JwkKty,
+    /// JWK `crv` value (`jose.xml#web-key-elliptic-curve`).
+    JwkCrv,
+    /// JWK member name (`jose.xml#web-key-parameters`).
+    JwkParam,
+    /// JWT claim name (`jwt.xml#claims`).
+    JwtClaim,
+    /// JWT `cnf` member (`jwt.xml#confirmation-methods`).
+    JwtCnfMethod,
+    /// COSE header label (`cose.xml#header-parameters`).
+    CoseHeader,
+    /// COSE algorithm-specific header label (`cose.xml#header-algorithm-parameters`).
+    CoseHeaderAlgParam,
+    /// COSE algorithm value (`cose.xml#algorithms`).
+    CoseAlg,
+    /// COSE_Key common parameter label (`cose.xml#key-common-parameters`).
+    CoseKeyParam,
+    /// COSE_Key type-specific parameter label (`cose.xml#key-type-parameters`).
+    CoseKeyTypeParam,
+    /// COSE key type value (`cose.xml#key-type`).
+    CoseKty,
+    /// COSE elliptic curve value (`cose.xml#elliptic-curves`).
+    CoseCrv,
+    /// CWT claim key (`cwt.xml#claims-registry`).
+    CwtClaim,
+    /// CWT `cnf` map key (`cwt.xml#confirmation-methods`).
+    CwtCnfMethod,
+    /// CBOR tag number relevant to tokens (local additions).
+    CborTag,
+    /// CBOR simple value relevant to tokens (local additions).
+    CborSimple,
+}
+
+/// An integer or text label/value.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Label {
+    /// Integer label, e.g. COSE header `4` or alg `-7`.
+    Int(i64),
+    /// Text label, e.g. JOSE `"kid"` or a COSE text header label.
+    Text(String),
+}
+
+impl From<i64> for Label {
+    fn from(v: i64) -> Self {
+        Self::Int(v)
+    }
+}
+
+impl From<&str> for Label {
+    fn from(v: &str) -> Self {
+        Self::Text(v.to_owned())
+    }
+}
+
+impl From<String> for Label {
+    fn from(v: String) -> Self {
+        Self::Text(v)
+    }
+}
+
+/// Where an entry came from. Precedence: `Refreshed` > `Iana` > `Local`.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub enum Source {
+    /// From the bundled snapshot of the IANA registries.
+    Iana,
+    /// From `data/local-additions.json` (not, or not yet, in IANA).
+    Local,
+    /// From a refreshed IANA fetch merged with [`crate::Registry::merge_iana`].
+    Refreshed,
+}
+
+/// A specification reference.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct SpecRef {
+    /// Human-readable text, e.g. `RFC 7519, Section 4.1.1`.
+    pub text: String,
+    /// Link, e.g. `https://www.rfc-editor.org/rfc/rfc7519#section-4.1.1`.
+    pub url: Option<String>,
+}
+
+/// One registered codepoint.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Entry {
+    /// What this entry describes.
+    pub kind: EntryKind,
+    /// The codepoint: claim key, header label, alg value, JOSE name, tag number…
+    pub label: Label,
+    /// Short name, e.g. `alg`, `ES256`, `iss`. Trailing IANA parentheticals
+    /// such as `(type)` or `(TEMPORARY - …)` are stripped.
+    pub name: String,
+    /// Plain-text description (markup flattened, whitespace collapsed).
+    pub description: String,
+    /// Value type as given by the registry (e.g. `bstr`, `int / tstr`), if any.
+    pub value_type: Option<String>,
+    /// Specification references.
+    pub reference: Vec<SpecRef>,
+    /// Provenance.
+    pub source: Source,
+    /// IANA marks the registration as TEMPORARY (early allocation).
+    pub temporary: bool,
+    /// For [`EntryKind::CoseKeyTypeParam`]: the kty value the label belongs to.
+    /// For [`EntryKind::JwkParam`]: the key type from the `usage` column (`EC`, `*`, …).
+    pub key_type: Option<Label>,
+    /// For CWT claims and CWT cnf methods: the JWT name of the same claim or member.
+    pub jwt_name: Option<String>,
+}

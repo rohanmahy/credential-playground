@@ -1,0 +1,293 @@
+{
+  "_comment": "Codepoints not (or not reliably) in the IANA CWT/COSE/JWT/JOSE registries. Entries get source=Local; an IANA registration of the same (kind, label) wins. SD-CWT codepoints come from the pinned revision.",
+  "sd_cwt_revision": "draft-ietf-spice-sd-cwt-08",
+  "entries": [
+    {
+      "kind": "cbor_simple",
+      "label": 59,
+      "name": "redacted_claim_keys",
+      "description": "As a map key, the value is an array of redacted claim keys at the same level",
+      "value_type": "array of bstr",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 4.1",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-4.1"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 58,
+      "name": "to-be-redacted",
+      "description": "An array element, or a map key whose key and value, are to be redacted",
+      "value_type": "any",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 11.1",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-11.1"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 60,
+      "name": "redacted-claim-element",
+      "description": "A selective disclosure redacted (array) claim element",
+      "value_type": "bstr",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 4.1",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-4.1"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 62,
+      "name": "to-be-decoy",
+      "description": "Marks where a decoy is to be inserted (tag number requested, not yet assigned)",
+      "value_type": "uint .gt 0",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 11.2",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-11.2"
+        }
+      ]
+    },
+    {
+      "kind": "cose_header",
+      "label": 17,
+      "name": "sd_claims",
+      "description": "A list of selectively disclosed claims, which were originally redacted, then later disclosed at the discretion of the sender.",
+      "value_type": "[ +bstr ]",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 3.3",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-3.3"
+        }
+      ]
+    },
+    {
+      "kind": "cose_header",
+      "label": 170,
+      "name": "sd_alg",
+      "description": "The hash algorithm used for redacting disclosures.",
+      "value_type": "int",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 6",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-6"
+        }
+      ]
+    },
+    {
+      "kind": "cose_header",
+      "label": 171,
+      "name": "sd_aead_encrypted_claims",
+      "description": "A list of AEAD encrypted selectively disclosed claims, which were originally redacted, then later disclosed at the discretion of the sender.",
+      "value_type": "[ +[bstr,bstr,bstr] ]",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 12.1",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-12.1"
+        }
+      ]
+    },
+    {
+      "kind": "cose_header",
+      "label": 172,
+      "name": "sd_aead",
+      "description": "The AEAD algorithm used for encrypting disclosures.",
+      "value_type": "uint .size 2",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 12.1",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-12.1"
+        }
+      ]
+    },
+    {
+      "kind": "cwt_claim",
+      "label": 11,
+      "name": "vct",
+      "description": "Verifiable credential type",
+      "value_type": "bstr",
+      "reference": [
+        {
+          "text": "draft-ietf-spice-sd-cwt-08, Section 13",
+          "url": "https://datatracker.ietf.org/doc/html/draft-ietf-spice-sd-cwt-08#section-13"
+        }
+      ],
+      "jwt_name": "vct"
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 0,
+      "name": "tdate",
+      "description": "Standard date/time string",
+      "value_type": "tstr",
+      "reference": [
+        {
+          "text": "RFC 8949, Section 3.4.1",
+          "url": "https://www.rfc-editor.org/rfc/rfc8949#section-3.4.1"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 1,
+      "name": "time",
+      "description": "Epoch-based date/time",
+      "value_type": "int / float",
+      "reference": [
+        {
+          "text": "RFC 8949, Section 3.4.2",
+          "url": "https://www.rfc-editor.org/rfc/rfc8949#section-3.4.2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 16,
+      "name": "COSE_Encrypt0",
+      "description": "COSE Single Recipient Encrypted Data Object",
+      "value_type": "COSE_Encrypt0",
+      "reference": [
+        {
+          "text": "RFC 9052, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9052#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 17,
+      "name": "COSE_Mac0",
+      "description": "COSE Mac w/o Recipients Object",
+      "value_type": "COSE_Mac0",
+      "reference": [
+        {
+          "text": "RFC 9052, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9052#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 18,
+      "name": "COSE_Sign1",
+      "description": "COSE Single Signer Data Object",
+      "value_type": "COSE_Sign1",
+      "reference": [
+        {
+          "text": "RFC 9052, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9052#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 24,
+      "name": "encoded-cbor",
+      "description": "Encoded CBOR data item",
+      "value_type": "bstr",
+      "reference": [
+        {
+          "text": "RFC 8949, Section 3.4.5.1",
+          "url": "https://www.rfc-editor.org/rfc/rfc8949#section-3.4.5.1"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 61,
+      "name": "CWT",
+      "description": "CBOR Web Token",
+      "value_type": "COSE_Messages",
+      "reference": [
+        {
+          "text": "RFC 8392, Section 6",
+          "url": "https://www.rfc-editor.org/rfc/rfc8392#section-6"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 96,
+      "name": "COSE_Encrypt",
+      "description": "COSE Encrypted Data Object",
+      "value_type": "COSE_Encrypt",
+      "reference": [
+        {
+          "text": "RFC 9052, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9052#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 97,
+      "name": "COSE_Mac",
+      "description": "COSE MACed Data Object",
+      "value_type": "COSE_Mac",
+      "reference": [
+        {
+          "text": "RFC 9052, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9052#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 98,
+      "name": "COSE_Sign",
+      "description": "COSE Signed Data Object",
+      "value_type": "COSE_Sign",
+      "reference": [
+        {
+          "text": "RFC 9052, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc9052#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 100,
+      "name": "days",
+      "description": "Number of days since the epoch date 1970-01-01",
+      "value_type": "int",
+      "reference": [
+        {
+          "text": "RFC 8943, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc8943#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 1004,
+      "name": "full-date",
+      "description": "RFC 3339 full-date string",
+      "value_type": "tstr",
+      "reference": [
+        {
+          "text": "RFC 8943, Section 2",
+          "url": "https://www.rfc-editor.org/rfc/rfc8943#section-2"
+        }
+      ]
+    },
+    {
+      "kind": "cbor_tag",
+      "label": 55799,
+      "name": "self-described-cbor",
+      "description": "Self-described CBOR",
+      "value_type": "any",
+      "reference": [
+        {
+          "text": "RFC 8949, Section 3.4.6",
+          "url": "https://www.rfc-editor.org/rfc/rfc8949#section-3.4.6"
+        }
+      ]
+    }
+  ]
+}

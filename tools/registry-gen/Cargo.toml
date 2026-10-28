@@ -1,0 +1,15 @@
+[package]
+name = "registry-gen"
+description = "Build-time generator for the tokenator-registry snapshot (IANA XML -> snapshot)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+tokenator-registry = { path = "../../crates/tokenator-registry" }
+
+[lints]
+workspace = true

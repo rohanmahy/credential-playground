@@ -3,6 +3,13 @@
 version = 4
 
 [[package]]
+name = "registry-gen"
+version = "0.1.0"
+dependencies = [
+ "tokenator-registry",
+]
+
+[[package]]
 name = "tokenator-cbor"
 version = "0.1.0"
 
