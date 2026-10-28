@@ -30,6 +30,9 @@ invariants of a `SpanMap` against the item, the bytes and the text, and
 
 ## Decisions encoded in the tests
 
+Open questions on these are tracked in issues #14 (grammar) and #15
+(printer, hex, `hash`, date/time).
+
 - **String juxtaposition is gone** (-28 §2.3): `"a" "b"` is two items (inside
   arrays) or trailing input (at top level). Concatenation is `b1<<…>>` /
   `t1<<…>>`. SPEC §8 "concatenated strings" is met by `b1`/`t1`.
@@ -45,7 +48,11 @@ invariants of a `SpanMap` against the item, the bytes and the text, and
   printer's default for indefinite strings; `IndefiniteStringStyle::AppExtension`
   prints `ilbs<<…>>`/`ilts<<…>>`.
 - **Reserved encoding indicators** (`_4`–`_7`, `_foo`) and indicators on
-  bignum literals are accepted and ignored with a warning.
+  bignum literals are accepted and ignored with a warning. An indicator is
+  `_` plus the longest run of word characters (`1_i0` is reserved `i0`).
+- **Built-in extensions**: `h`, `b64`, `dt`, `ip`, `hash` (SPEC) plus `b1`,
+  `t1`, `ilbs`, `ilts`, `float` (the vectors need `float`). `hash` supports
+  -16 (default), -43, -44, -15, by number or registry name.
 - **Float literals** that overflow binary64 (`1e400`) are errors; indicators
   too narrow for the exact value are errors.
 - **`float'…'` without an indicator** follows preferred serialization (the

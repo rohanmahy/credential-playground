@@ -420,6 +420,10 @@ version = "0.1.0"
 [[package]]
 name = "tokenator-edn"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+ "tokenator-cbor",
+]
 
 [[package]]
 name = "tokenator-jose"
