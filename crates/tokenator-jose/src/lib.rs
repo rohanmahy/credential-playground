@@ -19,24 +19,95 @@
 //! - [`header_facts`], [`duplicate_members`], [`cnf`], [`key_findings`] and
 //!   [`jwk_findings`] feed the core's linter.
 //!
-//! ```no_run
-//! use tokenator_jose::{parse, verify_signature};
-//! # fn demo(text: &str, issuer: &tokenator_keys::Key) -> Result<(), Box<dyn std::error::Error>> {
-//! let parsed = parse(text)?;
-//! let alg = verify_signature(parsed.token.jws(), 0, issuer)?;
-//! if let Some(sd) = parsed.token.sd_jwt() {
-//!     let processed = sd.process()?;
-//!     println!("{alg:?}: {} findings", processed.report.findings.len());
-//! }
-//! # Ok(()) }
+//! # Verifying a JWT
+//!
+//! RFC 7515 Appendix A.3, verified with its public key:
+//!
 //! ```
-
-// Skeleton: the implementation replaces every `unimplemented!()`.
-#![allow(unused_variables, dead_code, clippy::unimplemented)]
+//! use tokenator_crypto::Alg;
+//! use tokenator_jose::{TimeStatus, check_time_claims, parse, verify_signature};
+//! use tokenator_keys::{Jwk, from_jwk};
+//!
+//! let token = "eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJqb2UiLA0KICJleHAiOjEzMDA4MTkzODAsDQogImh0dHA6Ly9leGFtcGxlLmNvbS9pc19yb290Ijp0cnVlfQ.DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q";
+//! let key = from_jwk(&Jwk::parse(br#"{"kty":"EC","crv":"P-256",
+//!     "x":"f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU",
+//!     "y":"x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0"}"#)?)?;
+//!
+//! let parsed = parse(token)?;
+//! assert!(parsed.diagnostics.is_empty());
+//! let jws = parsed.token.jws();
+//! assert_eq!(verify_signature(jws, 0, &key), Ok(Alg::ES256));
+//!
+//! // The payload keeps its CRLFs; time checks use an injected clock.
+//! let claims = jws.claims()?;
+//! assert_eq!(check_time_claims(&claims, 1_300_819_379, 0).exp, TimeStatus::Valid);
+//! assert_eq!(check_time_claims(&claims, 1_300_819_380, 0).exp, TimeStatus::Expired);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
+//!
+//! # Issue, present, verify
+//!
+//! An issuer makes `email` and one array element selectively disclosable
+//! and binds the holder's key; the holder discloses only the element and
+//! adds a KB-JWT; the verifier checks both signatures and rebuilds the
+//! claims. Seeded keys and a seeded RNG make the run reproducible.
+//!
+//! ```
+//! use rand_chacha::ChaCha20Rng;
+//! use tokenator_crypto::{Alg, KeySpec, rand_core::SeedableRng};
+//! use tokenator_jose::{
+//!     Cnf, IssueOptions, KbExpectations, KbOptions, SdFinding, ValueCheck, check_kb_jwt, issue,
+//!     parse, present, verify_signature,
+//! };
+//! use tokenator_keys::{Role, Visibility, generate, to_jwk, to_public};
+//!
+//! let mut rng = ChaCha20Rng::from_seed([7; 32]);
+//! let issuer = generate(KeySpec::P256, Some(Role::Issuer), Some(&[1; 32]), &mut rng)?;
+//! let holder = generate(KeySpec::Ed25519, Some(Role::Holder), Some(&[2; 32]), &mut rng)?;
+//!
+//! // Issue.
+//! let claims = tokenator_json::parse(br#"{"sub":"alice","email":"a@example.com","langs":["de","fr"]}"#)?;
+//! let mut opts = IssueOptions::new(&issuer, Alg::ES256);
+//! opts.typ = Some("example+sd-jwt".into());
+//! opts.sd = vec!["/email".into(), "/langs/1".into()];
+//! opts.cnf = Some(Cnf::Jwk(to_jwk(&holder, Visibility::Public)?));
+//! let issued = issue(&claims, &opts, &mut rng)?;
+//! assert_eq!(issued.disclosures[1].pointer, "/langs/1");
+//!
+//! // Present only "fr", bound to the verifier's nonce.
+//! let parsed = parse(&issued.token)?;
+//! let sd = parsed.token.sd_jwt().expect("an SD-JWT");
+//! let kb = KbOptions::new(&holder, Alg::Ed25519, "https://verifier.example", "n-42", 1_800_000_000);
+//! let presented = present(sd, &[1], Some(&kb), &mut rng)?;
+//! assert!(presented.selection.findings.is_empty());
+//!
+//! // Verify.
+//! let parsed = parse(&presented.token)?;
+//! let sd = parsed.token.sd_jwt().expect("an SD-JWT");
+//! assert_eq!(verify_signature(&sd.issuer, 0, &to_public(&issuer)), Ok(Alg::ES256));
+//! let processed = sd.process()?;
+//! let claims = tokenator_json::print(&processed.claims, tokenator_json::PrintStyle::Compact);
+//! assert!(claims.starts_with(r#"{"sub":"alice","langs":["de","fr"],"cnf":"#));
+//! // The withheld email is just an unfilled digest.
+//! assert!(matches!(processed.report.findings[..], [SdFinding::DigestWithoutDisclosure { .. }]));
+//!
+//! let expect = KbExpectations {
+//!     aud: Some("https://verifier.example"),
+//!     nonce: Some("n-42"),
+//!     now: 1_800_000_030,
+//!     skew: 60,
+//!     max_age: Some(300),
+//! };
+//! let report = check_kb_jwt(sd, &[], &expect).expect("has a KB-JWT");
+//! assert_eq!(report.signature, Ok(Alg::Ed25519));
+//! assert_eq!(report.sd_hash, ValueCheck::Match);
+//! # Ok::<(), Box<dyn std::error::Error>>(())
+//! ```
 
 mod b64;
 mod error;
 mod issue;
+mod json_out;
 mod lint;
 mod manipulate;
 mod parse;

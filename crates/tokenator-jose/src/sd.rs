@@ -1,11 +1,14 @@
 //! SD-JWT semantics: disclosures, digests, matching, and processing
 //! (RFC 9901 §4.2, §7.1).
 
-use tokenator_crypto::HashAlg;
-use tokenator_json::{JsonError, Node};
+use std::borrow::Cow;
+use std::collections::HashMap;
 
-use crate::b64::B64Error;
-use crate::parse::Disclosure;
+use tokenator_crypto::{HashAlg, digest};
+use tokenator_json::{JsonError, Member, Node, Value};
+
+use crate::b64::{B64Error, b64u_encode};
+use crate::parse::{B64Part, Disclosure};
 
 /// Why a disclosure is not a valid `[salt, name, value]` / `[salt, value]`.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -43,27 +46,38 @@ pub struct DisclosureView<'b> {
 impl<'b> DisclosureView<'b> {
     /// The decoded JSON array; spans are relative to the decoded bytes.
     pub fn tree(&self) -> &Node<'b> {
-        unimplemented!()
+        &self.tree
     }
 
     /// Property or array element.
     pub fn kind(&self) -> DisclosureKind {
-        unimplemented!()
+        if self.elements().len() == 3 {
+            DisclosureKind::Property
+        } else {
+            DisclosureKind::ArrayElement
+        }
     }
 
     /// The salt.
     pub fn salt(&self) -> &str {
-        unimplemented!()
+        match self.elements().first().map(Node::value) {
+            Some(Value::String(s)) => s,
+            _ => "",
+        }
     }
 
     /// The claim name, for a property disclosure.
     pub fn name(&self) -> Option<&str> {
-        unimplemented!()
+        self.name_node().and_then(|n| match n.value() {
+            Value::String(s) => Some(s.as_ref()),
+            _ => None,
+        })
     }
 
     /// The claim value or array element.
     pub fn value(&self) -> &Node<'b> {
-        unimplemented!()
+        // Validated in `new`: the value is the last of 2 or 3 elements.
+        self.elements().last().unwrap_or(&self.tree)
     }
 }
 
@@ -84,13 +98,23 @@ pub enum SdAlg {
 impl SdAlg {
     /// The hash to use, if supported.
     pub fn hash(&self) -> Option<HashAlg> {
-        unimplemented!()
+        match self {
+            SdAlg::Default => Some(HashAlg::Sha256),
+            SdAlg::Named(h) => Some(*h),
+            SdAlg::Unsupported(_) | SdAlg::NotAString => None,
+        }
     }
 }
 
 /// Reads the top-level `_sd_alg` of `payload`.
 pub fn sd_alg(payload: &Node<'_>) -> SdAlg {
-    unimplemented!()
+    match payload.get("_sd_alg").map(Node::value) {
+        None => SdAlg::Default,
+        Some(Value::String(s)) => {
+            HashAlg::from_name(s).map_or_else(|| SdAlg::Unsupported(s.to_string()), SdAlg::Named)
+        }
+        Some(_) => SdAlg::NotAString,
+    }
 }
 
 /// Base64url of `hash` over the ASCII bytes of `text`: a disclosure digest
@@ -107,7 +131,7 @@ pub fn sd_alg(payload: &Node<'_>) -> SdAlg {
 /// );
 /// ```
 pub fn sd_digest(text: &str, hash: HashAlg) -> String {
-    unimplemented!()
+    b64u_encode(&digest(hash, text.as_bytes()))
 }
 
 /// Where a digest slot lives.
@@ -297,7 +321,369 @@ pub struct Processed<'s> {
 /// offending disclosure is left out and reported. A disclosure is inserted
 /// at most once, even when its digest appears in several slots.
 pub fn process<'s>(payload: &Node<'s>, disclosures: &'s [Disclosure<'_>]) -> Processed<'s> {
-    unimplemented!()
+    let alg = sd_alg(payload);
+    let hash = alg.hash();
+    let views: Vec<_> = disclosures.iter().map(Disclosure::view).collect();
+    let mut walker = Walker::new(&views, disclosures, hash);
+    let claims = walker.node(payload, Container::Payload, String::new(), true);
+    walker.finish(alg, claims)
+}
+
+impl<'b> DisclosureView<'b> {
+    /// Decodes and checks a disclosure part.
+    pub(crate) fn new(part: &'b B64Part<'_>) -> Result<DisclosureView<'b>, DisclosureError> {
+        let bytes = part.decoded().map_err(DisclosureError::Base64)?;
+        let tree = tokenator_json::parse(bytes).map_err(DisclosureError::Json)?;
+        let elements = tree.elements().ok_or(DisclosureError::NotAnArray)?;
+        let is_str = |n: &Node<'_>| matches!(n.value(), Value::String(_));
+        match elements {
+            [salt, ..] if (2..=3).contains(&elements.len()) && !is_str(salt) => {
+                return Err(DisclosureError::SaltNotString);
+            }
+            [_, name, _] if !is_str(name) => return Err(DisclosureError::NameNotString),
+            [_, _] | [_, _, _] => {}
+            _ => return Err(DisclosureError::WrongLength(elements.len())),
+        }
+        Ok(DisclosureView { tree })
+    }
+
+    fn elements(&self) -> &[Node<'b>] {
+        self.tree.elements().unwrap_or_default()
+    }
+
+    fn name_node(&self) -> Option<&Node<'b>> {
+        match self.elements() {
+            [_, name, _] => Some(name),
+            _ => None,
+        }
+    }
+
+    /// The claim name, borrowing the decoded bytes when unescaped.
+    pub(crate) fn name_cow(&self) -> Option<Cow<'b, str>> {
+        match self.name_node()?.value() {
+            Value::String(s) => Some(s.clone()),
+            _ => None,
+        }
+    }
+}
+
+/// Escapes one RFC 6901 reference token.
+pub(crate) fn escape_token(token: &str) -> Cow<'_, str> {
+    if token.contains(['~', '/']) {
+        Cow::Owned(token.replace('~', "~0").replace('/', "~1"))
+    } else {
+        Cow::Borrowed(token)
+    }
+}
+
+/// The digest of a `{"...": digest}` array element, if `node` is exactly
+/// that; `Err(())` for an object with `...` that is not a valid slot.
+pub(crate) fn array_digest<'n>(node: &'n Node<'_>) -> Option<Result<&'n str, ()>> {
+    let members = node.members()?;
+    if !members.iter().any(|m| m.key() == "...") {
+        return None;
+    }
+    Some(match members {
+        [m] => match m.value().value() {
+            Value::String(d) => Ok(d),
+            _ => Err(()),
+        },
+        _ => Err(()),
+    })
+}
+
+type Views<'s> = [Result<DisclosureView<'s>, DisclosureError>];
+
+/// The state of one [`process`] run.
+struct Walker<'s, 'v> {
+    views: &'v Views<'s>,
+    hash: Option<HashAlg>,
+    matches: Vec<DisclosureMatch>,
+    /// Digest to the group of disclosures with that digest.
+    disclosure_group: HashMap<String, usize>,
+    disclosure_groups: Vec<Vec<usize>>,
+    slots: Vec<DigestSlot>,
+    /// Digest to the group of slots with that digest.
+    slot_group: HashMap<String, usize>,
+    slot_groups: Vec<Vec<usize>>,
+    /// Findings met during the walk.
+    findings: Vec<SdFinding>,
+}
+
+impl<'s, 'v> Walker<'s, 'v> {
+    fn new(views: &'v Views<'s>, disclosures: &[Disclosure<'_>], hash: Option<HashAlg>) -> Self {
+        let mut walker = Walker {
+            views,
+            hash,
+            matches: Vec::with_capacity(disclosures.len()),
+            disclosure_group: HashMap::new(),
+            disclosure_groups: Vec::new(),
+            slots: Vec::new(),
+            slot_group: HashMap::new(),
+            slot_groups: Vec::new(),
+            findings: Vec::new(),
+        };
+        for (i, d) in disclosures.iter().enumerate() {
+            let digest = hash.map(|h| d.digest(h));
+            if let Some(dg) = &digest {
+                let next = walker.disclosure_groups.len();
+                let g = *walker.disclosure_group.entry(dg.clone()).or_insert(next);
+                match walker.disclosure_groups.get_mut(g) {
+                    Some(group) => group.push(i),
+                    None => walker.disclosure_groups.push(vec![i]),
+                }
+            }
+            walker.matches.push(DisclosureMatch { digest, slot: None });
+        }
+        walker
+    }
+
+    /// Records a slot and returns its index and the disclosure that fills it.
+    fn slot(
+        &mut self,
+        digest: &str,
+        kind: SlotKind,
+        container: Container,
+        pointer: String,
+    ) -> (usize, Option<usize>) {
+        let index = self.slots.len();
+        let mut disclosure = None;
+        if let Some(&g) = self.slot_group.get(digest) {
+            if let Some(group) = self.slot_groups.get_mut(g) {
+                group.push(index);
+            }
+        } else {
+            self.slot_group
+                .insert(digest.to_owned(), self.slot_groups.len());
+            self.slot_groups.push(vec![index]);
+            if self.hash.is_some() {
+                let first = self.disclosure_group.get(digest);
+                disclosure = first.and_then(|g| self.disclosure_groups.get(*g)?.first().copied());
+            }
+        }
+        if let Some(m) = disclosure.and_then(|d| self.matches.get_mut(d)) {
+            m.slot = Some(index);
+        }
+        self.slots.push(DigestSlot {
+            digest: digest.to_owned(),
+            kind,
+            container,
+            pointer,
+            disclosure,
+        });
+        (index, disclosure)
+    }
+
+    fn node(
+        &mut self,
+        node: &Node<'s>,
+        container: Container,
+        pointer: String,
+        top: bool,
+    ) -> Node<'s> {
+        match node.value() {
+            Value::Object(ms) => self.object(ms, container, &pointer, top),
+            Value::Array(xs) => self.array(xs, container, &pointer),
+            _ => node.clone(),
+        }
+    }
+
+    fn object(
+        &mut self,
+        ms: &[Member<'s>],
+        container: Container,
+        pointer: &str,
+        top: bool,
+    ) -> Node<'s> {
+        let mut plain = Vec::with_capacity(ms.len());
+        let mut disclosed = Vec::new();
+        for m in ms {
+            let key: &str = m.key();
+            let child = format!("{pointer}/{}", escape_token(key));
+            match key {
+                "_sd" => self.sd_array(m.value(), container, &child, ms, &mut disclosed),
+                "_sd_alg" if top => {}
+                _ => {
+                    if key == "_sd_alg" {
+                        let pointer = child.clone();
+                        self.findings
+                            .push(SdFinding::NestedSdAlg { container, pointer });
+                    }
+                    let value = self.node(m.value(), container, child, false);
+                    plain.push(Member::new(m.key().clone(), value));
+                }
+            }
+        }
+        plain.append(&mut disclosed);
+        Node::new(Value::Object(plain))
+    }
+
+    fn sd_array(
+        &mut self,
+        value: &Node<'s>,
+        container: Container,
+        pointer: &str,
+        siblings: &[Member<'s>],
+        disclosed: &mut Vec<Member<'s>>,
+    ) {
+        let Some(entries) = value.elements() else {
+            let pointer = pointer.to_owned();
+            self.findings
+                .push(SdFinding::SdNotArray { container, pointer });
+            return;
+        };
+        let views = self.views;
+        for (j, entry) in entries.iter().enumerate() {
+            let p = format!("{pointer}/{j}");
+            let Value::String(dg) = entry.value() else {
+                self.findings.push(SdFinding::SdEntryNotString {
+                    container,
+                    pointer: p,
+                });
+                continue;
+            };
+            let (slot, Some(d)) = self.slot(dg, SlotKind::Object, container, p) else {
+                continue;
+            };
+            // A malformed disclosure is reported once, at the end.
+            let Some(Ok(view)) = views.get(d) else {
+                continue;
+            };
+            let name = match view.name_cow() {
+                Some(name) if view.kind() == DisclosureKind::Property => name,
+                _ => {
+                    let finding = SdFinding::KindMismatch {
+                        disclosure: d,
+                        slot,
+                    };
+                    self.findings.push(finding);
+                    continue;
+                }
+            };
+            let taken = |m: &Member<'_>| m.key() == &name;
+            let finding = if name == "_sd" || name == "..." {
+                SdFinding::ForbiddenName {
+                    disclosure: d,
+                    name: name.into_owned(),
+                }
+            } else if siblings.iter().any(|m| m.key() != "_sd" && taken(m))
+                || disclosed.iter().any(taken)
+            {
+                SdFinding::NameCollision {
+                    disclosure: d,
+                    name: name.into_owned(),
+                }
+            } else {
+                let value = self.node(view.value(), Container::Disclosure(d), "/2".into(), false);
+                disclosed.push(Member::new(name, value));
+                continue;
+            };
+            self.findings.push(finding);
+        }
+    }
+
+    fn array(&mut self, xs: &[Node<'s>], container: Container, pointer: &str) -> Node<'s> {
+        let views = self.views;
+        let mut out = Vec::with_capacity(xs.len());
+        for (j, el) in xs.iter().enumerate() {
+            let p = format!("{pointer}/{j}");
+            match array_digest(el) {
+                Some(Ok(dg)) => {
+                    let (slot, d) = self.slot(dg, SlotKind::ArrayElement, container, p);
+                    let Some((d, Some(Ok(view)))) = d.map(|d| (d, views.get(d))) else {
+                        continue;
+                    };
+                    if view.kind() == DisclosureKind::Property {
+                        let finding = SdFinding::KindMismatch {
+                            disclosure: d,
+                            slot,
+                        };
+                        self.findings.push(finding);
+                    } else {
+                        out.push(self.node(
+                            view.value(),
+                            Container::Disclosure(d),
+                            "/1".into(),
+                            false,
+                        ));
+                    }
+                    continue;
+                }
+                Some(Err(())) => {
+                    let pointer = p.clone();
+                    self.findings
+                        .push(SdFinding::MalformedArrayDigest { container, pointer });
+                }
+                None => {}
+            }
+            out.push(self.node(el, container, p, false));
+        }
+        Node::new(Value::Array(out))
+    }
+
+    fn finish(self, sd_alg: SdAlg, claims: Node<'s>) -> Processed<'s> {
+        let matching = self.hash.is_some();
+        let mut findings = Vec::new();
+        if !matching {
+            findings.push(SdFinding::UnsupportedSdAlg);
+        }
+        findings.extend(self.findings);
+        for group in &self.slot_groups {
+            if let (Some(&first), true) = (group.first(), group.len() > 1) {
+                let digest = self
+                    .slots
+                    .get(first)
+                    .map(|s| s.digest.clone())
+                    .unwrap_or_default();
+                findings.push(SdFinding::DuplicateDigest {
+                    digest,
+                    slots: group.clone(),
+                });
+            }
+        }
+        let mut repeated = vec![false; self.matches.len()];
+        if matching {
+            for group in self.disclosure_groups.iter().filter(|g| g.len() > 1) {
+                for &i in group.iter().skip(1) {
+                    if let Some(r) = repeated.get_mut(i) {
+                        *r = true;
+                    }
+                }
+                findings.push(SdFinding::DuplicateDisclosure {
+                    disclosures: group.clone(),
+                });
+            }
+            for (slot, s) in self.slots.iter().enumerate() {
+                let first = self
+                    .slot_group
+                    .get(&s.digest)
+                    .and_then(|g| self.slot_groups.get(*g)?.first());
+                if s.disclosure.is_none() && first == Some(&slot) {
+                    findings.push(SdFinding::DigestWithoutDisclosure { slot });
+                }
+            }
+        }
+        for (i, m) in self.matches.iter().enumerate() {
+            if let Some(Err(error)) = self.views.get(i) {
+                findings.push(SdFinding::MalformedDisclosure {
+                    disclosure: i,
+                    error: error.clone(),
+                });
+            }
+            if matching && m.slot.is_none() && !repeated.get(i).copied().unwrap_or(false) {
+                findings.push(SdFinding::UnmatchedDisclosure { disclosure: i });
+            }
+        }
+        Processed {
+            claims,
+            report: SdReport {
+                sd_alg,
+                digests: self.slots,
+                disclosures: self.matches,
+                findings,
+            },
+        }
+    }
 }
 
 impl core::fmt::Display for DisclosureError {

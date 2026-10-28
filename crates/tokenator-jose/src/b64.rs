@@ -1,4 +1,9 @@
 //! Unpadded base64url (RFC 7515 §2, RFC 4648 §5).
+//!
+//! `base64ct` does the coding; this module adds the checks that give
+//! precise errors (first invalid byte, then length, then trailing bits).
+
+use base64ct::{Base64UrlUnpadded, Encoding};
 
 /// Why a base64url string did not decode.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -36,7 +41,7 @@ impl std::error::Error for B64Error {}
 /// assert_eq!(tokenator_jose::b64u_encode(b"{\"alg\":\"none\"}"), "eyJhbGciOiJub25lIn0");
 /// ```
 pub fn b64u_encode(bytes: &[u8]) -> String {
-    unimplemented!()
+    Base64UrlUnpadded::encode_string(bytes)
 }
 
 /// Strictly decodes unpadded base64url: no padding, no whitespace, no
@@ -48,5 +53,14 @@ pub fn b64u_encode(bytes: &[u8]) -> String {
 /// # Ok::<(), tokenator_jose::B64Error>(())
 /// ```
 pub fn b64u_decode(text: &str) -> Result<Vec<u8>, B64Error> {
-    unimplemented!()
+    let alphabet = |b: &u8| b.is_ascii_alphanumeric() || *b == b'-' || *b == b'_';
+    if let Some(offset) = text.bytes().position(|b| !alphabet(&b)) {
+        return Err(B64Error::InvalidByte { offset });
+    }
+    if text.len() % 4 == 1 {
+        return Err(B64Error::InvalidLength);
+    }
+    // Alphabet and length are fine, so the only remaining failure is a
+    // non-zero unused bit in the last character.
+    Base64UrlUnpadded::decode_vec(text).map_err(|_| B64Error::NonCanonical)
 }
