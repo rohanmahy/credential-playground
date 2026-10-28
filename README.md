@@ -15,7 +15,7 @@ Phase 1: foundations
 Phase 2
 - [ ] `tokenator-edn`: EDN parser/printer with span maps
 - [ ] `tokenator-keys`: PEM/JWK/CWK, to_jwk/to_cwk, thumbprints, keygen
-- [ ] `tokenator-detect`: unwrapping chain + classification
+- [x] `tokenator-detect`: unwrapping chain + classification
 
 Phase 3
 - [ ] `tokenator-jose`: JWS, JWT, SD-JWT, KB-JWT
