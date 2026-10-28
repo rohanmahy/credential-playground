@@ -313,32 +313,57 @@ proptest! {
             let r = print(&decoded, &opts);
             check_span_map(&decoded, Some(&bytes), &r).map_err(TestCaseError::fail)?;
         }
-        for embedded in [EmbeddedCbor::Off, EmbeddedCbor::Containers, EmbeddedCbor::AnyItem] {
-            let rows = annotated_hex(
-                &decoded,
-                &bytes,
-                &HexOptions { embedded_cbor: embedded, ..HexOptions::default() },
-            );
-            let r = print(
-                &decoded,
-                &PrintOptions { embedded_cbor: embedded, ..PrintOptions::indented(2) },
-            );
-            let row_paths: Vec<_> = rows
-                .rows
-                .iter()
-                .filter(|r| r.kind == HexRowKind::Item)
-                .map(|r| r.path.clone())
-                .collect();
-            let span_paths: Vec<_> = r.spans.iter().map(|(p, _)| p.clone()).collect();
-            prop_assert_eq!(row_paths, span_paths);
-            let mut at = 0;
-            for row in &rows.rows {
-                prop_assert_eq!(row.head.start, at);
-                at = row.payload.end;
-            }
-            prop_assert_eq!(at, bytes.len());
-        }
+        check_rows_and_spans(&decoded, &bytes, EmbeddedCbor::OFF)?;
     }
+
+    #[test]
+    fn embedded_views_have_consistent_spans_and_rows(item in item()) {
+        let bytes = encode(&item, EncodeMode::Preserve);
+        let decoded = decode(&bytes).unwrap();
+        common::rt_embedded(&bytes).map_err(TestCaseError::fail)?;
+        let paths = common::all_bstr_paths(&decoded);
+        check_rows_and_spans(&decoded, &bytes, EmbeddedCbor::tagged())?;
+        check_rows_and_spans(&decoded, &bytes, EmbeddedCbor::at(&paths))?;
+    }
+}
+
+/// Hex rows and the indented printer agree on paths, and rows cover the
+/// bytes exactly once.
+fn check_rows_and_spans(
+    decoded: &tokenator_cbor::Item,
+    bytes: &[u8],
+    embedded: EmbeddedCbor<'_>,
+) -> Result<(), TestCaseError> {
+    let rows = annotated_hex(
+        decoded,
+        bytes,
+        &HexOptions {
+            embedded_cbor: embedded,
+            ..HexOptions::default()
+        },
+    );
+    let r = print(
+        decoded,
+        &PrintOptions {
+            embedded_cbor: embedded,
+            ..PrintOptions::indented(2)
+        },
+    );
+    let row_paths: Vec<_> = rows
+        .rows
+        .iter()
+        .filter(|r| r.kind == HexRowKind::Item)
+        .map(|r| r.path.clone())
+        .collect();
+    let span_paths: Vec<_> = r.spans.iter().map(|(p, _)| p.clone()).collect();
+    prop_assert_eq!(row_paths, span_paths);
+    let mut at = 0;
+    for row in &rows.rows {
+        prop_assert_eq!(row.head.start, at);
+        at = row.payload.end;
+    }
+    prop_assert_eq!(at, bytes.len());
+    Ok(())
 }
 
 // ---------------------------------------------------------------- instants

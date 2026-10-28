@@ -220,13 +220,20 @@ fn ip_errors() {
 }
 
 // ---------------------------------------------------------------- hash (§3.4)
+//
+// `hash''` needs the optional `hash` cargo feature (issue #15). CI runs the
+// suite with default features and with `--all-features`.
 
+#[cfg(feature = "hash")]
 const SHA256_FOO: &str = "2C26B46B68FFC68FF99B453C1D30413413422D706483BFA0F98A5E886266E7AE";
+#[cfg(feature = "hash")]
 const SHA384_FOO: &str = "98c11ffdfdd540676b1a137cb1a22b2a70350c9a44171d6b1180c6be5cbb2ee3\
                           f79d532c8a1dd9ef2e8e08e752a3babb";
+#[cfg(feature = "hash")]
 const SHA512_FOO: &str = "F7FBBA6E0636F890E56FBBF3283E524C6FA3204AE298382D624741D0DC663832\
                           6E282C41BE5E4254D8820772C5518A2C5A8C0C7F7EDA19594A7EB539453E1ED7";
 
+#[cfg(feature = "hash")]
 #[test]
 fn hash_table5() {
     let sha256 = format!("h'{SHA256_FOO}'");
@@ -239,6 +246,7 @@ fn hash_table5() {
     same("hash<<'foo', \"SHA-512\">>", &sha512);
 }
 
+#[cfg(feature = "hash")]
 #[test]
 fn hash_more_algorithms_and_inputs() {
     same("hash<<'foo', -43>>", &format!("h'{SHA384_FOO}'"));
@@ -255,6 +263,7 @@ fn hash_more_algorithms_and_inputs() {
     );
 }
 
+/// Malformed input is an extension error with or without the feature.
 #[test]
 fn hash_errors() {
     for edn in [
@@ -268,6 +277,42 @@ fn hash_errors() {
         assert_eq!(ext_err(edn), "hash", "{edn}");
     }
     assert_eq!(ext_err("HASH'foo'"), "HASH");
+}
+
+/// Without the feature, `hash''` stays a built-in (so it is neither opaque
+/// nor warned about as unknown) and evaluating it is an extension error
+/// that names the feature.
+#[cfg(not(feature = "hash"))]
+#[test]
+fn hash_needs_the_hash_feature() {
+    for edn in [
+        "hash'foo'",
+        "hash<<'foo', -44>>",
+        "hash<<\"foo\", \"SHA-256\">>",
+    ] {
+        let e = parse(edn).unwrap_err();
+        match e.kind {
+            EdnErrorKind::Extension { prefix, message } => {
+                assert_eq!(prefix, "hash", "{edn}");
+                assert!(message.contains("feature"), "{edn}: {message}");
+            }
+            other => panic!("{edn}: {other:?}"),
+        }
+        assert_eq!(e.pos.offset, 0);
+    }
+    assert!(Extensions::builtin().get("hash").is_some());
+    assert!(Extensions::is_builtin_name("hash"));
+    let strict_unknown = ParseOptions {
+        unknown_extensions: UnknownExtensions::Error,
+        ..ParseOptions::default()
+    };
+    assert!(matches!(
+        parse_with("hash'foo'", &strict_unknown).unwrap_err().kind,
+        EdnErrorKind::Extension { .. }
+    ));
+    // An opaque value named "hash" still prints as a tag, not as hash''.
+    let bytes = enc("999([\"hash\", [\"foo\"]])");
+    assert_eq!(diag(&bytes), "999([\"hash\", [\"foo\"]])");
 }
 
 // ---------------------------------------------------------------- b1 / t1 (§3.5)
@@ -597,14 +642,17 @@ fn empty_registry_makes_everything_opaque() {
 
 #[test]
 fn extension_results_roundtrip_through_the_printer() {
-    for edn in [
+    let mut literals = vec![
         "dt'2013-03-21T20:04:00.5Z'",
         "DT'2013-03-21T20:04:00Z'",
         "IP'2001:db8::/64'",
-        "hash'foo'",
         "ilbs<<'Hello '_0, 'world'>>",
         "float'7fe00000'_2",
-    ] {
+    ];
+    if cfg!(feature = "hash") {
+        literals.push("hash'foo'");
+    }
+    for edn in literals {
         let bytes = enc(edn);
         common::rt(&bytes).unwrap_or_else(|e| panic!("{edn}: {e}"));
         let item = decode(&bytes).unwrap();

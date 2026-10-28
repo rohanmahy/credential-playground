@@ -176,6 +176,25 @@ fn check_each_test_roundtrips(name: &str) {
     );
 }
 
+/// Every decodable byte string listed as embedded CBOR (#15): the whole
+/// file and every good `encoded` value still round-trip exactly.
+fn check_embedded_roundtrips(name: &str) {
+    let bytes = vector_file(&format!("{name}.cbor"));
+    common::rt_embedded(&bytes).unwrap_or_else(|e| panic!("{name}: {e}"));
+    let file = decode(&bytes).unwrap();
+    for test in tests_of(&file) {
+        if let Some(Item {
+            value: Value::Bytes(encoded),
+            ..
+        }) = get(test, "encoded")
+            && decode(encoded).is_ok()
+        {
+            common::rt_embedded(encoded)
+                .unwrap_or_else(|e| panic!("{name}: {}: {e}", description(test)));
+        }
+    }
+}
+
 macro_rules! vector_tests {
     ($($id:ident => $name:literal,)*) => {
         mod edn_file_encodes_to_cbor {
@@ -186,6 +205,9 @@ macro_rules! vector_tests {
         }
         mod each_test_roundtrips {
             $(#[test] fn $id() { super::deep(|| super::check_each_test_roundtrips($name)); })*
+        }
+        mod embedded_roundtrips {
+            $(#[test] fn $id() { super::deep(|| super::check_embedded_roundtrips($name)); })*
         }
     };
 }

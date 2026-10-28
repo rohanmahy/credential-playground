@@ -8,8 +8,14 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
-sha2 = "0.11"
+sha2 = { version = "0.11", optional = true }
 tokenator-cbor = { path = "../tokenator-cbor" }
+
+[features]
+default = []
+# `hash''` app-extension (draft-ietf-cbor-edn-literals-28 §3.4). Without it,
+# `hash''` is still a built-in name but evaluating it is an extension error.
+hash = ["dep:sha2"]
 
 [dev-dependencies]
 proptest = "1"

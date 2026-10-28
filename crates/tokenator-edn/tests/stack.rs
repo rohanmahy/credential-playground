@@ -18,11 +18,15 @@ fn nested(open: &str, leaf: &str, close: &str, n: usize) -> String {
 
 fn deepest_cases() {
     let ann = |p: &Path, _: &Item| p.depth().is_multiple_of(100).then(|| "c".to_string());
+    // Every byte string of the `<<` nesting below, listed explicitly (#15).
+    let nested_bstrs: Vec<Path> = (0..MAX_DEPTH)
+        .map(|k| Path(vec![tokenator_edn::PathSegment::Embedded(0); k]))
+        .collect();
     let print_options = [
         PrintOptions::new(),
         PrintOptions {
             encoding_indicators: EncodingIndicators::Always,
-            embedded_cbor: EmbeddedCbor::AnyItem,
+            embedded_cbor: EmbeddedCbor::at(&nested_bstrs),
             annotator: Some(&ann),
             ..PrintOptions::indented(1)
         },

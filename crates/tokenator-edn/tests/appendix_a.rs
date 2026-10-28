@@ -182,6 +182,23 @@ fn ascii_option_prints_rfc_escapes() {
 }
 
 #[test]
+fn rfc_bytes_roundtrip_with_embedded_views() {
+    for (_, hex, _) in EXAMPLES {
+        common::rt_embedded(&h(hex)).unwrap();
+    }
+}
+
+#[test]
+fn tag_24_example_with_tagged_embedded_cbor() {
+    let item = decode(&h("d818456449455446")).unwrap().into_owned();
+    let opts = PrintOptions {
+        embedded_cbor: tokenator_edn::EmbeddedCbor::tagged(),
+        ..PrintOptions::new()
+    };
+    assert_eq!(print(&item, &opts).text, "24(<<\"IETF\">>)");
+}
+
+#[test]
 fn rfc_bytes_roundtrip_with_every_option() {
     for (_, hex, _) in EXAMPLES {
         rt(&h(hex)).unwrap();

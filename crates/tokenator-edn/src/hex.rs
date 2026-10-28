@@ -57,7 +57,7 @@ pub struct HexRows {
 pub struct HexOptions<'a> {
     /// Which byte strings get rows for their embedded items (same rule as
     /// the printer's option, so rows line up with the EDN pane).
-    pub embedded_cbor: EmbeddedCbor,
+    pub embedded_cbor: EmbeddedCbor<'a>,
     /// Fills [`HexRow::comment`].
     pub annotator: Option<&'a dyn Annotator>,
 }
@@ -98,7 +98,7 @@ impl fmt::Debug for HexOptions<'_> {
 /// use tokenator_edn::{annotated_hex, EmbeddedCbor, HexOptions, HexRowKind, Path, PathSegment};
 ///
 /// let bytes = [0xd8, 0x18, 0x42, 0x81, 0x07]; // 24(<<[7]>>)
-/// let options = HexOptions { embedded_cbor: EmbeddedCbor::Containers, ..HexOptions::default() };
+/// let options = HexOptions { embedded_cbor: EmbeddedCbor::tagged(), ..HexOptions::default() };
 /// let rows = annotated_hex(&decode(&bytes)?, &bytes, &options).rows;
 /// let seven = rows.last().unwrap();
 /// assert_eq!(seven.description, "unsigned(7)");
@@ -156,7 +156,13 @@ pub fn annotated_hex(item: &Item<'_>, bytes: &[u8], options: &HexOptions<'_>) ->
         let inner = if chunk || indefinite {
             None
         } else {
-            embedded(&node, parent_tag, options.embedded_cbor, path.depth())
+            embedded(
+                &node,
+                &path,
+                parent_tag,
+                options.embedded_cbor,
+                path.depth(),
+            )
         };
         let payload = match it.value {
             Value::Bytes(_) | Value::Text(_) if !indefinite && inner.is_none() => {
