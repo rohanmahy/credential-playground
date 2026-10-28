@@ -1000,6 +1000,7 @@ dependencies = [
  "tokenator-cbor",
  "tokenator-crypto",
  "tokenator-json",
+ "zeroize",
 ]
 
 [[package]]

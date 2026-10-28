@@ -2,22 +2,44 @@
 //! and kid assignment.
 
 use tokenator_crypto::rand_core::CryptoRng;
-use tokenator_crypto::{HashAlg, KeyParams, KeySpec};
+use tokenator_crypto::{HashAlg, KeyParams, KeySpec, digest, generate_from_seed};
+use zeroize::Zeroizing;
 
-use crate::{Key, KeyError, Role};
+use crate::key::Material;
+use crate::material::b64u_encode;
+use crate::{Key, KeyError, Kid, Role, cwk, jwk};
 
 /// The public half of `key`, as a new key with the same metadata (role,
 /// kid, alg, use, key_ops, extras) and [`Key::derived`] set. A public key
 /// is returned unchanged.
 pub fn to_public(key: &Key) -> Key {
-    unimplemented!()
+    match &key.material {
+        Material::Public(_) => key.clone(),
+        Material::Private(private) => Key {
+            material: Material::Public(private.public_key()),
+            role: key.role,
+            kid: key.kid.clone(),
+            alg: key.alg.clone(),
+            key_use: key.key_use.clone(),
+            key_ops: key.key_ops.clone(),
+            extras: key.extras.clone(),
+            derived: true,
+        },
+    }
 }
 
 /// The key's format-neutral description for `tokenator_crypto::check_key`:
 /// type, curve, RSA size, and ML-DSA set from the material, plus the
 /// declared [`Key::alg`].
 pub fn params(key: &Key) -> KeyParams {
-    unimplemented!()
+    let params = match &key.material {
+        Material::Private(k) => k.params(),
+        Material::Public(k) => k.params(),
+    };
+    match &key.alg {
+        Some(alg) => params.with_declared_alg(alg.clone()),
+        None => params,
+    }
 }
 
 /// Which thumbprint to compute.
@@ -34,20 +56,31 @@ pub enum ThumbprintKind {
 /// Metadata never affects it, except that for AKP keys the `alg` member is
 /// the ML-DSA parameter set of the material.
 pub fn thumbprint(key: &Key, kind: ThumbprintKind, hash: HashAlg) -> Vec<u8> {
-    unimplemented!()
+    match kind {
+        ThumbprintKind::Jwk => jwk::key_thumbprint(key, hash),
+        ThumbprintKind::Cose => cwk::key_thumbprint(key, hash),
+    }
 }
 
 /// The RFC 9278 JWK thumbprint URI,
 /// `urn:ietf:params:oauth:jwk-thumbprint:<hash name>:<base64url>`, with the
 /// hash name from [`HashAlg::name`] (e.g. `sha-256`).
 pub fn jwk_thumbprint_uri(key: &Key, hash: HashAlg) -> String {
-    unimplemented!()
+    format!(
+        "urn:ietf:params:oauth:jwk-thumbprint:{}:{}",
+        hash.name(),
+        b64u_encode(&thumbprint(key, ThumbprintKind::Jwk, hash))
+    )
 }
 
 /// The RFC 9679 §5.7 COSE Key thumbprint URI,
 /// `urn:ietf:params:oauth:ckt:<hash name>:<base64url>`.
 pub fn cose_thumbprint_uri(key: &Key, hash: HashAlg) -> String {
-    unimplemented!()
+    format!(
+        "urn:ietf:params:oauth:ckt:{}:{}",
+        hash.name(),
+        b64u_encode(&thumbprint(key, ThumbprintKind::Cose, hash))
+    )
 }
 
 /// The fixed, well-known test seed offered by the key panel (SPEC §4.2):
@@ -69,7 +102,20 @@ pub fn generate(
     seed: Option<&[u8]>,
     rng: &mut dyn CryptoRng,
 ) -> Result<Key, KeyError> {
-    unimplemented!()
+    let private = match seed {
+        Some(seed) => {
+            let mut fixed = Zeroizing::new([0u8; 32]);
+            match <&[u8; 32]>::try_from(seed) {
+                Ok(seed) => fixed.copy_from_slice(seed),
+                Err(_) => fixed.copy_from_slice(&Zeroizing::new(digest(HashAlg::Sha256, seed))),
+            }
+            generate_from_seed(spec, &fixed)?
+        }
+        None => tokenator_crypto::generate(spec, rng)?,
+    };
+    let mut key = Key::from_private(private);
+    key.role = role;
+    Ok(key)
 }
 
 /// Where [`assign_kid`] gets the kid from.
@@ -89,5 +135,12 @@ pub enum KidSource {
 
 /// Sets `key.kid` from `source`, replacing any existing kid.
 pub fn assign_kid(key: &mut Key, source: KidSource) {
-    unimplemented!()
+    key.kid = Some(match source {
+        KidSource::JwkThumbprint(hash) => {
+            Kid::Text(b64u_encode(&thumbprint(key, ThumbprintKind::Jwk, hash)))
+        }
+        KidSource::CoseThumbprint(hash) => Kid::Bytes(thumbprint(key, ThumbprintKind::Cose, hash)),
+        KidSource::Text(text) => Kid::Text(text),
+        KidSource::Bytes(bytes) => Kid::Bytes(bytes),
+    });
 }

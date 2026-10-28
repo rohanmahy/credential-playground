@@ -1,6 +1,9 @@
 //! Import and export across all key formats.
 
-use crate::{Key, KeyError, Visibility};
+use tokenator_cbor::Value as CborValue;
+use tokenator_json::Value as JsonValue;
+
+use crate::{CoseKey, Jwk, Key, KeyError, Visibility, from_cwk, from_jwk, pem, to_cwk, to_jwk};
 
 /// A key serialization.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
@@ -73,17 +76,87 @@ pub enum MlDsaPrivateForm {
 /// any key fails, the whole import fails; use [`import_each`] to keep the
 /// keys that parse.
 pub fn import(input: &[u8], hint: Option<KeyFormat>) -> Result<Vec<Key>, KeyError> {
-    unimplemented!()
+    import_each(input, hint)?.into_iter().collect()
 }
 
 /// Like [`import`], but returns one result per key (set member or PEM
 /// block). The outer error is for input that cannot be split into keys at
 /// all (not PEM / JSON / CBOR, not an object / map / set).
+///
+/// ```
+/// use tokenator_keys::{KeyError, import, import_each};
+///
+/// // A JWK Set with a symmetric key, which is not supported.
+/// let set = br#"{"keys":[{"kty":"oct","k":"AAAA"},
+///   {"kty":"OKP","crv":"Ed25519","x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}]}"#;
+/// assert_eq!(import(set, None), Err(KeyError::UnsupportedKeyType("oct".into())));
+/// let each = import_each(set, None)?;
+/// assert!(each[0].is_err() && each[1].is_ok());
+/// # Ok::<(), KeyError>(())
+/// ```
 pub fn import_each(
     input: &[u8],
     hint: Option<KeyFormat>,
 ) -> Result<Vec<Result<Key, KeyError>>, KeyError> {
-    unimplemented!()
+    let first = input.iter().find(|b| !b.is_ascii_whitespace());
+    let family = match hint {
+        Some(KeyFormat::Jwk | KeyFormat::JwkSet) => Family::Json,
+        Some(KeyFormat::CoseKey | KeyFormat::CoseKeySet) => Family::Cbor,
+        Some(KeyFormat::Pem(_)) => Family::Pem,
+        None => match first {
+            None => return Err(KeyError::UnrecognizedFormat),
+            Some(b'{') => Family::Json,
+            Some(_) if pem::looks_like_pem(input) => Family::Pem,
+            Some(_) => Family::Cbor,
+        },
+    };
+    match family {
+        Family::Json => import_json(input),
+        Family::Cbor => import_cbor(input),
+        Family::Pem => pem::import_blocks(input),
+    }
+}
+
+/// The three serializations import can detect.
+enum Family {
+    Json,
+    Cbor,
+    Pem,
+}
+
+/// A JWK, or a JWK Set when the object has a `keys` member.
+fn import_json(input: &[u8]) -> Result<Vec<Result<Key, KeyError>>, KeyError> {
+    let root = tokenator_json::parse(input)?;
+    if root.members().is_none() {
+        return Err(KeyError::UnrecognizedFormat);
+    }
+    let Some(keys) = root.get("keys") else {
+        return Ok(vec![Jwk::from_node(&root).and_then(|jwk| from_jwk(&jwk))]);
+    };
+    let JsonValue::Array(keys) = keys.value() else {
+        return Err(KeyError::InvalidParameter {
+            name: "keys".into(),
+            reason: "not an array",
+        });
+    };
+    Ok(keys
+        .iter()
+        .map(|node| Jwk::from_node(node).and_then(|jwk| from_jwk(&jwk)))
+        .collect())
+}
+
+/// A COSE_Key (map) or a COSE_KeySet (array of maps).
+fn import_cbor(input: &[u8]) -> Result<Vec<Result<Key, KeyError>>, KeyError> {
+    let item = tokenator_cbor::decode(input)?.into_owned();
+    match item.value {
+        CborValue::Map(_) => Ok(vec![CoseKey::from_owned(item).and_then(|k| from_cwk(&k))]),
+        // Each member is moved, not cloned: cloning deep items is costly.
+        CborValue::Array(items) => Ok(items
+            .into_iter()
+            .map(|item| CoseKey::from_owned(item).and_then(|k| from_cwk(&k)))
+            .collect()),
+        _ => Err(KeyError::UnrecognizedFormat),
+    }
 }
 
 /// Serializes one key.
@@ -94,7 +167,7 @@ pub fn import_each(
 /// endings, and a final newline. JOSE and COSE metadata (kid, alg,
 /// key_ops, extras) does not exist in PEM and is dropped.
 pub fn export(key: &Key, format: KeyFormat, visibility: Visibility) -> Result<Vec<u8>, KeyError> {
-    unimplemented!()
+    export_set(core::slice::from_ref(key), format, visibility)
 }
 
 /// Serializes several keys: a JWK Set, a COSE_KeySet, or concatenated PEM
@@ -104,5 +177,39 @@ pub fn export_set(
     format: KeyFormat,
     visibility: Visibility,
 ) -> Result<Vec<u8>, KeyError> {
-    unimplemented!()
+    let single = || match keys {
+        [key] => Ok(key),
+        _ => Err(KeyError::FormatNotApplicable {
+            format,
+            reason: "holds exactly one key",
+        }),
+    };
+    match format {
+        KeyFormat::Jwk => Ok(to_jwk(single()?, visibility)?.to_json().into_bytes()),
+        KeyFormat::CoseKey => Ok(to_cwk(single()?, visibility)?.to_cbor()),
+        KeyFormat::JwkSet => {
+            let members = keys
+                .iter()
+                .map(|key| to_jwk(key, visibility).map(|jwk| jwk.to_json()))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(format!(r#"{{"keys":[{}]}}"#, members.join(",")).into_bytes())
+        }
+        KeyFormat::CoseKeySet => {
+            let items = keys
+                .iter()
+                .map(|key| to_cwk(key, visibility).map(|cwk| cwk.item().clone()))
+                .collect::<Result<Vec<_>, _>>()?;
+            Ok(tokenator_cbor::encode(
+                &tokenator_cbor::Item::array(items),
+                tokenator_cbor::EncodeMode::Preserve,
+            ))
+        }
+        KeyFormat::Pem(enc) => {
+            let mut out = Vec::new();
+            for key in keys {
+                out.extend(pem::export(key, enc, visibility)?);
+            }
+            Ok(out)
+        }
+    }
 }
