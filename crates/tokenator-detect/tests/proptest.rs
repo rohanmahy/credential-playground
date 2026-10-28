@@ -232,6 +232,13 @@ proptest! {
         // actually contains an escape.)
         let mut layers = layers;
         layers.retain(|l| !matches!(l, Layer::CborTag(_)));
+        // One byte per line leaves no room for a separator, so the text
+        // cannot tell which one was asked for.
+        for l in &mut layers {
+            if let Layer::Hex { separator, wrap: Some(1), .. } = l {
+                *separator = None;
+            }
+        }
         layers.push(Layer::CborTag(18));
         let input = rewrap(&cwt_untagged(), &layers);
         let cands = run(&input);
