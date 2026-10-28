@@ -1,5 +1,7 @@
 //! Mapping from tree nodes to text and byte ranges.
 
+use std::collections::BTreeMap;
+use std::hash::{DefaultHasher, Hash, Hasher};
 use std::ops::Range;
 
 use tokenator_cbor::Span;
@@ -25,6 +27,14 @@ pub struct NodeSpan {
 #[derive(Clone, Debug, Default, PartialEq, Eq)]
 pub struct SpanMap {
     entries: Vec<(Path, NodeSpan)>,
+    /// Hash of each path to the index of its first entry, for [`SpanMap::get`].
+    index: BTreeMap<u64, usize>,
+}
+
+fn path_hash(path: &Path) -> u64 {
+    let mut h = DefaultHasher::new();
+    path.hash(&mut h);
+    h.finish()
 }
 
 impl SpanMap {
@@ -35,12 +45,20 @@ impl SpanMap {
 
     /// Appends an entry. Callers add nodes in pre-order.
     pub fn push(&mut self, path: Path, span: NodeSpan) {
+        self.index
+            .entry(path_hash(&path))
+            .or_insert(self.entries.len());
         self.entries.push((path, span));
     }
 
     /// The span of the node at `path`.
     pub fn get(&self, path: &Path) -> Option<&NodeSpan> {
-        unimplemented!()
+        let (p, span) = self.entries.get(*self.index.get(&path_hash(path))?)?;
+        if p == path {
+            return Some(span);
+        }
+        // A hash collision: fall back to a scan.
+        self.entries.iter().find(|(p, _)| p == path).map(|(_, s)| s)
     }
 
     /// All entries in pre-order.
@@ -60,6 +78,12 @@ impl SpanMap {
 
     /// The deepest node whose text range contains `offset`.
     pub fn innermost_at(&self, offset: usize) -> Option<&Path> {
-        unimplemented!()
+        let mut best: Option<&Path> = None;
+        for (path, span) in &self.entries {
+            if span.text.contains(&offset) && best.is_none_or(|b| path.depth() >= b.depth()) {
+                best = Some(path);
+            }
+        }
+        best
     }
 }

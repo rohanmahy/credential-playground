@@ -52,7 +52,7 @@ fn h_blank_space_and_comments() {
         hello,
         "h'48 65 6c /doubled l!/ 6c 6f # hello\n  20 /space/\n  77 6f 72 6c 64' /world/",
     );
-    same(hello, "'hello world'");
+    same(hello, "'Hello world'");
     same("h'/head/ 63 /contents/ 66 6f 6f'", "<<\"foo\">>");
     assert_enc("h''", "40");
     assert_enc("h'  '", "40");
@@ -444,7 +444,7 @@ fn opaque_values_that_cannot_be_prefixed_print_as_tags() {
         "999([1, [\"x\"]])",
         "999([\"x\", \"y\"])",
         "999([\"x\", [\"y\"], 1])",
-        "999_1([\"x\", [\"y\"]])",
+        "999_2([\"x\", [\"y\"]])",
         "999([_ \"x\", [\"y\"]])",
         "999([\"x\"_0, [\"y\"]])",
         "999([\"x\", [_ \"y\"]])",

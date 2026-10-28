@@ -68,7 +68,20 @@ impl<const N: usize> From<[PathSegment; N]> for Path {
 
 impl fmt::Display for Path {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        unimplemented!()
+        for (i, seg) in self.0.iter().enumerate() {
+            if i > 0 {
+                f.write_str("/")?;
+            }
+            match seg {
+                PathSegment::Index(n) => write!(f, "{n}")?,
+                PathSegment::Key(n) => write!(f, "k{n}")?,
+                PathSegment::Value(n) => write!(f, "v{n}")?,
+                PathSegment::TagContent => f.write_str("t")?,
+                PathSegment::Embedded(n) => write!(f, "e{n}")?,
+                PathSegment::Chunk(n) => write!(f, "c{n}")?,
+            }
+        }
+        Ok(())
     }
 }
 
@@ -88,6 +101,27 @@ impl FromStr for Path {
     type Err = PathParseError;
 
     fn from_str(s: &str) -> Result<Path, PathParseError> {
-        unimplemented!()
+        if s.is_empty() {
+            return Ok(Path::root());
+        }
+        let number = |digits: &str| -> Result<usize, PathParseError> {
+            if digits.is_empty() || !digits.bytes().all(|b| b.is_ascii_digit()) {
+                return Err(PathParseError);
+            }
+            digits.parse().map_err(|_| PathParseError)
+        };
+        s.split('/')
+            .map(|seg| {
+                Ok(match seg.split_at_checked(1) {
+                    Some(("t", "")) => PathSegment::TagContent,
+                    Some(("k", n)) => PathSegment::Key(number(n)?),
+                    Some(("v", n)) => PathSegment::Value(number(n)?),
+                    Some(("e", n)) => PathSegment::Embedded(number(n)?),
+                    Some(("c", n)) => PathSegment::Chunk(number(n)?),
+                    _ => PathSegment::Index(number(seg)?),
+                })
+            })
+            .collect::<Result<Vec<_>, _>>()
+            .map(Path)
     }
 }

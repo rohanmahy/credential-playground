@@ -26,9 +26,6 @@
 //! assert_eq!(encode(&parse(&rendered.text)?, EncodeMode::Preserve), bytes);
 //! ```
 
-// Skeleton: bodies are `unimplemented!()` until the implementation lands.
-#![allow(unused_variables)]
-
 mod annotate;
 pub mod datetime;
 mod error;
