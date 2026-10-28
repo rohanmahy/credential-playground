@@ -976,6 +976,11 @@ dependencies = [
 [[package]]
 name = "tokenator-edn"
 version = "0.1.0"
+dependencies = [
+ "proptest",
+ "sha2",
+ "tokenator-cbor",
+]
 
 [[package]]
 name = "tokenator-jose"
