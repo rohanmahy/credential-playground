@@ -366,7 +366,8 @@ pub struct Slot {
     pub kind: SlotKind,
     /// The digest bytes.
     pub digest: Vec<u8>,
-    /// The digest item, in [`Sign1::bytes`] coordinates.
+    /// The digest bstr item (inside tag 60 for an element), in
+    /// [`Sign1::bytes`] coordinates.
     pub span: Span,
 }
 

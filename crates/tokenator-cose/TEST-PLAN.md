@@ -77,3 +77,9 @@ datatracker, examples from the draft repository).
 - sd-cwt C.1 holder (P-256) and C.2 issuer (P-384, declares `alg` -51).
 - Generated: `tokenator_keys::generate(KeySpec::for_alg(alg), …, Some(seed))`;
   one RSA-2048 key is generated once per test binary (slow in debug).
+
+## Open questions
+
+Defaults above are pinned by tests and listed for confirmation in #23
+(digest input, reconstruction and redaction order) and #24 (leniency
+defaults, lint severities, `crit`, the C.2 key's declared alg).
