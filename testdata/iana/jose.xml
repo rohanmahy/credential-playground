@@ -1,0 +1,1502 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-stylesheet type="text/xsl" href="jose.xsl"?>
+<?xml-model href="jose.rng" schematypens="http://relaxng.org/ns/structure/1.0" ?>
+<registry xmlns="http://www.iana.org/assignments" id="jose">
+  <title>JSON Object Signing and Encryption (JOSE)</title>
+  <created>2015-01-23</created>
+  <updated>2026-09-29</updated>
+  
+  <registry id="web-signature-encryption-header-parameters">
+    <title>JSON Web Signature and Encryption Header Parameters</title>
+    <xref type="rfc" data="rfc7515"/>
+    <registration_rule>Specification Required</registration_rule>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7515"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23">
+      <value>alg</value>
+      <description>Algorithm</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>jku</value>
+      <description>JWK Set URL</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>jwk</value>
+      <description>JSON Web Key</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>kid</value>
+      <description>Key ID</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.4"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5u</value>
+      <description>X.509 URL</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.5"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5c</value>
+      <description>X.509 Certificate Chain</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.6"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5t</value>
+      <description>X.509 Certificate SHA-1 Thumbprint</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.7"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5t#S256</value>
+      <description>X.509 Certificate SHA-256 Thumbprint</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.8"/>
+    </record>
+    <record date="2015-01-23">
+      <value>typ</value>
+      <description>Type</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.9"/>
+    </record>
+    <record date="2015-01-23">
+      <value>cty</value>
+      <description>Content Type</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.10"/>
+    </record>
+    <record date="2015-01-23">
+      <value>crit</value>
+      <description>Critical</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7515" section="4.1.11"/>
+    </record>
+    <record date="2015-01-23">
+      <value>alg</value>
+      <description>Algorithm</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>enc</value>
+      <description>Encryption Algorithm</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>zip</value>
+      <description>Compression Algorithm</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>jku</value>
+      <description>JWK Set URL</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.4"/>
+    </record>
+    <record date="2015-01-23">
+      <value>jwk</value>
+      <description>JSON Web Key</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.5"/>
+    </record>
+    <record date="2015-01-23">
+      <value>kid</value>
+      <description>Key ID</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.6"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5u</value>
+      <description>X.509 URL</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.7"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5c</value>
+      <description>X.509 Certificate Chain</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.8"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5t</value>
+      <description>X.509 Certificate SHA-1 Thumbprint</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.9"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5t#S256</value>
+      <description>X.509 Certificate SHA-256 Thumbprint</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.10"/>
+    </record>
+    <record date="2015-01-23">
+      <value>typ</value>
+      <description>Type</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.11"/>
+    </record>
+    <record date="2015-01-23">
+      <value>cty</value>
+      <description>Content Type</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.12"/>
+    </record>
+    <record date="2015-01-23">
+      <value>crit</value>
+      <description>Critical</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516" section="4.1.13"/>
+    </record>
+    <record date="2015-01-23">
+      <value>epk</value>
+      <description>Ephemeral Public Key</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>apu</value>
+      <description>Agreement PartyUInfo</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>apv</value>
+      <description>Agreement PartyVInfo</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6.1.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>iv</value>
+      <description>Initialization Vector</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.7.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>tag</value>
+      <description>Authentication Tag</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.7.1.2"/>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>p2s</value>
+      <description>PBES2 Salt Input</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.8.1.1"/>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>p2c</value>
+      <description>PBES2 Count</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.8.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>iss</value>
+      <description>Issuer</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7519" section="4.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>sub</value>
+      <description>Subject</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7519" section="4.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>aud</value>
+      <description>Audience</description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7519" section="4.1.3"/>
+    </record>
+    <record date="2016-01-07">
+      <value>b64</value>
+      <description>Base64url-Encode Payload</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7797" section="3"/>
+    </record>
+    <record date="2017-06-12">
+      <value>ppt</value>
+      <description>PASSporT extension identifier</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8225" section="8.1"/>
+    </record>
+    <record date="2019-01-02">
+      <value>url</value>
+      <description>URL</description>
+      <usage>JWE, JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8555" section="6.4.1"/>
+    </record>
+    <record date="2019-01-02">
+      <value>nonce</value>
+      <description>Nonce</description>
+      <usage>JWE, JWS</usage>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8555" section="6.5.2"/>
+    </record>
+    <record date="2022-08-22">
+      <value>svt</value>
+      <description>Signature Validation Token</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9321"/>
+    </record>
+    <record date="2025-02-27">
+      <value>iheSSId</value>
+      <description>The iheSSId header parameter's value shall specify the SubmissionSet.uniqueId as per <xref type="uri" data="https://profiles.ihe.net/ITI/TF/Volume3/ch-4.2.html#4.2.3.3.12"/>.</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IHE_ITI"/></controller>
+      <xref type="uri" data="https://profiles.ihe.net/ITI/DSGj/Volume3/ch-5.10.html#5.10"/>
+    </record>
+    <record date="2025-08-13">
+      <value>jwt</value>
+      <description>This header contains a JWT. Processing rules MAY depend on the typ header value of the respective JWT.</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="OpenID_Foundation_Digital_Credentials_Protocols_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-4-verifiable-presentations-1_0.html#verifier_attestation_jwt">OpenID for Verifiable Presentations 1.0, Section 12</xref>
+    </record>
+    <record date="2025-08-13">
+      <value>client_id</value>
+      <description>This header contains a Client Identifier. A Client Identifier is used in OAuth to identify a certain client. It is defined in <xref type="rfc" data="rfc6749" section="2.2"/>.</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc6749"/>
+    </record>
+    <record date="2024-08-16" updated="2026-02-05">
+      <value>trust_chain</value>
+      <description>OpenID Federation Trust Chain</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="OpenID_Foundation_Artifact_Binding_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-federation-1_0.html#trust_chain_head_param">OpenID Federation 1.0, Section 4.3</xref>
+    </record>
+    <record date="2026-02-05">
+      <value>peer_trust_chain</value>
+      <description>OpenID Federation Peer Trust Chain</description>
+      <usage>JWS</usage>
+      <controller><xref type="person" data="OpenID_Foundation_Artifact_Binding_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-federation-1_0.html#peer_trust_chain_head_param">OpenID Federation 1.0, Section 4.4</xref>
+    </record>
+    <record date="2026-09-29">
+      <value>ek</value>
+      <description>A base64url-encoded encapsulated secret, as defined in <xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="4.1"/>
+    </record>
+    <record date="2026-09-29">
+      <value>psk_id</value>
+      <description>A base64url-encoded key identifier (kid) for the pre-shared key, as defined in <xref type="draft" data="draft-ietf-hpke-hpke-03" section="5.1.2"/></description>
+      <usage>JWE</usage>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="4"/>
+    </record>
+  </registry>
+  
+  
+  <registry id="web-signature-encryption-algorithms">
+    <title>JSON Web Signature and Encryption Algorithms</title>
+    <xref type="rfc" data="rfc7518"/>
+    <xref type="rfc" data="rfc9864" section="4.3.1"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7518"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>HS256</value>
+      <description>HMAC using SHA-256</description>
+      <usage>alg</usage>
+      <requirements>Required</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.2"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>HS384</value>
+      <description>HMAC using SHA-384</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.2"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>HS512</value>
+      <description>HMAC using SHA-512</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.2"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>RS256</value>
+      <description>RSASSA-PKCS1-v1_5 using SHA-256</description>
+      <usage>alg</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>RS384</value>
+      <description>RSASSA-PKCS1-v1_5 using SHA-384</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>RS512</value>
+      <description>RSASSA-PKCS1-v1_5 using SHA-512</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ES256</value>
+      <description>ECDSA using P-256 and SHA-256</description>
+      <usage>alg</usage>
+      <requirements>Recommended+</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ES384</value>
+      <description>ECDSA using P-384 and SHA-384</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ES512</value>
+      <description>ECDSA using P-521 and SHA-512</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>PS256</value>
+      <description>RSASSA-PSS using SHA-256 and MGF1 with SHA-256</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.5"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>PS384</value>
+      <description>RSASSA-PSS using SHA-384 and MGF1 with SHA-384</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.5"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>PS512</value>
+      <description>RSASSA-PSS using SHA-512 and MGF1 with SHA-512</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.5"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>none</value>
+      <description>No digital signature or MAC performed</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="3.6"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>RSA1_5</value>
+      <description>RSAES-PKCS1-v1_5</description>
+      <usage>alg</usage>
+      <requirements>Recommended-</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.2"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>RSA-OAEP</value>
+      <description>RSAES OAEP using default parameters</description>
+      <usage>alg</usage>
+      <requirements>Recommended+</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>RSA-OAEP-256</value>
+      <description>RSAES OAEP using SHA-256 and MGF1 with SHA-256</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A128KW</value>
+      <description>AES Key Wrap using 128-bit key</description>
+      <usage>alg</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A192KW</value>
+      <description>AES Key Wrap using 192-bit key</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A256KW</value>
+      <description>AES Key Wrap using 256-bit key</description>
+      <usage>alg</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>dir</value>
+      <description>Direct use of a shared symmetric key</description>
+      <usage>alg</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.5"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ECDH-ES</value>
+      <description>ECDH-ES using Concat KDF</description>
+      <usage>alg</usage>
+      <requirements>Recommended+</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ECDH-ES+A128KW</value>
+      <description>ECDH-ES using Concat KDF and "A128KW" wrapping</description>
+      <usage>alg</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ECDH-ES+A192KW</value>
+      <description>ECDH-ES using Concat KDF and "A192KW" wrapping</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-01-30">
+      <value>ECDH-ES+A256KW</value>
+      <description>ECDH-ES using Concat KDF and "A256KW" wrapping</description>
+      <usage>alg</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.6"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A128GCMKW</value>
+      <description>Key wrapping with AES GCM using 128-bit key</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.7"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A192GCMKW</value>
+      <description>Key wrapping with AES GCM using 192-bit key</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.7"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A256GCMKW</value>
+      <description>Key wrapping with AES GCM using 256-bit key</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.7"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23">
+      <value>PBES2-HS256+A128KW</value>
+      <description>PBES2 with HMAC SHA-256 and "A128KW" wrapping</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.8"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23">
+      <value>PBES2-HS384+A192KW</value>
+      <description>PBES2 with HMAC SHA-384 and "A192KW" wrapping</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.8"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23">
+      <value>PBES2-HS512+A256KW</value>
+      <description>PBES2 with HMAC SHA-512 and "A256KW" wrapping</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="4.8"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A128CBC-HS256</value>
+      <description>AES_128_CBC_HMAC_SHA_256 authenticated encryption algorithm</description>
+      <usage>enc</usage>
+      <requirements>Required</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="5.2.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A192CBC-HS384</value>
+      <description>AES_192_CBC_HMAC_SHA_384 authenticated encryption algorithm</description>
+      <usage>enc</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="5.2.4"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>A256CBC-HS512</value>
+      <description>AES_256_CBC_HMAC_SHA_512 authenticated encryption algorithm</description>
+      <usage>enc</usage>
+      <requirements>Required</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="5.2.5"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>A128GCM</value>
+      <description>AES GCM using 128-bit key</description>
+      <usage>enc</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="5.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>A192GCM</value>
+      <description>AES GCM using 192-bit key</description>
+      <usage>enc</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="5.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2015-01-23" updated="2015-05-06">
+      <value>A256GCM</value>
+      <description>AES GCM using 256-bit key</description>
+      <usage>enc</usage>
+      <requirements>Recommended</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="5.3"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2016-08-22" updated="2025-05-12">
+      <value>EdDSA</value>
+      <description>EdDSA signature algorithms</description>
+      <usage>alg</usage>
+      <requirements>Deprecated</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9864" section="2.2"/>
+      <analysis><xref type="rfc" data="rfc8032"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>RS1</value>
+      <description>RSASSA-PKCS1-v1_5 with SHA-1</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>RSA-OAEP-384</value>
+      <description>RSA-OAEP using SHA-384 and MGF1 with SHA-384</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>RSA-OAEP-512</value>
+      <description>RSA-OAEP using SHA-512 and MGF1 with SHA-512</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis>n/a</analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>A128CBC</value>
+      <description>AES CBC using 128 bit key</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>A192CBC</value>
+      <description>AES CBC using 192 bit key</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>A256CBC</value>
+      <description>AES CBC using 256 bit key</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>A128CTR</value>
+      <description>AES CTR using 128 bit key</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>A192CTR</value>
+      <description>AES CTR using 192 bit key</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>A256CTR</value>
+      <description>AES CTR using 256 bit key</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>HS1</value>
+      <description>HMAC using SHA-1</description>
+      <usage>JWK</usage>
+      <requirements>Prohibited</requirements>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+      <analysis><xref type="draft" data="draft-irtf-cfrg-webcrypto-algorithms-00"/></analysis>
+    </record>
+    <record date="2020-05-26">
+      <value>ES256K</value>
+      <description>ECDSA using secp256k1 curve and SHA-256</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8812" section="3.2"/>
+      <analysis><xref type="uri" data="http://www.secg.org/sec2-v2.pdf">SEC2</xref></analysis>
+    </record>
+    <record date="2025-04-24" updated="2025-10-24">
+      <value>ML-DSA-44</value>
+      <description>ML-DSA-44 as described in US NIST FIPS 204</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9964"/>
+      <analysis><xref type="uri" data="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf">FIPS-204</xref></analysis>
+    </record>
+    <record date="2025-04-24" updated="2025-10-24">
+      <value>ML-DSA-65</value>
+      <description>ML-DSA-65 as described in US NIST FIPS 204</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9964"/>
+      <analysis><xref type="uri" data="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf">FIPS-204</xref></analysis>
+    </record>
+    <record date="2025-04-24" updated="2025-10-24">
+      <value>ML-DSA-87</value>
+      <description>ML-DSA-87 as described in US NIST FIPS 204</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9964"/>
+      <analysis><xref type="uri" data="https://nvlpubs.nist.gov/nistpubs/FIPS/NIST.FIPS.204.pdf">FIPS-204</xref></analysis>
+    </record>
+    <record date="2025-05-12">
+      <value>Ed25519</value>
+      <description>EdDSA using the Ed25519 parameter set in <xref type="rfc" data="rfc8032" section="5.1" label-format="of"/></description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9864" section="2.2"/>
+      <analysis><xref type="rfc" data="rfc8032"/></analysis>
+    </record>
+    <record date="2025-05-12">
+      <value>Ed448</value>
+      <description>EdDSA using the Ed448 parameter set in <xref type="rfc" data="rfc8032" section="5.2" label-format="of"/></description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9864" section="2.2"/>
+      <analysis><xref type="rfc" data="rfc8032"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-0</value>
+      <description>Integrated Encryption with HPKE using DHKEM(P-256, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and AES-128-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-1</value>
+      <description>Integrated Encryption with HPKE using DHKEM(P-384, HKDF-SHA384) KEM, HKDF-SHA384 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-2</value>
+      <description>Integrated Encryption with HPKE using DHKEM(P-521, HKDF-SHA512) KEM, HKDF-SHA512 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-3</value>
+      <description>Integrated Encryption with HPKE using DHKEM(X25519, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and AES-128-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-4</value>
+      <description>Integrated Encryption with HPKE using DHKEM(X25519, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and ChaCha20Poly1305 AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-5</value>
+      <description>Integrated Encryption with HPKE using DHKEM(X448, HKDF-SHA512) KEM, HKDF-SHA512 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-6</value>
+      <description>Integrated Encryption with HPKE using DHKEM(X448, HKDF-SHA512) KEM, HKDF-SHA512 KDF, and ChaCha20Poly1305 AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-7</value>
+      <description>Integrated Encryption with HPKE using DHKEM(P-256, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="5.1"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="6.1"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-0-KE</value>
+      <description>Key Encryption with HPKE using DHKEM(P-256, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and AES-128-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="6.2"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-1-KE</value>
+      <description>Key Encryption with HPKE using DHKEM(P-384, HKDF-SHA384) KEM, HKDF-SHA384 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="6.2"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-2-KE</value>
+      <description>Key Encryption with HPKE using DHKEM(P-521, HKDF-SHA512) KEM, HKDF-SHA512 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="6.2"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-3-KE</value>
+      <description>Key Encryption with HPKE using DHKEM(X25519, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and AES-128-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="6.2"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-5-KE</value>
+      <description>Key Encryption with HPKE using DHKEM(X448, HKDF-SHA512) KEM, HKDF-SHA512 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="6.2"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></analysis>
+    </record>
+    <record date="2026-09-29">
+      <value>HPKE-7-KE</value>
+      <description>Key Encryption with HPKE using DHKEM(P-256, HKDF-SHA256) KEM, HKDF-SHA256 KDF, and AES-256-GCM AEAD</description>
+      <usage>alg</usage>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="draft" data="RFC-ietf-jose-hpke-encrypt-22" section="6.2"/>
+      <analysis><xref type="draft" data="draft-ietf-hpke-hpke-03" section="5"/></analysis>
+    </record>
+  </registry>
+  
+  
+  <registry id="web-encryption-compression-algorithms">
+    <title>JSON Web Encryption Compression Algorithms</title>
+    <xref type="rfc" data="rfc7518"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7518"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23">
+      <value>DEF</value>
+      <description>DEFLATE</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7516"/>
+    </record>
+  </registry>
+
+
+  <registry id="web-key-types">
+    <title>JSON Web Key Types</title>
+    <xref type="rfc" data="rfc7518"/>
+    <xref type="rfc" data="rfc7638"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7518"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23">
+      <value>EC</value>
+      <description>Elliptic Curve</description>
+      <requirements>Recommended+</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>RSA</value>
+      <description>RSA</description>
+      <requirements>Required</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>oct</value>
+      <description>Octet sequence</description>
+      <requirements>Required</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.4"/>
+    </record>
+    <record date="2016-08-22">
+      <value>OKP</value>
+      <description>Octet string key pairs</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="2"/>
+    </record>
+    <record date="2025-04-24" updated="2025-10-24">
+      <value>AKP</value>
+      <description>Algorithm Key Pair</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9964"/>
+    </record>
+  </registry>
+  
+  
+  <registry id="web-key-elliptic-curve">
+    <title>JSON Web Key Elliptic Curve</title>
+    <xref type="rfc" data="rfc7518"/>
+    <xref type="rfc" data="rfc7638"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7518"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>P-256</value>
+      <description>P-256 Curve</description>
+      <requirements>Recommended+</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.1.1"/>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>P-384</value>
+      <description>P-384 Curve</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.1.1"/>
+    </record>
+    <record date="2015-01-23" updated="2015-04-22">
+      <value>P-521</value>
+      <description>P-521 Curve</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.1.1"/>
+    </record>
+    <record date="2016-08-22" updated="2017-02-23">
+      <value>Ed25519</value>
+      <description>Ed25519 signature algorithm key pairs</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="3.1"/>
+    </record>
+    <record date="2016-08-22" updated="2017-02-23">
+      <value>Ed448</value>
+      <description>Ed448 signature algorithm key pairs</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="3.1"/>
+    </record>
+    <record date="2016-08-22">
+      <value>X25519</value>
+      <description>X25519 function key pairs</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="3.2"/>
+    </record>
+    <record date="2016-08-22">
+      <value>X448</value>
+      <description>X448 function key pairs</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="3.2"/>
+    </record>
+    <record date="2020-05-26">
+      <value>secp256k1</value>
+      <description>SECG secp256k1 curve</description>
+      <requirements>Optional</requirements>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8812" section="3.1"/>
+    </record>
+  </registry>
+
+
+  <registry id="web-key-parameters">
+    <title>JSON Web Key Parameters</title>
+    <xref type="rfc" data="rfc7517"/>
+    <xref type="rfc" data="rfc7638"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7517"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23">
+      <value>kty</value>
+      <description>Key Type</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>use</value>
+      <description>Public Key Use</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>key_ops</value>
+      <description>Key Operations</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>alg</value>
+      <description>Algorithm</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.4"/>
+    </record>
+    <record date="2015-01-23">
+      <value>kid</value>
+      <description>Key ID</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.5"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5u</value>
+      <description>X.509 URL</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.6"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5c</value>
+      <description>X.509 Certificate Chain</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.7"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5t</value>
+      <description>X.509 Certificate SHA-1 Thumbprint</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.8"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x5t#S256</value>
+      <description>X.509 Certificate SHA-256 Thumbprint</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.9"/>
+    </record>
+    <record date="2015-01-23">
+      <value>crv</value>
+      <description>Curve</description>
+      <usage>EC</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>x</value>
+      <description>X Coordinate</description>
+      <usage>EC</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>y</value>
+      <description>Y Coordinate</description>
+      <usage>EC</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.1.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>d</value>
+      <description>ECC Private Key</description>
+      <usage>EC</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.2.2.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>n</value>
+      <description>Modulus</description>
+      <usage>RSA</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.1.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>e</value>
+      <description>Exponent</description>
+      <usage>RSA</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.1.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>d</value>
+      <description>Private Exponent</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.1"/>
+    </record>
+    <record date="2015-01-23">
+      <value>p</value>
+      <description>First Prime Factor</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>q</value>
+      <description>Second Prime Factor</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>dp</value>
+      <description>First Factor CRT Exponent</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.4"/>
+    </record>
+    <record date="2015-01-23">
+      <value>dq</value>
+      <description>Second Factor CRT Exponent</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.5"/>
+    </record>
+    <record date="2015-01-23">
+      <value>qi</value>
+      <description>First CRT Coefficient</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.6"/>
+    </record>
+    <record date="2015-01-23">
+      <value>oth</value>
+      <description>Other Primes Info</description>
+      <usage>RSA</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.3.2.7"/>
+    </record>
+    <record date="2015-01-23">
+      <value>k</value>
+      <description>Key Value</description>
+      <usage>oct</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7518" section="6.4.1"/>
+    </record>
+    <record date="2016-08-22">
+      <value>crv</value>
+      <description>The subtype of key pair</description>
+      <usage>OKP</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="2"/>
+    </record>
+    <record date="2016-08-22">
+      <value>d</value>
+      <description>The private key</description>
+      <usage>OKP</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="2"/>
+    </record>
+    <record date="2016-08-22">
+      <value>x</value>
+      <description>The public key</description>
+      <usage>OKP</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc8037" section="2"/>
+    </record>
+    <record date="2016-11-29" updated="2024-10-16">
+      <value>ext</value>
+      <description>Extractable</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="W3C_Web_Application_Security_WG"/></controller>
+      <xref type="uri" data="https://www.w3.org/TR/WebCryptoAPI"/>
+    </record>
+    <record date="2024-08-20">
+      <value>iat</value>
+      <description>Issued At, as defined in <xref type="rfc" data="rfc7519"/></description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="OpenID_Foundation_Artifact_Binding_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-federation-1_0.html#name-federation-historical-keys-res">OpenID Federation 1.0, Section 8.7.2</xref>
+    </record>
+    <record date="2024-08-20">
+      <value>nbf</value>
+      <description>Not Before, as defined in <xref type="rfc" data="rfc7519"/></description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="OpenID_Foundation_Artifact_Binding_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-federation-1_0.html#name-federation-historical-keys-res">OpenID Federation 1.0, Section 8.7.2</xref>
+    </record>
+    <record date="2024-08-20">
+      <value>exp</value>
+      <description>Expiration Time, as defined in <xref type="rfc" data="rfc7519"/></description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="OpenID_Foundation_Artifact_Binding_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-federation-1_0.html#name-federation-historical-keys-res">OpenID Federation 1.0, Section 8.7.2</xref>
+    </record>
+    <record date="2024-08-20">
+      <value>revoked</value>
+      <description>Revoked Key Properties</description>
+      <usage>*</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="OpenID_Foundation_Artifact_Binding_Working_Group"/></controller>
+      <xref type="uri" data="https://openid.net/specs/openid-federation-1_0.html#name-federation-historical-keys-res">OpenID Federation 1.0, Section 8.7.2</xref>
+    </record>
+    <record date="2025-04-24" updated="2025-10-24">
+      <value>pub</value>
+      <description>Public key</description>
+      <usage>AKP</usage>
+      <class>Public</class>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9964"/>
+    </record>
+    <record date="2025-07-24" updated="2025-10-24">
+      <value>priv</value>
+      <description>Private key</description>
+      <usage>AKP</usage>
+      <class>Private</class>
+      <controller><xref type="person" data="IETF"/></controller>
+      <xref type="rfc" data="rfc9964"/>
+    </record>
+  </registry>
+
+
+  <registry id="web-key-use">
+    <title>JSON Web Key Use</title>
+    <xref type="rfc" data="rfc7517"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7517"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23">
+      <value>sig</value>
+      <description>Digital Signature or MAC</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.2"/>
+    </record>
+    <record date="2015-01-23">
+      <value>enc</value>
+      <description>Encryption</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.2"/>
+    </record>
+  </registry>
+
+
+  <registry id="web-key-operations">
+    <title>JSON Web Key Operations</title>
+    <xref type="rfc" data="rfc7517"/>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7517"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <record date="2015-01-23">
+      <value>sign</value>
+      <description>Compute digital signature or MAC</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>verify</value>
+      <description>Verify digital signature or MAC</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>encrypt</value>
+      <description>Encrypt content</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>decrypt</value>
+      <description>Decrypt content and validate decryption, if applicable</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>wrapKey</value>
+      <description>Encrypt key</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>unwrapKey</value>
+      <description>Decrypt key and validate decryption, if applicable</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>deriveKey</value>
+      <description>Derive key</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+    <record date="2015-01-23">
+      <value>deriveBits</value>
+      <description>Derive bits not to be used as a key</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="4.3"/>
+    </record>
+  </registry>
+
+
+  <registry id="web-key-set-parameters">
+    <title>JSON Web Key Set Parameters</title>
+    <xref type="rfc" data="rfc7517"/>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Sean Turner, Mike Jones, Filip Skokan</expert>
+    <note>Registration requests should be sent to the mailing list described in 
+<xref type="rfc" data="rfc7517"/>. If approved, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org.
+    </note>
+    <record date="2015-01-23">
+      <value>keys</value>
+      <description>Array of JWK Values</description>
+      <controller><xref type="person" data="IESG"/></controller>
+      <xref type="rfc" data="rfc7517" section="5.1"/>
+    </record>
+  </registry>
+
+  <people>
+    <person id="IESG">
+      <name>IESG</name>
+      <uri>mailto:iesg&amp;ietf.org</uri>
+    </person>
+    <person id="IETF">
+      <name>IETF</name>
+      <uri>mailto:iesg&amp;ietf.org</uri>
+    </person>
+    <person id="IHE_ITI">
+      <name>IHE ITI</name>
+      <uri>https://www.ihe.net</uri>
+      <updated>2025-02-27</updated>
+    </person>
+    <person id="OpenID_Foundation_Artifact_Binding_Working_Group">
+      <name>OpenID Foundation Artifact Binding Working Group</name>
+      <uri>mailto:openid-specs-ab&amp;lists.openid.net</uri>
+      <updated>2024-08-20</updated>
+    </person>
+        <person id="OpenID_Foundation_Digital_Credentials_Protocols_Working_Group">
+      <name>OpenID Foundation Digital Credentials Protocols Working Group</name>
+      <uri>mailto:openid-specs-digital-credentials-protocols&amp;lists.openid.net</uri>
+      <updated>2025-08-13</updated>
+    </person>
+    <person id="W3C_Web_Application_Security_WG">
+      <name>W3C Web Application Security Working Group</name>
+      <uri>mailto:public-webappsec&amp;w3.org</uri>
+      <updated>2024-10-16</updated>
+    </person>
+  </people>
+</registry>

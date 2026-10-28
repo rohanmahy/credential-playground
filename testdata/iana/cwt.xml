@@ -1,0 +1,971 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<?xml-stylesheet type="text/xsl" href="cwt.xsl"?>
+<?xml-model href="cwt.rng" schematypens="http://relaxng.org/ns/structure/1.0" ?>
+<registry xmlns="http://www.iana.org/assignments" id="cwt">
+  <title>CBOR Web Token (CWT)</title>
+  <created>2018-03-22</created>
+  <updated>2026-07-20</updated>
+  
+  <registry id="claims-registry">
+    <title>CBOR Web Token (CWT) Claims</title>
+    <xref type="rfc" data="rfc8392"/>
+    <note>Registration requests should be sent to the <xref type="uri" data="mailto:cwt-reg-review@ietf.org">mailing list</xref> described in 
+<xref type="rfc" data="rfc8392"/>. If they approve, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org. IANA does not 
+monitor the list.
+    </note>
+    <range>
+      <value>Integer values from -256 to 255</value>
+      <registration_rule>Standards Action</registration_rule>
+    </range>
+    <range>
+      <value>Integer values from -65536 to -257</value>
+      <registration_rule>Specification Required</registration_rule>
+    </range>
+    <range>
+      <value>Integer values from 256 to 65535</value>
+      <registration_rule>Specification Required</registration_rule>
+    </range>
+    <range>
+      <value>Integer values greater than 65535</value>
+      <registration_rule>Expert Review</registration_rule>
+    </range>
+    <range>
+      <value>Strings of length 1</value>
+      <registration_rule>Standards Action</registration_rule>
+    </range>
+    <range>
+      <value>Strings of length 2</value>
+      <registration_rule>Specification Required</registration_rule>
+    </range>
+    <range>
+      <value>Strings of length greater than 2</value>
+      <registration_rule>Expert Review</registration_rule>
+    </range>
+    <expert>Mike Jones, Hannes Tschofenig, Ludwig Seitz</expert>
+    <record date="2018-03-22">
+      <claim>Reserved for Private Use</claim>
+      <description/>
+      <jwt/>
+      <key>less than -65536</key>
+      <value/>
+      <change/>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>-65536 to -262</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2024-08-14">
+      <claim>globalplatform_component</claim>
+      <description>This claim holds an array of CBOR maps in which each array entry holds a map containing claims 
+about a GlobalPlatform component that is within the boundary of the enclosing Entity Attestation Token.</description>
+      <jwt>N/A</jwt>
+      <key>-261</key>
+      <value>map</value>
+      <change><xref type="person" data="GlobalPlatform_Inc."/></change>
+      <xref type="uri" data="https://globalplatform.org/wp-content/uploads/2024/07/GPP_EntityAttestationProtocolSpec_v0.0.0.26_PublicRvw2.pdf">GlobalPlatform Entity Attestation Protocol Specification, GPP_SPE_001, Section 6.5.</xref>
+    </record>
+    <record date="2021-04-15">
+      <claim>hcert</claim>
+      <description>Health Certificate</description>
+      <jwt>hcert</jwt>
+      <key>-260</key>
+      <value>map</value>
+      <change><xref type="person" data="European_eHealth_Network"/></change>
+      <xref type="uri" data="https://github.com/ehn-digital-green-development/hcert-spec/blob/main/hcert_spec.md">Electronic Health Certificate Specification</xref>
+    </record>
+    <record date="2021-03-05">
+      <claim>EUPHNonce</claim>
+      <description>Challenge Nonce</description>
+      <jwt>EUPHNonce</jwt>
+      <key>-259</key>
+      <value>bstr</value>
+      <change><xref type="person" data="FIDO_Alliance"/></change>
+      <xref type="uri" data="https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-RD-v1.0-20201202.html">FIDO Device Onboard Specification</xref>
+    </record>
+    <record date="2021-03-05">
+      <claim>EATMAROEPrefix</claim>
+      <description>Signing prefix for multi-app restricted operating environments</description>
+      <jwt>EATMAROEPrefix</jwt>
+      <key>-258</key>
+      <value>bstr</value>
+      <change><xref type="person" data="FIDO_Alliance"/></change>
+      <xref type="uri" data="https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-RD-v1.0-20201202.html">FIDO Device Onboard Specification</xref>
+    </record>
+    <record date="2021-03-05">
+      <claim>EAT-FDO</claim>
+      <description>EAT-FDO may contain related to FIDO Device Onboarding</description>
+      <jwt>EAT-FDO</jwt>
+      <key>-257</key>
+      <value>array</value>
+      <change><xref type="person" data="FIDO_Alliance"/></change>
+      <xref type="uri" data="https://fidoalliance.org/specs/FDO/FIDO-Device-Onboard-RD-v1.0-20201202.html">FIDO Device Onboard Specification</xref>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>-256 to -1</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2018-03-22">
+      <claim>Reserved</claim>
+      <description>This registration reserves the key value 0</description>
+      <jwt/>
+      <key>0</key>
+      <value/>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>iss</claim>
+      <description>Issuer</description>
+      <jwt>iss</jwt>
+      <key>1</key>
+      <value>text string</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>sub</claim>
+      <description>Subject</description>
+      <jwt>sub</jwt>
+      <key>2</key>
+      <value>text string</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>aud</claim>
+      <description>Audience</description>
+      <jwt>aud</jwt>
+      <key>3</key>
+      <value>text string</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>exp</claim>
+      <description>Expiration Time</description>
+      <jwt>exp</jwt>
+      <key>4</key>
+      <value>integer or floating-point number</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>nbf</claim>
+      <description>Not Before</description>
+      <jwt>nbf</jwt>
+      <key>5</key>
+      <value>integer or floating-point number</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>iat</claim>
+      <description>Issued At</description>
+      <jwt>iat</jwt>
+      <key>6</key>
+      <value>integer or floating-point number</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2018-03-22">
+      <claim>cti</claim>
+      <description>CWT ID</description>
+      <jwt>jti</jwt>
+      <key>7</key>
+      <value>byte string</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8392"/>
+    </record>
+    <record date="2019-11-08">
+      <claim>cnf</claim>
+      <description>Confirmation</description>
+      <jwt>cnf</jwt>
+      <key>8</key>
+      <value>map</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8747"/>
+    </record>
+    <record date="2021-07-27">
+      <claim>scope</claim>
+      <description>The scope of an access token, as defined in <xref type="rfc" data="rfc6749"/>.</description>
+      <jwt>scope</jwt>
+      <key>9</key>
+      <value>byte string or text string</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8693" section="4.2"/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-12">
+      <claim>Nonce</claim>
+      <description>Nonce</description>
+      <jwt>eat_nonce</jwt>
+      <key>10</key>
+      <value>bstr or array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2025-12-02">
+      <claim>vct (TEMPORARY - registered 2025-12-02, expires 2026-12-02)</claim>
+      <description>Verifiable credential type</description>
+      <jwt>vct</jwt>
+      <key>11</key>
+      <value>bstr</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="draft" data="draft-ietf-spice-sd-cwt-06" section="13"/>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>12 to 37</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2021-07-27">
+      <claim>ace_profile</claim>
+      <description>The ACE profile a token is supposed to be used
+        with.</description>
+      <jwt>ace_profile</jwt>
+      <key>38</key>
+      <value>integer</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9200" section="5.10"/>
+    </record>
+    <record date="2021-07-27">
+      <claim>cnonce</claim>
+      <description>The client-nonce sent to the AS by the RS via
+        the client.</description>
+      <jwt>cnonce</jwt>
+      <key>39</key>
+      <value>byte string</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9200" section="5.10"/>
+    </record>
+    <record date="2021-07-27" updated="2022-03-04">
+      <claim>exi</claim>
+      <description>The expiration time of a token measured from
+        when it was received at the RS in seconds.</description>
+      <jwt>exi</jwt>
+      <key>40</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9200" section="5.10.3"/>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>41 to 168</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2024-05-15">
+      <claim>identity-data</claim>
+      <description>Registering the claim for storing identity data of a person, 
+      which could be personally identifiable data (PII) mostly used in Foundational/National ID 
+      for cross-border interoperability.</description>
+      <jwt>identity-data</jwt>
+      <key>169</key>
+      <value>map</value>
+      <change><xref type="person" data="MOSIP"/></change>
+      <xref type="uri" data="https://docs.mosip.io/1.2.0/overview/standards-and-specifications/169-qr-code-specification#id-3.-semantics">CBOR Identity Data in QR Code, Section 3</xref>
+      <xref type="uri" data="https://docs.mosip.io/1.2.0/overview/standards-and-specifications/169-qr-code-specification#id-4.-iana-considerations">CBOR Identity Data in QR Code, Section 4</xref>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>170 to 255</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-15">
+      <claim>UEID</claim>
+      <description>Universal Entity ID</description>
+      <jwt>ueid</jwt>
+      <key>256</key>
+      <value>bstr</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2023-12-21">
+      <claim>SUEIDs</claim>
+      <description>Semipermanent UEIDs</description>
+      <jwt>sueids</jwt>
+      <key>257</key>
+      <value>map</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-12">
+      <claim>Hardware OEM ID</claim>
+      <description>Hardware OEM ID</description>
+      <jwt>oemid</jwt>
+      <key>258</key>
+      <value>bstr or int</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-15">
+      <claim>Hardware Model</claim>
+      <description>Model identifier for hardware</description>
+      <jwt>hwmodel</jwt>
+      <key>259</key>
+      <value>bstr</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2023-12-21">
+      <claim>Hardware Version</claim>
+      <description>Hardware Version Identifier</description>
+      <jwt>hwversion</jwt>
+      <key>260</key>
+      <value>array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21" updated="2024-01-12">
+      <claim>Uptime</claim>
+      <description>Uptime</description>
+      <jwt>uptime</jwt>
+      <key>261</key>
+      <value>uint</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-12">
+      <claim>OEM Authorized Boot</claim>
+      <description>Indicates whether the software booted was OEM authorized</description>
+      <jwt>oemboot</jwt>
+      <key>262</key>
+      <value>bool</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-12">
+      <claim>Debug Status</claim>
+      <description>The status of debug facilities</description>
+      <jwt>dbgstat</jwt>
+      <key>263</key>
+      <value>uint</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2022-04-11">
+      <claim>Location</claim>
+      <description>The geographic location</description>
+      <jwt>location</jwt>
+      <key>264</key>
+      <value>map</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2024-01-12">
+      <claim>EAT Profile</claim>
+      <description>The EAT profile followed</description>
+      <jwt>eat_profile</jwt>
+      <key>265</key>
+      <value>uri or oid</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2022-03-23" updated="2022-04-11">
+      <claim>Submodules Section</claim>
+      <description>The section containing submodules</description>
+      <jwt>submods</jwt>
+      <key>266</key>
+      <value>map</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21">
+      <claim>Boot Count</claim>
+      <description>The number of times the entity or submodule has been booted</description>
+      <jwt>bootcount</jwt>
+      <key>267</key>
+      <value>uint</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21" updated="2024-01-12">
+      <claim>Boot Seed</claim>
+      <description>Identifies a boot cycle</description>
+      <jwt>bootseed</jwt>
+      <key>268</key>
+      <value>bstr</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21">
+      <claim>DLOAs</claim>
+      <description>Certifications received as Digital Letters of Approval</description>
+      <jwt>dloas</jwt>
+      <key>269</key>
+      <value>array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21" updated="2024-01-12">
+      <claim>Software Name</claim>
+      <description>The name of the software running in the entity</description>
+      <jwt>swname</jwt>
+      <key>270</key>
+      <value>tstr</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21" updated="2024-01-12">
+      <claim>Software Version</claim>
+      <description>The version of software running in the entity</description>
+      <jwt>swversion</jwt>
+      <key>271</key>
+      <value>array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21">
+      <claim>Software Manifests</claim>
+      <description>Manifests describing the software installed on the entity</description>
+      <jwt>manifests</jwt>
+      <key>272</key>
+      <value>array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21">
+      <claim>Measurements</claim>
+      <description>Measurements of the software, memory configuration, and such on the entity</description>
+      <jwt>measurements</jwt>
+      <key>273</key>
+      <value>array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21">
+      <claim>Software Measurement Results</claim>
+      <description>The results of comparing software measurements to reference values</description>
+      <jwt>measres</jwt>
+      <key>274</key>
+      <value>array</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record date="2023-12-21" updated="2024-01-12">
+      <claim>Intended Use</claim>
+      <description>The intended use of the EAT</description>
+      <jwt>intuse</jwt>
+      <key>275</key>
+      <value>uint</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9711"/>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>276 to 281</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2024-02-21">
+      <claim>geohash</claim>
+      <description>Geohash String</description>
+      <jwt>geohash</jwt>
+      <key>282</key>
+      <value>text string or array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/collections/standards/products/fast-and-readable-geographical-hashing-cta-5009">Fast and Readable Geographical Hashing (CTA-5009)</xref>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>283 to 298</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2025-12-09">
+      <claim>cmw</claim>
+      <description>RATS Conceptual Message Wrapper</description>
+      <jwt>cmw</jwt>
+      <key>299</key>
+      <value>CBOR map, CBOR array, or CBOR tag</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9999" section="3.1"/>
+      <xref type="rfc" data="rfc9999" section="3.2" label-format="bare"/>
+      <xref type="rfc" data="rfc9999" section="3.3" label-format="bare"/>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmver</claim>
+      <description>The version of the WM Token</description>
+      <jwt>wmver</jwt>
+      <key>300</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmvnd</claim>
+      <description>The WM technology vendor</description>
+      <jwt>wmvnd</jwt>
+      <key>301</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmpatlen</claim>
+      <description>The length in bits of the WM pattern</description>
+      <jwt>wmpatlen</jwt>
+      <key>302</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmsegduration</claim>
+      <description>The nominal duration of a segment</description>
+      <jwt>wmsegduration</jwt>
+      <key>303</key>
+      <value>map</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmpattern</claim>
+      <description>The WM pattern</description>
+      <jwt>wmpattern</jwt>
+      <key>304</key>
+      <value>COSE_Encrypt0 or COSE_Encrypt or byte string</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmid</claim>
+      <description>Used as input to derive the WM pattern for indirect mode</description>
+      <jwt>wmid</jwt>
+      <key>305</key>
+      <value>text string</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmopid</claim>
+      <description>Used as additional input to derive the WM pattern for indirect mode</description>
+      <jwt>wmopid</jwt>
+      <key>306</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2023-03-01" updated="2023-09-14">
+      <claim>wmkeyver</claim>
+      <description>The key to use for derivation of the WM pattern in indirect mode</description>
+      <jwt>wmkeyver</jwt>
+      <key>307</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="DASH-IF"/></change>
+      <xref type="uri" data="https://www.etsi.org/deliver/etsi_ts/104000_104099/104002/01.01.01_60/ts_104002v010101p.pdf">ETSI TS 104 002 V1.1.1</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catreplay</claim>
+      <description>Common Access Token Replay</description>
+      <jwt>N/A</jwt>
+      <key>308</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catpor</claim>
+      <description>Common Access Token Probability of Rejection</description>
+      <jwt>N/A</jwt>
+      <key>309</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catv</claim>
+      <description>Common Access Token Version</description>
+      <jwt>N/A</jwt>
+      <key>310</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catnip</claim>
+      <description>Common Access Token Network IP</description>
+      <jwt>N/A</jwt>
+      <key>311</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catu</claim>
+      <description>Common Access Token URI</description>
+      <jwt>N/A</jwt>
+      <key>312</key>
+      <value>map</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catm</claim>
+      <description>Common Access Token Method</description>
+      <jwt>N/A</jwt>
+      <key>313</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catalpn</claim>
+      <description>Common Access Token ALPN</description>
+      <jwt>N/A</jwt>
+      <key>314</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>cath</claim>
+      <description>Common Access Token Header</description>
+      <jwt>N/A</jwt>
+      <key>315</key>
+      <value>map</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catgeoiso3166</claim>
+      <description>Common Access Token Geographic ISO3166</description>
+      <jwt>N/A</jwt>
+      <key>316</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catgeocoord</claim>
+      <description>Common Access Token Geographic Coordinate</description>
+      <jwt>N/A</jwt>
+      <key>317</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catgeoalt</claim>
+      <description>Common Access Token Geographic Altitude</description>
+      <jwt>N/A</jwt>
+      <key>318</key>
+      <value>array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>cattpk</claim>
+      <description>Common Access Token TLS Public Key</description>
+      <jwt>N/A</jwt>
+      <key>319</key>
+      <value>byte string</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catifdata</claim>
+      <description>Common Access Token If Data</description>
+      <jwt>N/A</jwt>
+      <key>320</key>
+      <value>string or array</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catdpop</claim>
+      <description>Common Access Token DPoP Settings</description>
+      <jwt>N/A</jwt>
+      <key>321</key>
+      <value>map</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catif</claim>
+      <description>Common Access Token If</description>
+      <jwt>N/A</jwt>
+      <key>322</key>
+      <value>map</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record date="2025-05-09">
+      <claim>catr</claim>
+      <description>Common Access Token Renewal</description>
+      <jwt>N/A</jwt>
+      <key>323</key>
+      <value>map</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>324 to 2393</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2022-07-27" updated="2024-11-07">
+      <claim>psa-client-id</claim>
+      <description>PSA Client ID</description>
+      <jwt>N/A</jwt>
+      <key>2394</key>
+      <value>signed integer</value>
+      <change><xref type="person" data="Hannes_Tschofenig"/></change>
+      <xref type="rfc" data="rfc9783" section="4.1.2"/>
+    </record>
+    <record date="2022-07-27" updated="2024-11-07">
+      <claim>psa-security-lifecycle</claim>
+      <description>PSA Security Lifecycle</description>
+      <jwt>N/A</jwt>
+      <key>2395</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="Hannes_Tschofenig"/></change>
+      <xref type="rfc" data="rfc9783" section="4.3.1"/>
+    </record>
+    <record date="2022-07-27" updated="2024-11-07">
+      <claim>psa-implementation-id</claim>
+      <description>PSA Implementation ID</description>
+      <jwt>N/A</jwt>
+      <key>2396</key>
+      <value>byte string</value>
+      <change><xref type="person" data="Hannes_Tschofenig"/></change>
+      <xref type="rfc" data="rfc9783" section="4.2.2"/>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key/>
+      <value>2397</value>
+      <change/>
+    </record>
+    <record date="2022-07-27" updated="2024-11-07">
+      <claim>psa-certification-reference</claim>
+      <description>PSA Certification Reference</description>
+      <jwt>N/A</jwt>
+      <key>2398</key>
+      <value>text string</value>
+      <change><xref type="person" data="Hannes_Tschofenig"/></change>
+      <xref type="rfc" data="rfc9783" section="4.2.3"/>
+    </record>
+    <record date="2022-07-27" updated="2024-11-07">
+      <claim>psa-software-components</claim>
+      <description>PSA Software Components</description>
+      <jwt>N/A</jwt>
+      <key>2399</key>
+      <value>array</value>
+      <change><xref type="person" data="Hannes_Tschofenig"/></change>
+      <xref type="rfc" data="rfc9783" section="4.4.1"/>
+    </record>
+    <record date="2022-07-27" updated="2024-11-07">
+      <claim>psa-verification-service-indicator</claim>
+      <description>PSA Verification Service Indicator</description>
+      <jwt>N/A</jwt>
+      <key>2400</key>
+      <value>text string</value>
+      <change><xref type="person" data="Hannes_Tschofenig"/></change>
+      <xref type="rfc" data="rfc9783" section="4.5.1"/>
+    </record>
+    <record>
+      <claim>Unassigned</claim>
+      <description/>
+      <jwt/>
+      <key>2401 to 65532</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2026-06-12">
+      <claim>status_list</claim>
+      <description>A CBOR structure containing up-to-date status information on multiple tokens using the Token Status List mechanism.</description>
+      <jwt>status_list</jwt>
+      <key>65533</key>
+      <value>map</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="draft" data="RFC-ietf-oauth-status-list-21" section="5.2"/>
+    </record>
+    <record date="2026-06-12">
+      <claim>ttl</claim>
+      <description>Time to Live</description>
+      <jwt>ttl</jwt>
+      <key>65534</key>
+      <value>unsigned integer</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="draft" data="RFC-ietf-oauth-status-list-21" section="5.2"/>
+    </record>
+    <record date="2026-06-12">
+      <claim>status</claim>
+      <description>A CBOR structure containing a reference to a status mechanism from the CWT Status Mechanisms registry.</description>
+      <jwt>status</jwt>
+      <key>65535</key>
+      <value>map</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="draft" data="RFC-ietf-oauth-status-list-21" section="6.1"/>
+    </record>
+  </registry>
+  
+  <registry id="confirmation-methods">
+    <title>CWT Confirmation Methods</title>
+    <xref type="rfc" data="rfc8747"/>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Ludwig Seitz, Mike Jones</expert>
+    <note>Registration requests should be sent to the <xref type="uri" data="mailto:cwt-reg-review@ietf.org">mailing list</xref> described in 
+<xref type="rfc" data="rfc8747"/>. If they approve, designated experts should notify IANA within 
+three weeks. For assistance, please contact iana@iana.org. IANA does not 
+monitor the list.
+    </note>  
+    <record date="2019-11-08">
+      <confirmation>COSE_Key</confirmation>
+      <description>COSE_Key Representing Public Key</description>
+      <jwt>jwk</jwt>
+      <key>1</key>
+      <value>COSE_Key structure</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8747" section="3.2"/>
+    </record>
+    <record date="2019-11-08">
+      <confirmation>Encrypted_COSE_Key</confirmation>
+      <description>Encrypted COSE_Key</description>
+      <jwt>jwe</jwt>
+      <key>2</key>
+      <value>COSE_Encrypt or COSE_Encrypt0
+      structure (with an optional corresponding COSE_Encrypt or
+      COSE_Encrypt0 tag)</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8747" section="3.3"/>
+    </record>
+    <record date="2019-11-08">
+      <confirmation>kid</confirmation>
+      <description>Key Identifier</description>
+      <jwt>kid</jwt>
+      <key>3</key>
+      <value>binary string</value>
+      <change><xref type="person" data="IESG"/></change>
+      <xref type="rfc" data="rfc8747" section="3.4"/>
+    </record>
+    <record date="2021-08-12" updated="2021-08-13">
+      <confirmation>osc</confirmation>
+      <description>OSCORE_Input_Material carrying
+        the parameters for using OSCORE per-message security with implicit
+        key confirmation</description>
+      <jwt>osc</jwt>
+      <key>4</key>
+      <value>map</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9203" section="3.2.1"/>
+    </record>
+    <record date="2024-09-10" updated="2024-12-05">
+      <confirmation>ckt</confirmation>
+      <description>COSE Key SHA-256 Thumbprint</description>
+      <jwt>(none)</jwt>
+      <key>5</key>
+      <value>binary string</value>
+      <change><xref type="person" data="IETF"/></change>
+      <xref type="rfc" data="rfc9679"/>
+    </record>
+    <record>
+      <confirmation>Unassigned</confirmation>
+      <description/>
+      <jwt/>
+      <key>6-322</key>
+      <value/>
+      <change/>
+    </record>
+    <record date="2025-05-09">
+      <confirmation>jkt</confirmation>
+      <description>JWK SHA-256 Thumbprint</description>
+      <jwt>jkt</jwt>
+      <key>323</key>
+      <value>byte string</value>
+      <change><xref type="person" data="CTA"/></change>
+      <xref type="uri" data="https://shop.cta.tech/products/cta-5007-b">CTA-5007</xref>
+    </record>
+  </registry>
+ 
+  <registry id="status-mechanisms">
+    <title>CWT Status Mechanisms</title>
+    <xref type="draft" data="RFC-ietf-oauth-status-list-21"/>
+    <registration_rule>Specification Required</registration_rule>
+    <expert>Unassigned</expert>
+    <note>Registration requests should be sent to the <xref type="uri" data="mailto:cwt-reg-review@ietf.org">mailing list</xref> described in 
+<xref type="draft" data="RFC-ietf-oauth-status-list-21"/>. If they approve, designated experts
+should notify IANA within three weeks. For assistance, please contact 
+iana@iana.org. IANA does not monitor the list.
+    </note>
+    <record date="2026-06-26">
+      <value>status_list</value>
+      <description>A Token Status List containing up-to-date status information on multiple tokens.</description>
+      <controller><xref type="person" data="IETF"/></controller>
+      <reference><xref type="draft" data="RFC-ietf-oauth-status-list-21" section="6.3"/></reference>
+    </record>
+  </registry>
+
+  <people>
+    <person id="CTA">
+      <name>Consumer Technology Association</name>
+      <uri>mailto:standards&amp;cta.tech</uri>
+      <updated>2024-02-21</updated>
+    </person>
+    <person id="DASH-IF">
+      <name>DASH Industry Forum</name>
+      <uri>https://dashif.org</uri>
+      <updated>2023-03-01</updated>
+    </person>
+    <person id="European_eHealth_Network">
+      <name>European eHealth Network</name>
+      <uri>mailto:jakob&amp;kirei.se</uri>
+      <updated>2021-04-15</updated>
+    </person>
+    <person id="FIDO_Alliance">
+      <name>FIDO Alliance</name>
+      <uri>mailto:iana-request&amp;fidoalliance.org</uri>
+      <updated>2021-03-05</updated>
+    </person>
+    <person id="GlobalPlatform_Inc.">
+      <name>GlobalPlatform Inc.</name>
+      <uri>mailto:secretariat&amp;globalplatform.org</uri>
+      <updated>2024-08-14</updated>
+    </person>
+    <person id="Hannes_Tschofenig">
+      <name>Hannes Tschofenig</name>
+      <uri>mailto:hannes.tschofenig&amp;arm.com</uri>
+      <updated>2022-07-27</updated>
+    </person>
+    <person id="IESG">
+      <name>IESG</name>
+      <uri>mailto:iesg&amp;ietf.org</uri>
+    </person>
+    <person id="IETF">
+      <name>IETF</name>
+      <uri>mailto:iesg&amp;ietf.org</uri>
+    </person>
+    <person id="MOSIP">
+      <name>MOSIP</name>
+      <uri>mailto:resham&amp;mosip.io</uri>
+      <updated>2024-05-15</updated>
+    </person>
+  </people>
+</registry>
