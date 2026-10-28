@@ -72,10 +72,10 @@ pub struct Parsed {
 ///
 /// let item = tokenator_edn::parse(r#"{1: "a", 2: h'00ff'}"#)?;
 /// assert_eq!(
-///     encode(&item, EncodeMode::Preserve),
+///     encode(&item, EncodeMode::Preserve)?,
 ///     [0xa2, 0x01, 0x61, 0x61, 0x02, 0x42, 0x00, 0xff]
 /// );
-/// # Ok::<(), tokenator_edn::EdnError>(())
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 ///
 /// Encoding indicators, comments, embedded CBOR, and app-extensions:
@@ -90,11 +90,11 @@ pub struct Parsed {
 ///         6: dt'2013-03-21T20:04:00Z',
 ///     }";
 /// let item = tokenator_edn::parse(edn)?;
-/// let bytes = encode(&item, EncodeMode::Preserve);
+/// let bytes = encode(&item, EncodeMode::Preserve)?;
 /// assert_eq!(bytes[0], 0xbf); // indefinite-length map
 /// assert_eq!(&bytes[4..9], [0x58, 0x03, b'k', b'i', b'd']);
 /// assert_eq!(&bytes[9..], [0x06, 0x1a, 0x51, 0x4b, 0x67, 0xb0, 0xff]);
-/// # Ok::<(), tokenator_edn::EdnError>(())
+/// # Ok::<(), Box<dyn std::error::Error>>(())
 /// ```
 pub fn parse(text: &str) -> Result<Item<'static>, EdnError> {
     let options = ParseOptions::default();
@@ -393,7 +393,7 @@ pub(crate) fn float_fits(f: f64, width: FloatWidth) -> bool {
         FloatWidth::F64 => return true,
     };
     // The encoder widens a value that does not fit, bit-exactly.
-    encode(&Item::new(Value::Float(f, width)), EncodeMode::Preserve).len() == len
+    encode(&Item::new(Value::Float(f, width)), EncodeMode::Preserve).is_ok_and(|b| b.len() == len)
 }
 
 fn len_u64(n: usize) -> u64 {
@@ -728,7 +728,11 @@ impl<'s, 'o> Parser<'s, 'o> {
                 self.pos += 2;
                 let mut bytes = Vec::new();
                 for item in &items {
-                    bytes.extend(encode(item, EncodeMode::Preserve));
+                    // The parser rejects simple(24..=31), so this never fails.
+                    match encode(item, EncodeMode::Preserve) {
+                        Ok(b) => bytes.extend(b),
+                        Err(_) => return self.fail(start, EdnErrorKind::OutOfRange),
+                    }
                 }
                 self.with_spec(Item::bytes(bytes))?
             }

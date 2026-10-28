@@ -190,7 +190,7 @@ pub fn tru<'a>() -> Item<'a> {
 }
 
 pub fn enc(item: &Item) -> Vec<u8> {
-    encode(item, EncodeMode::Preserve)
+    encode(item, EncodeMode::Preserve).unwrap()
 }
 
 /// Encodes a byte string head + contents (preferred head).

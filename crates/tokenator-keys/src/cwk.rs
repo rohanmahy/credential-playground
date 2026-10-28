@@ -69,10 +69,13 @@ impl CoseKey {
         }
     }
 
-    /// Takes an owned map item.
+    /// Takes an owned map item. A map that cannot be encoded (it holds a
+    /// `simple(24..=31)`) is not a COSE_Key, so `to_cbor` never fails.
     pub(crate) fn from_owned(item: Item<'static>) -> Result<CoseKey, KeyError> {
         match item.value {
-            Value::Map(_) => Ok(CoseKey { item }),
+            Value::Map(_) if tokenator_cbor::encode(&item, EncodeMode::Preserve).is_ok() => {
+                Ok(CoseKey { item })
+            }
             _ => Err(KeyError::UnrecognizedFormat),
         }
     }
@@ -85,7 +88,8 @@ impl CoseKey {
     /// The CBOR encoding, preserving the recorded encoding details
     /// (`EncodeMode::Preserve`). A decoded key encodes to its input bytes.
     pub fn to_cbor(&self) -> Vec<u8> {
-        tokenator_cbor::encode(&self.item, EncodeMode::Preserve)
+        // `from_owned` only accepts maps that encode.
+        tokenator_cbor::encode(&self.item, EncodeMode::Preserve).unwrap_or_default()
     }
 
     /// Map labels in order, duplicates included. Labels that are neither
@@ -479,12 +483,13 @@ pub fn from_cwk(cwk: &CoseKey) -> Result<Key, KeyError> {
         .filter_map(|(k, v)| {
             let label = label_of(k)?;
             let recognized = matches!(label, Label::Int(n) if (KTY..=KEY_OPS).contains(&n) || known.contains(&n));
-            (!recognized).then(|| Extra::Cose {
-                label,
-                cbor: tokenator_cbor::encode(v, EncodeMode::Preserve),
+            (!recognized).then(|| {
+                let cbor = tokenator_cbor::encode(v, EncodeMode::Preserve)
+                    .map_err(|_| KeyError::UnrecognizedFormat)?;
+                Ok(Extra::Cose { label, cbor })
             })
         })
-        .collect();
+        .collect::<Result<_, KeyError>>()?;
     Ok(key)
 }
 
@@ -567,7 +572,7 @@ pub fn cose_thumbprint(cwk: &CoseKey, hash: HashAlg) -> Result<Vec<u8>, KeyError
             Ok((Item::int(*label), value.clone()))
         })
         .collect::<Result<Vec<_>, KeyError>>()?;
-    Ok(hash_map(entries, hash))
+    hash_map(entries, hash)
 }
 
 /// RFC 9679 §4 / RFC 9964 §6 required labels.
@@ -580,11 +585,13 @@ fn thumbprint_labels(kty: KeyType) -> &'static [i64] {
     }
 }
 
-fn hash_map(entries: Vec<(Item<'static>, Item<'static>)>, hash: HashAlg) -> Vec<u8> {
-    digest(
-        hash,
-        &tokenator_cbor::encode(&Item::map(entries), EncodeMode::Deterministic),
-    )
+fn hash_map(
+    entries: Vec<(Item<'static>, Item<'static>)>,
+    hash: HashAlg,
+) -> Result<Vec<u8>, KeyError> {
+    let cbor = tokenator_cbor::encode(&Item::map(entries), EncodeMode::Deterministic)
+        .map_err(|_| KeyError::UnrecognizedFormat)?;
+    Ok(digest(hash, &cbor))
 }
 
 /// The RFC 9679 thumbprint of `key`'s public part.
@@ -613,5 +620,6 @@ pub(crate) fn key_thumbprint(key: &Key, hash: HashAlg) -> Vec<u8> {
             (Item::int(-1), Item::bytes(public)),
         ],
     };
-    hash_map(entries, hash)
+    // Integers and byte strings always encode.
+    hash_map(entries, hash).unwrap_or_default()
 }

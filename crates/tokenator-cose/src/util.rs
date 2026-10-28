@@ -4,6 +4,8 @@
 use std::borrow::Cow;
 
 use tokenator_cbor::{EncodeMode, Item, Span, Value, Width, encode};
+
+use crate::CoseError;
 use tokenator_crypto::{DeclaredAlg, alg_from_cose};
 use tokenator_keys::Label;
 
@@ -135,10 +137,12 @@ pub(crate) fn bstr(contents: &[u8], width: Width) -> Vec<u8> {
     } else {
         width
     };
+    // A byte string always encodes.
     encode(
         &Item::bytes(Cow::Borrowed(contents)).with_width(width),
         EncodeMode::Preserve,
     )
+    .unwrap_or_default()
 }
 
 /// The argument width of a definite head of `head_len` bytes.
@@ -193,6 +197,6 @@ pub(crate) fn with_value<'a>(item: &Item<'a>, value: Value<'a>) -> Item<'a> {
 }
 
 /// Encodes with `EncodeMode::Preserve`.
-pub(crate) fn enc(item: &Item<'_>) -> Vec<u8> {
-    encode(item, EncodeMode::Preserve)
+pub(crate) fn enc(item: &Item<'_>) -> Result<Vec<u8>, CoseError> {
+    Ok(encode(item, EncodeMode::Preserve)?)
 }

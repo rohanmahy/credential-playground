@@ -199,10 +199,12 @@ pub fn export_set(
                 .iter()
                 .map(|key| to_cwk(key, visibility).map(|cwk| cwk.item().clone()))
                 .collect::<Result<Vec<_>, _>>()?;
-            Ok(tokenator_cbor::encode(
+            // The items come from valid COSE_Keys, which always encode.
+            tokenator_cbor::encode(
                 &tokenator_cbor::Item::array(items),
                 tokenator_cbor::EncodeMode::Preserve,
-            ))
+            )
+            .map_err(|_| KeyError::UnrecognizedFormat)
         }
         KeyFormat::Pem(enc) => {
             let mut out = Vec::new();

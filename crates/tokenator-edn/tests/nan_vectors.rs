@@ -8,7 +8,7 @@
 //!   input bytes;
 //! - the input and the preferred bytes print as the expected EDN, which
 //!   parses back to exactly those bytes (in strict mode, without warnings);
-//! - both survive decode → print → parse → encode(Preserve) for every
+//! - both survive decode → print → parse → encode(Preserve).unwrap() for every
 //!   print option set.
 
 #![allow(clippy::unwrap_used, clippy::panic, clippy::indexing_slicing)]
@@ -138,7 +138,7 @@ fn expected_edn_parses_to_exact_bytes() {
             let parsed = parse_with(edn, &strict).unwrap_or_else(|e| panic!("{edn}: {e:?}"));
             assert!(parsed.warnings.is_empty(), "{edn}");
             assert_eq!(
-                hex(&encode(&parsed.items[0], EncodeMode::Preserve)),
+                hex(&encode(&parsed.items[0], EncodeMode::Preserve).unwrap()),
                 hex(bytes),
                 "{edn} ({})",
                 r.source
@@ -165,5 +165,5 @@ fn nans_inside_containers_keep_their_bytes() {
     rt(&bytes).unwrap();
     let text = print(&decode(&bytes).unwrap(), &PrintOptions::new()).text;
     let back = parse(&text).unwrap();
-    assert_eq!(encode(&back, EncodeMode::Preserve), bytes);
+    assert_eq!(encode(&back, EncodeMode::Preserve).unwrap(), bytes);
 }

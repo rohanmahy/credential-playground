@@ -48,12 +48,16 @@ fn deepest_cases() {
             continue;
         }
         let item = parse(&text).unwrap_or_else(|e| panic!("{open}: {e:?}"));
-        let bytes = encode(&item, EncodeMode::Preserve);
+        let bytes = encode(&item, EncodeMode::Preserve).unwrap();
         let decoded = decode(&bytes).unwrap();
         for opts in &print_options {
             let rendered = print(&decoded, opts);
             let back = parse(&rendered.text).unwrap_or_else(|e| panic!("{open}: {e:?}"));
-            assert_eq!(encode(&back, EncodeMode::Preserve), bytes, "{open}");
+            assert_eq!(
+                encode(&back, EncodeMode::Preserve).unwrap(),
+                bytes,
+                "{open}"
+            );
             let rows = annotated_hex(
                 &decoded,
                 &bytes,
@@ -77,10 +81,10 @@ fn deepest_cases() {
     let n = MAX_DEPTH / 3;
     let text = nested("foo<<", "1", ">>", n);
     let item = parse(&text).unwrap();
-    let bytes = encode(&item, EncodeMode::Preserve);
+    let bytes = encode(&item, EncodeMode::Preserve).unwrap();
     let rendered = print(&decode(&bytes).unwrap(), &PrintOptions::indented(2));
     assert_eq!(
-        encode(&parse(&rendered.text).unwrap(), EncodeMode::Preserve),
+        encode(&parse(&rendered.text).unwrap(), EncodeMode::Preserve).unwrap(),
         bytes
     );
     assert_eq!(

@@ -493,6 +493,7 @@ mod tests {
                 let _ = encode(&item, EncodeMode::Deterministic);
                 let _ = encode(&item, EncodeMode::PreferredPlus);
                 let _ = deterministic_findings(&item);
+                let _ = item.clone();
                 let owned = item.into_owned();
                 assert_eq!(encode(&owned, EncodeMode::Preserve).unwrap(), input);
             }

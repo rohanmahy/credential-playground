@@ -224,7 +224,7 @@ fn short_salts_are_allowed_with_a_warning() {
     assert_eq!(r.warnings, [RedactWarning::SaltLength(8)]);
     assert_eq!(
         r.disclosures[0],
-        encode_disclosure(&[7; 8], Some(&tru()), Some(&int(500)))
+        encode_disclosure(&[7; 8], Some(&tru()), Some(&int(500))).unwrap()
     );
 }
 
@@ -292,9 +292,9 @@ fn redacted_keys_go_last_in_key_order() {
     assert_eq!(
         r.disclosures,
         [
-            encode_disclosure(&[0; 16], Some(&text("b")), Some(&int(2))),
-            encode_disclosure(&[1; 16], Some(&text("d")), Some(&text("x"))),
-            encode_disclosure(&[2; 16], None, None),
+            encode_disclosure(&[0; 16], Some(&text("b")), Some(&int(2))).unwrap(),
+            encode_disclosure(&[1; 16], Some(&text("d")), Some(&text("x"))).unwrap(),
+            encode_disclosure(&[2; 16], None, None).unwrap(),
         ]
     );
 }
@@ -308,12 +308,12 @@ fn nested_redaction_inside_elements_and_other_tags() {
     ]);
     let r = redact(&claims, HashAlg::Sha256, &mut Recorder::default()).unwrap();
     assert_eq!(r.disclosures.len(), 3);
-    let d0 = encode_disclosure(&[0; 16], Some(&int(10)), None);
+    let d0 = encode_disclosure(&[0; 16], Some(&int(10)), None).unwrap();
     assert_eq!(r.disclosures[0], d0);
     let inner = arr(vec![tag(60, bs(&sha256(&bstr_item(&d0)))), int(11)]);
-    let d1 = encode_disclosure(&[1; 16], Some(&inner), None);
+    let d1 = encode_disclosure(&[1; 16], Some(&inner), None).unwrap();
     assert_eq!(r.disclosures[1], d1);
-    let d2 = encode_disclosure(&[2; 16], Some(&int(5)), None);
+    let d2 = encode_disclosure(&[2; 16], Some(&int(5)), None).unwrap();
     assert_eq!(r.disclosures[2], d2);
     let want = map(vec![
         (int(1), arr(vec![tag(60, bs(&sha256(&bstr_item(&d1))))])),
@@ -355,19 +355,19 @@ fn copied_items_keep_their_encoding() {
 fn encode_disclosure_shapes() {
     let salt = h("bae611067bb823486797da1ebbb52f83");
     assert_eq!(
-        encode_disclosure(&salt, Some(&text("ABCD-123456")), Some(&int(501))),
+        encode_disclosure(&salt, Some(&text("ABCD-123456")), Some(&int(501))).unwrap(),
         h("8350bae611067bb823486797da1ebbb52f836b414243442d3132333435361901f5")
     );
     assert_eq!(
-        encode_disclosure(&salt, Some(&int(1)), None),
+        encode_disclosure(&salt, Some(&int(1)), None).unwrap(),
         [h("8250"), salt.clone(), h("01")].concat()
     );
     assert_eq!(
-        encode_disclosure(&salt, None, None),
+        encode_disclosure(&salt, None, None).unwrap(),
         [h("8150"), salt.clone()].concat()
     );
     assert_eq!(
-        encode_disclosure(&salt, None, Some(&int(1))),
+        encode_disclosure(&salt, None, Some(&int(1))).unwrap(),
         [h("8150"), salt].concat()
     );
 }

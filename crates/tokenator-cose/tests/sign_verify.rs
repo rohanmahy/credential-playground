@@ -150,7 +150,7 @@ fn parts_from_sign1_borrow_and_reassemble() {
         let msg = B.parse(&bytes).unwrap();
         let p = Sign1Parts::from_sign1(&msg).unwrap();
         assert!(matches!(p.protected, Cow::Borrowed(_)));
-        assert_eq!(B.assemble(&p), bytes, "{name}");
+        assert_eq!(B.assemble(&p).unwrap(), bytes, "{name}");
     }
 }
 
@@ -175,9 +175,12 @@ fn assemble_detached_and_tags() {
     let mut p = parts(&h("a10126"), None);
     p.tags = vec![61, 18];
     p.signature = Cow::Owned(vec![1, 2]);
-    assert_eq!(B.assemble(&p), h("d83d d2 84 43a10126 a0 f6 420102"));
+    assert_eq!(
+        B.assemble(&p).unwrap(),
+        h("d83d d2 84 43a10126 a0 f6 420102")
+    );
     p.tags.clear();
-    assert_eq!(B.assemble(&p), h("84 43a10126 a0 f6 420102"));
+    assert_eq!(B.assemble(&p).unwrap(), h("84 43a10126 a0 f6 420102"));
 }
 
 #[test]
@@ -204,7 +207,7 @@ fn sign_and_verify_every_alg() {
         // A different payload under the same signature fails.
         let mut forged = Sign1Parts::from_sign1(&msg).unwrap();
         forged.payload = Some(Cow::Borrowed(b"hellO"));
-        let forged = B.assemble(&forged);
+        let forged = B.assemble(&forged).unwrap();
         assert_eq!(
             B.verify(&B.parse(&forged).unwrap(), &key, &VerifyOptions::default()),
             Err(CoseError::InvalidSignature),
@@ -395,10 +398,12 @@ fn detached_payload_sign_verify() {
     assert_eq!(B.verify(&msg, &key, &bad), Err(CoseError::InvalidSignature));
 
     // Same signature as an attached message over the same payload.
-    let attached = B.assemble(&Sign1Parts {
-        payload: Some(Cow::Borrowed(b"detached")),
-        ..Sign1Parts::from_sign1(&msg).unwrap()
-    });
+    let attached = B
+        .assemble(&Sign1Parts {
+            payload: Some(Cow::Borrowed(b"detached")),
+            ..Sign1Parts::from_sign1(&msg).unwrap()
+        })
+        .unwrap();
     assert_eq!(
         B.verify(
             &B.parse(&attached).unwrap(),

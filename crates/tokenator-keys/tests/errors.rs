@@ -423,7 +423,7 @@ fn deeply_nested_json_is_an_error() {
 // ------------------------------------------------------------ COSE_Key
 
 fn cbor(item: Item<'_>) -> Vec<u8> {
-    tokenator_cbor::encode(&item, EncodeMode::Preserve)
+    tokenator_cbor::encode(&item, EncodeMode::Preserve).unwrap()
 }
 
 fn cose_map(entries: Vec<(i64, Item<'static>)>) -> Vec<u8> {

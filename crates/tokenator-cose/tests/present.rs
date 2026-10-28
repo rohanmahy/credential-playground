@@ -717,7 +717,7 @@ fn empty_sd_claims_is_invalid() {
     let msg = B.parse(&issuer).unwrap();
     let mut parts = Sign1Parts::from_sign1(&msg).unwrap();
     parts.unprotected = map(vec![(int(17), arr(vec![]))]);
-    let inner = B.assemble(&parts);
+    let inner = B.assemble(&parts).unwrap();
     let payload = map(vec![(int(3), text(SD_AUD)), (int(6), int(SD_KBT_IAT))]);
     let kbt = manual_kbt(&inner, typ294(), &payload, &sd_holder());
     let mut opts = kopts();

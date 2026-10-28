@@ -123,7 +123,7 @@ print bignums as plain integers.
   is rejected; years 0000–9999; fractional digits beyond nanoseconds are
   truncated; float epochs round to the nearest nanosecond; `dt''` with a
   fraction yields the correctly rounded binary64 of the decimal epoch.
-- **Depth**: `MAX_DEPTH` (1024, from tokenator-cbor) nested arrays, maps,
+- **Depth**: `MAX_DEPTH` (512, from tokenator-cbor) nested arrays, maps,
   tags, and embedded sequences; deeper input is `EdnErrorKind::DepthLimit`.
   Deep tests run on an 8 MiB thread.
 

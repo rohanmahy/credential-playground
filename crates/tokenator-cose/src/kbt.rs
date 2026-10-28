@@ -168,9 +168,9 @@ pub fn present(
 
     let parts = Sign1Parts {
         tags: opts.tags.clone(),
-        protected: Cow::Owned(enc(&Item::map(prot))),
+        protected: Cow::Owned(enc(&Item::map(prot))?),
         unprotected: Item::map(Vec::new()),
-        payload: Some(Cow::Owned(enc(&Item::map(claims)))),
+        payload: Some(Cow::Owned(enc(&Item::map(claims))?)),
         signature: Cow::Borrowed(&[]),
     };
     backend.sign(&parts, holder, &SignOptions::new(opts.alg), rng)

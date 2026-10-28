@@ -323,16 +323,16 @@ fn assemble_from_raw_parts() {
     let msg = B.parse(&a3).unwrap();
     let mut p = Sign1Parts::from_sign1(&msg).unwrap();
     p.protected = Cow::Owned(h("a1013822"));
-    let swapped = B.assemble(&p);
+    let swapped = B.assemble(&p).unwrap();
     assert_eq!(swapped, t(&a3, TamperOp::SwapAlg(-35)));
 
     let mut p = Sign1Parts::from_sign1(&msg).unwrap();
     p.signature = Cow::Borrowed(&[]);
-    assert_eq!(B.assemble(&p), t(&a3, TamperOp::StripSignature));
+    assert_eq!(B.assemble(&p).unwrap(), t(&a3, TamperOp::StripSignature));
 
     let mut p = Sign1Parts::from_sign1(&msg).unwrap();
     p.unprotected = map(vec![(int(4), bs(b"x")), (int(4), bs(b"y"))]);
-    let dup = B.assemble(&p);
+    let dup = B.assemble(&p).unwrap();
     assert_eq!(verify_a3(&dup), Ok(Alg::ES256));
 }
 
@@ -616,7 +616,7 @@ fn edit_duplicate_append_replace_forge() {
     let (_, matched, _, _, dups) = sd_report_after(&[DisclosureOp::Duplicate(0)]);
     assert_eq!((matched, dups), (5, vec![5]));
 
-    let forged = encode_disclosure(&[9; 16], Some(&text("forged")), Some(&int(501)));
+    let forged = encode_disclosure(&[9; 16], Some(&text("forged")), Some(&int(501))).unwrap();
     let (out, _, _, unmatched, _) =
         sd_report_after(&[DisclosureOp::Append(Cow::Owned(forged.clone()))]);
     assert_eq!(unmatched, [5]);
@@ -645,7 +645,7 @@ fn edit_duplicate_append_replace_forge() {
     assert_eq!(unmatched, [5]);
     assert_eq!(
         disclosures_of(&out)[5],
-        encode_disclosure(&[8; 16], None, None)
+        encode_disclosure(&[8; 16], None, None).unwrap()
     );
 }
 

@@ -30,7 +30,7 @@ fn cose(entries: Vec<(i64, Item<'static>)>) -> CoseKey {
             .map(|(k, v)| (Item::int(k), v))
             .collect(),
     );
-    CoseKey::decode(&tokenator_cbor::encode(&item, EncodeMode::Preserve)).unwrap()
+    CoseKey::decode(&tokenator_cbor::encode(&item, EncodeMode::Preserve).unwrap()).unwrap()
 }
 
 fn pc(entries: Vec<(i64, Item<'static>)>) -> Result<tokenator_keys::KeyParams, KeyError> {

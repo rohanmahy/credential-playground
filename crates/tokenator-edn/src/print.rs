@@ -396,7 +396,7 @@ pub(crate) fn embedded<'r>(
     // Shown only where the text re-encodes to exactly these bytes.
     let mut again = Vec::with_capacity(content.len());
     for item in &items {
-        again.extend(encode(item, EncodeMode::Preserve));
+        again.extend(encode(item, EncodeMode::Preserve).ok()?);
     }
     (again == content).then_some(items)
 }
@@ -696,7 +696,8 @@ fn dt_literal(item: &Item<'_>) -> Option<String> {
         text.insert_str(text.len() - 1, ".0");
     }
     let candidate = Item::tag(1, dt(&text).ok()?);
-    let same = encode(&candidate, EncodeMode::Preserve) == encode(item, EncodeMode::Preserve);
+    let same = encode(&candidate, EncodeMode::Preserve).ok()?
+        == encode(item, EncodeMode::Preserve).ok()?;
     same.then(|| format!("DT'{text}'"))
 }
 
@@ -728,7 +729,8 @@ fn ip_literal(item: &Item<'_>) -> Option<String> {
         _ => return None,
     };
     let candidate = ip(&text, true).ok()?;
-    let same = encode(&candidate, EncodeMode::Preserve) == encode(item, EncodeMode::Preserve);
+    let same = encode(&candidate, EncodeMode::Preserve).ok()?
+        == encode(item, EncodeMode::Preserve).ok()?;
     same.then(|| format!("IP'{text}'"))
 }
 
@@ -1160,7 +1162,8 @@ impl<'o> Printer<'o> {
         let (eff, shortest) = float_widths(f, width);
         let ind = self.float_ind(eff, shortest);
         if f.is_nan() && f.to_bits() != CANONICAL_NAN {
-            let bytes = encode(&Item::float(f), EncodeMode::Preserve);
+            // A float always encodes.
+            let bytes = encode(&Item::float(f), EncodeMode::Preserve).unwrap_or_default();
             self.out.push_str("float'");
             self.out
                 .push_str(&hex_string(bytes.get(1..).unwrap_or_default()));

@@ -48,6 +48,7 @@ fn assemble(protected: &[u8], unprotected: Item<'_>, payload: &[u8]) -> Vec<u8> 
         payload: Some(Cow::Owned(payload.to_vec())),
         signature: Cow::Borrowed(&[]),
     })
+    .unwrap()
 }
 
 fn es256() -> Vec<u8> {
@@ -217,7 +218,7 @@ fn indefinite_lengths() {
 fn disclosure_encodings_are_warn() {
     // A disclosure with a non-preferred value, and one with a wide bstr head.
     let d0 = [h("82 50"), vec![0; 16], h("1801")].concat();
-    let d1 = encode_disclosure(&[1; 16], Some(&int(2)), None);
+    let d1 = encode_disclosure(&[1; 16], Some(&int(2)), None).unwrap();
     let mut wide = vec![0x58, u8::try_from(d1.len()).unwrap()];
     wide.extend(&d1);
     let unprotected = map(vec![(
@@ -452,7 +453,7 @@ fn empty_protected_must_be_zero_length() {
 
 #[test]
 fn salt_length() {
-    let d = encode_disclosure(&[1; 8], Some(&int(2)), None);
+    let d = encode_disclosure(&[1; 8], Some(&int(2)), None).unwrap();
     let unprotected = map(vec![(int(17), arr(vec![bs(&d)]))]);
     let f = run(&assemble(&sd_prot(), unprotected, &h("a0")));
     let x = find(&f, |f| f.kind == FindingKind::SaltLength(8));

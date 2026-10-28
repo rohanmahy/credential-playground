@@ -223,12 +223,12 @@ fn exercise(text: &str) {
         },
     );
     if let Ok(item) = parse(text) {
-        let bytes = encode(&item, EncodeMode::Preserve);
+        let bytes = encode(&item, EncodeMode::Preserve).unwrap();
         let decoded = decode(&bytes).unwrap_or_else(|e| panic!("{text:?} encoded badly: {e}"));
         let again = print(&decoded, &PrintOptions::new()).text;
         let back = parse(&again).unwrap_or_else(|e| panic!("{again:?}: {e:?}"));
         assert_eq!(
-            encode(&back, EncodeMode::Preserve),
+            encode(&back, EncodeMode::Preserve).unwrap(),
             bytes,
             "{text:?} -> {again:?}"
         );
@@ -269,13 +269,13 @@ proptest! {
 
     #[test]
     fn built_items_print_and_reparse_exactly(item in item()) {
-        let want = encode(&item, EncodeMode::Preserve);
+        let want = encode(&item, EncodeMode::Preserve).unwrap();
         for (name, opts) in roundtrip_options() {
             let text = print(&item, &opts).text;
             let back = parse(&text);
             prop_assert!(back.is_ok(), "[{name}] {text:?}: {:?}", back.err());
             prop_assert_eq!(
-                encode(&back.unwrap(), EncodeMode::Preserve),
+                encode(&back.unwrap(), EncodeMode::Preserve).unwrap(),
                 want.clone(),
                 "[{}] {}",
                 name,
@@ -286,7 +286,7 @@ proptest! {
 
     #[test]
     fn default_output_parses_without_warnings(item in item()) {
-        let bytes = encode(&item, EncodeMode::Preserve);
+        let bytes = encode(&item, EncodeMode::Preserve).unwrap();
         // Tags 888 and 999 warn by design (ellipsis, unknown extension).
         let decoded = decode(&bytes).unwrap();
         prop_assume!(!common::nodes(&decoded).iter().any(|(_, i)| matches!(
@@ -300,13 +300,13 @@ proptest! {
             prop_assert!(parsed.is_ok(), "{text:?}: {:?}", parsed.err());
             let parsed = parsed.unwrap();
             prop_assert!(parsed.warnings.is_empty(), "{text:?}: {:?}", parsed.warnings);
-            prop_assert_eq!(encode(&parsed.items[0], EncodeMode::Preserve), bytes.clone());
+            prop_assert_eq!(encode(&parsed.items[0], EncodeMode::Preserve).unwrap(), bytes.clone());
         }
     }
 
     #[test]
     fn decoded_items_have_consistent_spans_and_rows(item in item()) {
-        let bytes = encode(&item, EncodeMode::Preserve);
+        let bytes = encode(&item, EncodeMode::Preserve).unwrap();
         let decoded = decode(&bytes).unwrap();
         common::rt(&bytes).map_err(TestCaseError::fail)?;
         for opts in [PrintOptions::new(), PrintOptions::indented(2)] {
@@ -318,7 +318,7 @@ proptest! {
 
     #[test]
     fn embedded_views_have_consistent_spans_and_rows(item in item()) {
-        let bytes = encode(&item, EncodeMode::Preserve);
+        let bytes = encode(&item, EncodeMode::Preserve).unwrap();
         let decoded = decode(&bytes).unwrap();
         common::rt_embedded(&bytes).map_err(TestCaseError::fail)?;
         let paths = common::all_bstr_paths(&decoded);
@@ -412,8 +412,8 @@ proptest! {
         let from_dt = parse(&format!("dt'{text}'")).unwrap();
         let from_epoch = t.to_item(tokenator_edn::datetime::DateForm::Epoch).unwrap();
         prop_assert_eq!(
-            encode(&from_dt, EncodeMode::Preserve),
-            encode(&from_epoch, EncodeMode::Preserve)
+            encode(&from_dt, EncodeMode::Preserve).unwrap(),
+            encode(&from_epoch, EncodeMode::Preserve).unwrap()
         );
     }
 }

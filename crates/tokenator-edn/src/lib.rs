@@ -4,7 +4,7 @@
 //! EDN text parses into a [`tokenator_cbor::Item`] and items print back to
 //! EDN. Encoding indicators (`_i`, `_0`..`_3`, `_`) carry every encoding
 //! choice, so for a decoded item
-//! `encode(&parse(&print(&item, &PrintOptions::default()).text)?, Preserve)`
+//! `encode(&parse(&print(&item, &PrintOptions::default()).text)?, Preserve)?`
 //! gives back the original bytes.
 //!
 //! - [`parse`], [`parse_seq`], [`parse_with`]: EDN text to items, with
@@ -30,7 +30,7 @@
 //! let item = decode(&bytes)?;
 //! let rendered = print(&item, &PrintOptions::default());
 //! assert_eq!(rendered.text, "[1_0, [_ ]]");
-//! assert_eq!(encode(&parse(&rendered.text)?, EncodeMode::Preserve), bytes);
+//! assert_eq!(encode(&parse(&rendered.text)?, EncodeMode::Preserve)?, bytes);
 //! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 //!
@@ -70,8 +70,8 @@
 //! let text = print(item, &PrintOptions::new()).text;
 //! assert_eq!(text, r#"["cba", cri'https://example.com']"#);
 //! let Value::Array(items) = &item.value else { unreachable!() };
-//! assert_eq!(encode(&items[1], EncodeMode::Preserve)[..3], [0xd9, 0x03, 0xe7]); // tag 999
-//! # Ok::<(), tokenator_edn::EdnError>(())
+//! assert_eq!(encode(&items[1], EncodeMode::Preserve)?[..3], [0xd9, 0x03, 0xe7]); // tag 999
+//! # Ok::<(), Box<dyn std::error::Error>>(())
 //! ```
 
 mod annotate;

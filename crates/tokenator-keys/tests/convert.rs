@@ -373,7 +373,7 @@ fn cose_label_order_per_key_type() {
         // without sorting changes nothing.
         let item = tokenator_cbor::decode(&out).unwrap();
         assert!(
-            tokenator_cbor::preferred_findings(&item).is_empty(),
+            tokenator_cbor::preferred_plus_findings(&item).is_empty(),
             "{kind:?}"
         );
     }
@@ -503,7 +503,7 @@ fn cose_key_from_embedded_item() {
     let key_bytes = fixture("rfc9679/ec2-p256.cbor");
     let inner = tokenator_cbor::decode(&key_bytes).unwrap();
     let wrapper = Item::map(vec![(Item::int(1), inner)]);
-    let encoded = tokenator_cbor::encode(&wrapper, EncodeMode::Preserve);
+    let encoded = tokenator_cbor::encode(&wrapper, EncodeMode::Preserve).unwrap();
     let decoded = tokenator_cbor::decode(&encoded).unwrap();
     let Value::Map(entries) = &decoded.value else {
         panic!()

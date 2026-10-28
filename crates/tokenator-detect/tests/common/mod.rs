@@ -172,7 +172,7 @@ pub fn pct_all(data: &[u8]) -> String {
 // ------------------------------------------------------------------ CBOR
 
 pub fn cbor(item: &Item) -> Vec<u8> {
-    encode(item, EncodeMode::Preserve)
+    encode(item, EncodeMode::Preserve).unwrap()
 }
 
 pub fn int(n: i64) -> Item<'static> {

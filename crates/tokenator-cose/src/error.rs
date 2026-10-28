@@ -2,7 +2,7 @@
 
 use core::fmt;
 
-use tokenator_cbor::DecodeError;
+use tokenator_cbor::{DecodeError, EncodeError};
 use tokenator_crypto::{Alg, CryptoError, DeclaredAlg, KeyMismatch};
 use tokenator_keys::{KeyError, Label};
 
@@ -17,6 +17,8 @@ use crate::Part;
 pub enum CoseError {
     /// The input is not well-formed CBOR (including trailing bytes).
     Cbor(DecodeError),
+    /// An item cannot be encoded (it holds a `simple(24..=31)`).
+    Encode(EncodeError),
     /// Well-formed CBOR that is not a COSE_Sign1: not an array under its tags.
     NotSign1,
     /// A COSE structure this crate does not handle: COSE_Encrypt0 (16),
@@ -101,6 +103,12 @@ impl std::error::Error for CoseError {}
 impl From<DecodeError> for CoseError {
     fn from(e: DecodeError) -> Self {
         CoseError::Cbor(e)
+    }
+}
+
+impl From<EncodeError> for CoseError {
+    fn from(e: EncodeError) -> Self {
+        CoseError::Encode(e)
     }
 }
 

@@ -193,7 +193,7 @@ fn default_printer_output_parses_without_warnings() {
                 parsed.warnings
             );
             assert_eq!(
-                encode(&parsed.items[0], EncodeMode::Preserve),
+                encode(&parsed.items[0], EncodeMode::Preserve).unwrap(),
                 h(bytes),
                 "{text:?}"
             );
