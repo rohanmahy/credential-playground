@@ -77,7 +77,7 @@ pub fn roundtrip_options() -> Vec<(&'static str, PrintOptions<'static>)> {
     ]
 }
 
-/// decode → print → parse → encode(Preserve).unwrap() == bytes, for every option set.
+/// decode → print → parse → encode(Preserve) == bytes, for every option set.
 pub fn rt(bytes: &[u8]) -> Result<(), String> {
     let item = decode(bytes).map_err(|e| format!("decode: {e}"))?;
     for (name, opts) in roundtrip_options() {

@@ -287,12 +287,16 @@ proptest! {
     #[test]
     fn default_output_parses_without_warnings(item in item()) {
         let bytes = encode(&item, EncodeMode::Preserve).unwrap();
-        // Tags 888 and 999 warn by design (ellipsis, unknown extension).
+        // Tags 888 and 999 warn by design (ellipsis, unknown extension), and
+        // so do non-canonical NaNs (#7).
         let decoded = decode(&bytes).unwrap();
-        prop_assume!(!common::nodes(&decoded).iter().any(|(_, i)| matches!(
-            i.value,
-            Value::Tag(888 | 999, _)
-        )));
+        prop_assume!(!common::nodes(&decoded).iter().any(|(_, i)| match i.value {
+            Value::Tag(888 | 999, _) => true,
+            Value::Float(f, _) if f.is_nan() => {
+                encode(i, EncodeMode::Preserve).unwrap() != [0xf9, 0x7e, 0x00]
+            }
+            _ => false,
+        }));
         let strict = ParseOptions { strict: true, ..ParseOptions::default() };
         for opts in [PrintOptions::new(), PrintOptions::indented(2)] {
             let text = print(&decoded, &opts).text;

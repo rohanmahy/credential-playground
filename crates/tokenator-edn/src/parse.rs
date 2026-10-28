@@ -744,6 +744,7 @@ impl<'s, 'o> Parser<'s, 'o> {
                     return self.fail(start, EdnErrorKind::DepthLimit);
                 }
                 let item = self.with_spec(item)?;
+                self.check_nan(start, &item)?;
                 self.record_end(entry, self.pos);
                 self.record_subtree(entry, &item);
                 return Ok(Closed::Item(item));
@@ -987,7 +988,20 @@ impl<'s, 'o> Parser<'s, 'o> {
                 return self.unexpected();
             }
         };
-        Ok(Begun::Item(self.with_spec(item)?))
+        let item = self.with_spec(item)?;
+        self.check_nan(start, &item)?;
+        Ok(Begun::Item(item))
+    }
+
+    /// Warns about a NaN that does not encode as the canonical `f97e00`.
+    fn check_nan(&mut self, start: usize, item: &Item<'_>) -> Res<()> {
+        if let Value::Float(f, _) = item.value
+            && f.is_nan()
+            && encode(item, EncodeMode::Preserve).ok().as_deref() != Some(&CANONICAL_NAN_CBOR[..])
+        {
+            self.warn(start, WarningKind::NonCanonicalNaN)?;
+        }
+        Ok(())
     }
 
     /// A prefixed literal: `p'…'`, ``p`…` ``, or `p<<…>>` (opened).
@@ -1027,7 +1041,9 @@ impl<'s, 'o> Parser<'s, 'o> {
         if depth + height(&item) > MAX_DEPTH {
             return self.fail(start, EdnErrorKind::DepthLimit);
         }
-        Ok(Begun::Item(self.with_spec(item)?))
+        let item = self.with_spec(item)?;
+        self.check_nan(start, &item)?;
+        Ok(Begun::Item(item))
     }
 
     /// Runs the extension for `prefix`, or builds the opaque value.
@@ -1532,6 +1548,9 @@ impl<'s, 'o> Parser<'s, 'o> {
         Ok(out)
     }
 }
+
+/// The canonical NaN as CBOR.
+const CANONICAL_NAN_CBOR: [u8; 3] = [0xf9, 0x7e, 0x00];
 
 /// The quiet NaN with no payload.
 pub(crate) const CANONICAL_NAN: u64 = 0x7ff8_0000_0000_0000;

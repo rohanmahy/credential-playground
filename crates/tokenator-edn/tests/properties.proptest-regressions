@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 20c6ba61d66c2fbc38eab88629b75112f7da4803e251d8713a49d90594e19235 # shrinks to item = Item { value: Map([(Item { value: Tag(0, Item { value: Float(NaN, F16), span: Span { start: 0, end: 3, head_len: 3 }, width: U16, chunks: [] }), span: Span { start: 0, end: 0, head_len: 0 }, width: Immediate, chunks: [] }, Item { value: Uint(0), span: Span { start: 0, end: 0, head_len: 0 }, width: Immediate, chunks: [] })]), span: Span { start: 0, end: 0, head_len: 0 }, width: Immediate, chunks: [] }

@@ -9,7 +9,7 @@
 //! - parsing the `.edn` file and encoding it gives exactly the `.cbor` file;
 //! - printing the decoded `.cbor` file and parsing it gives the same bytes;
 //! - every good `encoded` byte string survives decode → print → parse →
-//!   encode(Preserve).unwrap(), with each set of print options;
+//!   encode(Preserve), with each set of print options;
 //! - every `decoded` item prints and re-parses to the same encoding.
 
 #![allow(clippy::unwrap_used, clippy::panic, clippy::indexing_slicing)]
@@ -18,7 +18,9 @@ mod common;
 
 use common::{check_span_map, deep, hex, rt, vector_file};
 use tokenator_cbor::{EncodeMode, Item, Value, decode, encode};
-use tokenator_edn::{ParseOptions, PrintOptions, parse, parse_with, print};
+use tokenator_edn::{
+    EdnErrorKind, ParseOptions, PrintOptions, WarningKind, parse, parse_with, print,
+};
 
 const FILES: &[&str] = &[
     "rfc8949-appendixA/mt0",
@@ -128,10 +130,28 @@ fn check_cbor_file_roundtrips(name: &str) {
         let rendered = print(&item, &opts);
         check_span_map(&item, Some(&bytes), &rendered)
             .unwrap_or_else(|e| panic!("{name} ({:?}): {e}", opts.layout));
-        // The printer's default output parses without warnings (#14).
-        let parsed = parse_with(&rendered.text, &strict)
-            .unwrap_or_else(|e| panic!("{name} ({:?}) in strict mode: {e}", opts.layout));
-        assert!(parsed.warnings.is_empty(), "{name}: {:?}", parsed.warnings);
+        // The printer's default output parses without warnings (#14),
+        // except for non-canonical NaNs, which warn by design (#7).
+        match parse_with(&rendered.text, &strict) {
+            Ok(parsed) => assert!(parsed.warnings.is_empty(), "{name}: {:?}", parsed.warnings),
+            Err(e) => {
+                assert_eq!(
+                    e.kind,
+                    EdnErrorKind::Strict(WarningKind::NonCanonicalNaN),
+                    "{name} ({:?}) in strict mode: {e}",
+                    opts.layout
+                );
+                let parsed = parse_with(&rendered.text, &ParseOptions::default()).unwrap();
+                assert!(
+                    parsed
+                        .warnings
+                        .iter()
+                        .all(|w| w.kind == WarningKind::NonCanonicalNaN),
+                    "{name}: {:?}",
+                    parsed.warnings
+                );
+            }
+        }
     }
 }
 

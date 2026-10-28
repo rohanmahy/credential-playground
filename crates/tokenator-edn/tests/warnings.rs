@@ -11,6 +11,9 @@
 //! 7. an end-of-line comment at the end of the input without a line feed
 //!    warns.
 //!
+//! From issue #7: a NaN other than the canonical `f97e00` warns, but is kept
+//! as written.
+//!
 //! Unknown app-extensions keep their own option (`unknown_extensions`) and
 //! are not affected by `strict`.
 
@@ -178,9 +181,9 @@ fn default_printer_output_parses_without_warnings() {
         "9f 5f4101ff 7f6161ff 5fff 7fff 1801 ff",
         "bf 7f6161ff 5f40ff ff",
         "a1 01 d818 44 7f6161ff",
-        "fa7fc00000",
-        "fb7ff8000000000001",
         "c2 49 010000000000000000",
+        // Non-canonical NaNs (fa7fc00000, fb7ff8000000000001) warn by design
+        // (#7); see non_canonical_nans_warn_but_keep_their_bits.
     ] {
         let item = decode(&h(bytes)).unwrap().into_owned();
         for opts in [PrintOptions::new(), PrintOptions::indented(2)] {
@@ -354,4 +357,56 @@ fn strict_error_display() {
     let text = e.to_string();
     assert!(text.contains("line 1"), "{text}");
     assert!(text.contains("column 3"), "{text}");
+}
+
+// ------------------------------------------------------- #7 non-canonical NaN
+
+#[test]
+fn canonical_nan_does_not_warn() {
+    for edn in [
+        "NaN",
+        "NaN_1",
+        "float'7e00'",
+        "float'7fc00000'",
+        "[NaN, 1.5]",
+    ] {
+        clean(edn);
+    }
+}
+
+#[test]
+fn non_canonical_nans_warn_but_keep_their_bits() {
+    for (edn, offset, bytes) in [
+        ("float'7fc00001'", 0, "fa7fc00001"),
+        ("float'7e01'", 0, "f97e01"),
+        ("float'fe00'", 0, "f9fe00"),
+        ("float'7c01'", 0, "f97c01"),
+        ("float'7ff0000000000001'", 0, "fb7ff0000000000001"),
+        ("NaN_2", 0, "fa7fc00000"),
+        ("NaN_3", 0, "fb7ff8000000000000"),
+        ("float'7ff8000000000001'", 0, "fb7ff8000000000001"),
+        ("float'7e00'_2", 0, "fa7fc00000"),
+        ("[1, float'7e01']", 4, "8201f97e01"),
+        ("{float'7e01': 0}", 1, "a1f97e0100"),
+    ] {
+        warns(edn, WarningKind::NonCanonicalNaN, offset);
+        assert_eq!(hex(&enc(edn)), bytes, "{edn}");
+    }
+}
+
+#[test]
+fn printed_non_canonical_nans_reparse_with_a_warning() {
+    let input = h("fa7fc00001");
+    let item = decode(&input).unwrap();
+    let text = print(&item, &PrintOptions::new()).text;
+    warns(&text, WarningKind::NonCanonicalNaN, 0);
+    let back = parse(&text).unwrap();
+    assert_eq!(
+        encode(&back, EncodeMode::Preserve).unwrap(),
+        h("fa7fc00001")
+    );
+    assert_eq!(
+        encode(&back, EncodeMode::PreferredPlus).unwrap(),
+        h("f97e00")
+    );
 }
