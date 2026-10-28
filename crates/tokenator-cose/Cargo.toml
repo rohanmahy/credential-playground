@@ -8,6 +8,16 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
+tokenator-cbor = { path = "../tokenator-cbor" }
+tokenator-crypto = { path = "../tokenator-crypto" }
+tokenator-keys = { path = "../tokenator-keys" }
+
+[dev-dependencies]
+tokenator-registry = { path = "../tokenator-registry" }
+hex = "0.4"
+proptest = "1"
+rand_chacha = { version = "0.10", default-features = false }
+serde_json = "1"
 
 [lints]
 workspace = true
