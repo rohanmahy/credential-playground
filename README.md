@@ -10,7 +10,7 @@ Phase 1: foundations
 - [ ] `tokenator-cbor`: span-preserving CBOR, preferred/deterministic findings
 - [x] `tokenator-json`: span- and order-preserving JSON
 - [ ] `tokenator-crypto`: sign/verify/digest, alg ↔ key requirements
-- [ ] `tokenator-registry`: IANA snapshot generator + lookups
+- [x] `tokenator-registry`: IANA snapshot generator + lookups
 
 Phase 2
 - [ ] `tokenator-edn`: EDN parser/printer with span maps
