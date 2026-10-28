@@ -153,6 +153,52 @@ pub struct SpecRef {
     pub url: Option<String>,
 }
 
+impl SpecRef {
+    /// `text` with the revision suffix removed from Internet-Draft names, for
+    /// hover text: `draft-ietf-spice-sd-cwt-08, Section 3.3` becomes
+    /// `draft-ietf-spice-sd-cwt, Section 3.3`. `RFC-ietf-…-NN` placeholders
+    /// are shortened the same way. `url` keeps the exact revision.
+    ///
+    /// ```
+    /// use tokenator_registry::SpecRef;
+    /// let r = SpecRef { text: "draft-ietf-spice-sd-cwt-06, Section 4".into(), url: None };
+    /// assert_eq!(r.display_text(), "draft-ietf-spice-sd-cwt, Section 4");
+    /// ```
+    pub fn display_text(&self) -> String {
+        let text = self.text.as_str();
+        let mut out = String::with_capacity(text.len());
+        let mut rest = text;
+        while let Some(start) = find_draft_name(rest) {
+            let (before, name_and_after) = rest.split_at(start);
+            let name_len = name_and_after
+                .find(|c: char| !(c.is_ascii_alphanumeric() || c == '-'))
+                .unwrap_or(name_and_after.len());
+            let (name, after) = name_and_after.split_at(name_len);
+            out.push_str(before);
+            out.push_str(strip_revision(name));
+            rest = after;
+        }
+        out.push_str(rest);
+        out
+    }
+}
+
+/// Byte offset of the next `draft-` or `RFC-ietf-` name in `s`.
+fn find_draft_name(s: &str) -> Option<usize> {
+    match (s.find("draft-"), s.find("RFC-ietf-")) {
+        (Some(a), Some(b)) => Some(a.min(b)),
+        (a, b) => a.or(b),
+    }
+}
+
+/// Removes a trailing `-NN` (two-digit revision) from a draft name.
+fn strip_revision(name: &str) -> &str {
+    match name.rsplit_once('-') {
+        Some((base, rev)) if rev.len() == 2 && rev.bytes().all(|b| b.is_ascii_digit()) => base,
+        _ => name,
+    }
+}
+
 /// One registered codepoint.
 ///
 /// The serde form is the one used in the snapshot and in
