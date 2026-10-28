@@ -149,17 +149,29 @@ fn magnitude(neg: bool, be: &[u8]) -> String {
 /// integers are unified with bignums (tags 2 and 3 over a byte string), as
 /// the vectors' `collapseBigInts` option requires. `int(-m)` means `-1 - m`.
 pub fn sem(item: &Item) -> String {
-    sem_impl(item, false)
+    sem_impl(item, false, false)
 }
 
 /// Like [`sem`], but map entries are sorted, so it is unaffected by the
 /// reordering that Deterministic encoding does.
 pub fn sem_unordered(item: &Item) -> String {
-    sem_impl(item, true)
+    sem_impl(item, true, false)
 }
 
-fn sem_impl(item: &Item, sort_maps: bool) -> String {
-    let sem = |i: &Item| sem_impl(i, sort_maps);
+/// Like [`sem`], but every NaN renders as the canonical NaN, matching what
+/// PreferredPlus encoding does to NaNs.
+pub fn sem_plus(item: &Item) -> String {
+    sem_impl(item, false, true)
+}
+
+/// [`sem_unordered`] and [`sem_plus`] combined: the meaning that survives
+/// Deterministic encoding.
+pub fn sem_canonical(item: &Item) -> String {
+    sem_impl(item, true, true)
+}
+
+fn sem_impl(item: &Item, sort_maps: bool, canonical_nan: bool) -> String {
+    let sem = |i: &Item| sem_impl(i, sort_maps, canonical_nan);
     match &item.value {
         Value::Uint(n) => magnitude(false, &n.to_be_bytes()),
         Value::Nint(n) => magnitude(true, &n.to_be_bytes()),
@@ -185,6 +197,7 @@ fn sem_impl(item: &Item, sort_maps: bool) -> String {
         Value::Null => "null".into(),
         Value::Undefined => "undefined".into(),
         Value::Simple(n) => format!("simple({n})"),
+        Value::Float(f, _) if canonical_nan && f.is_nan() => "NaN".into(),
         Value::Float(f, _) => format!("f{:016x}", f.to_bits()),
     }
 }
@@ -245,7 +258,7 @@ pub fn check_spans(item: &Item, input: &[u8]) -> Result<(), String> {
         return Err(at("initial byte has the wrong major type"));
     }
     let own = &input[s.start..s.end];
-    if encode(item, EncodeMode::Preserve) != own {
+    if encode(item, EncodeMode::Preserve).ok().as_deref() != Some(own) {
         return Err(at("Preserve encoding differs from the spanned bytes"));
     }
     let indef = item.width == Width::Indefinite;
@@ -307,7 +320,7 @@ pub fn decode_diag(hex_in: &str) -> String {
     let item =
         tokenator_cbor::decode(&input).unwrap_or_else(|e| panic!("decode {hex_in} failed: {e}"));
     assert_eq!(
-        hex(&encode(&item, EncodeMode::Preserve)),
+        hex(&enc(&item, EncodeMode::Preserve)),
         hex(&input),
         "Preserve round trip of {hex_in}"
     );
@@ -320,5 +333,18 @@ pub fn det(hex_in: &str) -> String {
     let input = h(hex_in);
     let item =
         tokenator_cbor::decode(&input).unwrap_or_else(|e| panic!("decode {hex_in} failed: {e}"));
-    hex(&encode(&item, EncodeMode::Deterministic))
+    hex(&enc(&item, EncodeMode::Deterministic))
+}
+
+/// Decodes `hex_in` and returns its preferred-plus encoding as hex.
+pub fn plus(hex_in: &str) -> String {
+    let input = h(hex_in);
+    let item =
+        tokenator_cbor::decode(&input).unwrap_or_else(|e| panic!("decode {hex_in} failed: {e}"));
+    hex(&enc(&item, EncodeMode::PreferredPlus))
+}
+
+/// Encodes, panicking on an encode error.
+pub fn enc(item: &Item, mode: EncodeMode) -> Vec<u8> {
+    encode(item, mode).unwrap_or_else(|e| panic!("encode {mode:?} failed: {e}"))
 }

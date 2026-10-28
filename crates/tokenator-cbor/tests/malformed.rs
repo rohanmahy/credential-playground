@@ -227,6 +227,17 @@ fn nested(prefix: &[u8], depth: usize, leaf: &[u8], suffix: &[u8]) -> Vec<u8> {
 }
 
 #[test]
+fn depth_limit_is_512() {
+    // #8: 512 levels is enough, and fits a 1 MiB WASM stack comfortably.
+    assert_eq!(MAX_DEPTH, 512);
+    // The deepest good cbor-test-vectors case nests 508 arrays.
+    let ok = nested(&[0x81], 508, &[0x00], &[]);
+    assert!(decode(&ok).is_ok());
+    let bad = nested(&[0x81], 513, &[0x00], &[]);
+    assert_eq!(decode(&bad).unwrap_err().kind, DepthLimit);
+}
+
+#[test]
 fn depth_limit_is_exact() {
     for prefix in [&[0x81u8][..], &[0xc1], &[0xa1, 0x00]] {
         let ok = nested(prefix, MAX_DEPTH, &[0x00], &[]);

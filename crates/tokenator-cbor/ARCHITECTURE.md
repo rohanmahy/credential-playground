@@ -7,10 +7,10 @@ Span-preserving, zero-copy CBOR decoder/encoder. See the top-level
 |---|---|
 | `item.rs` | `Item`, `Value`, `Span`, `Width`, `FloatWidth`; builders; `into_owned` |
 | `decode.rs` | `decode`, `decode_seq`, `MAX_DEPTH` |
-| `encode.rs` | `encode`; internal `Mode` (Preserve, Preferred, Deterministic) |
-| `findings.rs` | `preferred_findings`, `deterministic_findings` |
+| `encode.rs` | `encode`, `EncodeMode` (Preserve, PreferredPlus, Deterministic); internal `Mode` |
+| `findings.rs` | `preferred_plus_findings`, `deterministic_findings`, `duplicate_keys` |
 | `float.rs` | bit-exact f16/f32/f64 conversions |
-| `error.rs` | `DecodeError`, `DecodeErrorKind` |
+| `error.rs` | `DecodeError`, `DecodeErrorKind`, `EncodeError` |
 
 ## Design notes
 

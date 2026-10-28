@@ -10,7 +10,7 @@ use crate::{DecodeError, DecodeErrorKind, FloatWidth, Item, Span, Value, Width, 
 /// Maximum nesting of arrays, maps, and tags. An item nested inside
 /// `MAX_DEPTH` containers decodes; one more level is
 /// [`DecodeErrorKind::DepthLimit`](crate::DecodeErrorKind::DepthLimit).
-pub const MAX_DEPTH: usize = 1024;
+pub const MAX_DEPTH: usize = 512;
 
 /// Decodes exactly one data item. Bytes after it are an error
 /// ([`TrailingBytes`](crate::DecodeErrorKind::TrailingBytes)).
@@ -489,11 +489,12 @@ mod tests {
                 input.push(0x00);
                 input.extend(suffix.repeat(MAX_DEPTH));
                 let item = decode(&input).unwrap();
-                assert_eq!(encode(&item, EncodeMode::Preserve), input);
+                assert_eq!(encode(&item, EncodeMode::Preserve).unwrap(), input);
                 let _ = encode(&item, EncodeMode::Deterministic);
+                let _ = encode(&item, EncodeMode::PreferredPlus);
                 let _ = deterministic_findings(&item);
                 let owned = item.into_owned();
-                assert_eq!(encode(&owned, EncodeMode::Preserve), input);
+                assert_eq!(encode(&owned, EncodeMode::Preserve).unwrap(), input);
             }
         };
         let stack = if cfg!(debug_assertions) {

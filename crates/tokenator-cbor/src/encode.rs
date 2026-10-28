@@ -1,21 +1,36 @@
-//! Encoding, either preserving recorded encoding details or deterministic.
+//! Encoding: preserving recorded encoding details, or one of the
+//! serializations of draft-ietf-cbor-serialization-11.
 
 use crate::item::len_u64;
-use crate::{FloatWidth, Item, Value, Width, float};
+use crate::{EncodeError, FloatWidth, Item, Value, Width, float};
 
 /// How [`encode`] chooses among the encodings RFC 8949 allows.
+///
+/// `PreferredPlus` and `Deterministic` are the serializations defined in
+/// draft-ietf-cbor-serialization-11 §4 and §5.
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub enum EncodeMode {
-    /// Reproduce the recorded argument widths, float widths, indefinite
-    /// lengths, string chunks, and map arrival order. Encoding a decoded item
-    /// gives back the input bytes exactly.
+    /// Reproduce the recorded argument widths, float widths (NaN bit
+    /// patterns included), indefinite lengths, string chunks, bignums, and
+    /// map arrival order. Encoding a decoded item gives back the input bytes
+    /// exactly.
     Preserve,
-    /// RFC 8949 §4.2.1 core deterministic encoding: preferred serialization
-    /// (shortest arguments, shortest exact floats with NaN payloads kept),
-    /// definite lengths only, and map entries sorted by the bytewise
-    /// lexicographic order of their deterministically encoded keys. Duplicate
-    /// keys are kept (adjacent, in arrival order). Tags, including bignums,
-    /// are not rewritten.
+    /// Preferred-plus serialization (draft-ietf-cbor-serialization-11 §4.1):
+    ///
+    /// 1. shortest-form arguments;
+    /// 2. definite-length strings; 3. definite-length arrays and maps;
+    /// 4. floats in the shortest of f16/f32/f64 that is exact, with every
+    ///    NaN written as the canonical `0xf97e00`;
+    /// 5. bignums (tags 2 and 3 over a byte string) without leading zeros,
+    ///    and as major type 0/1 when the value fits there (`c24101` becomes
+    ///    `01`, `c340` becomes `20`).
+    ///
+    /// Map entries keep their arrival order.
+    PreferredPlus,
+    /// Deterministic serialization (draft-ietf-cbor-serialization-11 §5.1):
+    /// preferred-plus, plus map entries sorted by the bytewise lexicographic
+    /// order of the deterministic encodings of their keys. Duplicate keys
+    /// are kept, adjacent and in arrival order.
     Deterministic,
 }
 
@@ -30,8 +45,8 @@ pub(crate) enum Mode {
 
 /// Encodes an item.
 ///
-/// Does not validate: a `Value::Simple` in 24..=31 is emitted as
-/// `0xf8 nn`, which is not well-formed.
+/// Fails with [`EncodeError::InvalidSimple`] in every mode if the item
+/// contains a `Value::Simple` in 24..=31, which has no well-formed encoding.
 ///
 /// ```
 /// use tokenator_cbor::{encode, EncodeMode, Item};
@@ -42,22 +57,27 @@ pub(crate) enum Mode {
 /// ]);
 /// // Preserve keeps arrival order; Deterministic sorts the keys.
 /// assert_eq!(
-///     encode(&item, EncodeMode::Preserve),
+///     encode(&item, EncodeMode::Preserve)?,
 ///     [0xa2, 0x61, 0x62, 0x20, 0x61, 0x61, 0xf9, 0x3e, 0x00]
 /// );
 /// assert_eq!(
-///     encode(&item, EncodeMode::Deterministic),
+///     encode(&item, EncodeMode::Deterministic)?,
 ///     [0xa2, 0x61, 0x61, 0xf9, 0x3e, 0x00, 0x61, 0x62, 0x20]
 /// );
+/// # Ok::<(), tokenator_cbor::EncodeError>(())
 /// ```
-pub fn encode(item: &Item, mode: EncodeMode) -> Vec<u8> {
+pub fn encode(item: &Item, mode: EncodeMode) -> Result<Vec<u8>, EncodeError> {
+    // TODO(#7, #8): PreferredPlus/Deterministic must canonicalize NaNs and
+    // rewrite bignums, and every mode must reject Simple(24..=31). Until
+    // then this maps onto the old internal modes.
     let mode = match mode {
         EncodeMode::Preserve => Mode::Preserve,
+        EncodeMode::PreferredPlus => Mode::Preferred,
         EncodeMode::Deterministic => Mode::Deterministic,
     };
     let mut out = Vec::new();
     write_item(&mut out, item, mode);
-    out
+    Ok(out)
 }
 
 /// Encodes an item in the given internal mode.

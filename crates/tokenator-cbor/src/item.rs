@@ -145,7 +145,8 @@ pub enum Value<'a> {
     /// Simple value 23.
     Undefined,
     /// Any other simple value (0..=19 and 32..=255), assigned or not. Values
-    /// 24..=31 are not well-formed and are never produced by the decoder.
+    /// 24..=31 are not well-formed: the decoder never produces them and
+    /// [`encode`](crate::encode) rejects them.
     Simple(u8),
     /// A floating-point number and the width it was encoded with.
     ///

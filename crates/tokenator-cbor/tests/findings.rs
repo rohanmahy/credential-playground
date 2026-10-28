@@ -1,16 +1,19 @@
-//! preferred_findings and deterministic_findings.
+//! preferred_plus_findings and deterministic_findings.
 
 #![allow(clippy::unwrap_used, clippy::panic, clippy::indexing_slicing)]
 
 mod common;
 
-use common::{h, hex, sem};
+use common::{enc, h, hex, sem_plus};
 use tokenator_cbor::{
     EncodeMode, EncodingFinding, FindingKind, Item, Span, Width, decode, deterministic_findings,
-    encode, preferred_findings,
+    preferred_plus_findings,
 };
 
-use FindingKind::{IndefiniteLength, MapKeyOrder, NonPreferredArgument, NonPreferredFloat};
+use FindingKind::{
+    IndefiniteLength, MapKeyOrder, NonCanonicalNaN, NonPreferredArgument, NonPreferredBignum,
+    NonPreferredFloat,
+};
 
 /// A finding as (start, end, head_len, kind, preferred hex), for compact
 /// expectations.
@@ -47,7 +50,7 @@ fn expect(findings: Vec<EncodingFinding>, expected: &[F]) -> Result<(), String> 
 fn preferred(hex_in: &str, expected: &[F]) {
     let input = h(hex_in);
     let item = decode(&input).unwrap();
-    expect(preferred_findings(&item), expected).unwrap_or_else(|e| panic!("{hex_in}: {e}"));
+    expect(preferred_plus_findings(&item), expected).unwrap_or_else(|e| panic!("{hex_in}: {e}"));
 }
 
 fn deterministic(hex_in: &str, expected: &[F]) {
@@ -84,9 +87,12 @@ fn preferred_input_has_no_findings() {
         "fa47c35000",
         "fb3ff199999999999a",
         "f97e00",
-        "f97e01",
-        "fa7f800001",
+        "f97c00",
+        "f9fc00",
         "f90001",
+        "c249010000000000000000",
+        "c349010000000000000000",
+        "c26161",
         "8301820203820405",
         "a26161016162820203",
     ] {
@@ -151,18 +157,117 @@ fn non_preferred_floats() {
     preferred("fa80000000", &[(0, 5, 5, NonPreferredFloat, "f98000")]);
     preferred("fa33800000", &[(0, 5, 5, NonPreferredFloat, "f90001")]);
     preferred("fa7f800000", &[(0, 5, 5, NonPreferredFloat, "f97c00")]);
-    preferred("fa7fc00000", &[(0, 5, 5, NonPreferredFloat, "f97e00")]);
+}
+
+/// draft-ietf-cbor-serialization-11 §4.1 rule 4: only f97e00 may be written.
+#[test]
+fn non_canonical_nans() {
+    for (input, len) in [
+        ("fa7fc00000", 5),
+        ("fb7ff8000000000000", 9),
+        ("f97e01", 3),
+        ("f97c01", 3),
+        ("f9fe00", 3),
+        ("f9ffff", 3),
+        ("fa7fc02000", 5),
+        ("fa7f800001", 5),
+        ("faffc00000", 5),
+        ("fb7ff8040000000000", 9),
+        ("fb7ff0000000000001", 9),
+        ("fbfff8000000000000", 9),
+    ] {
+        preferred(input, &[(0, len, len, NonCanonicalNaN, "f97e00")]);
+        deterministic(input, &[(0, len, len, NonCanonicalNaN, "f97e00")]);
+    }
+    preferred("f97e00", &[]);
+    // nested, and as a map key
+    preferred("81 f97e01", &[(1, 4, 3, NonCanonicalNaN, "f97e00")]);
+    preferred("a1 fa7fc00000 00", &[(1, 6, 5, NonCanonicalNaN, "f97e00")]);
+}
+
+/// draft-ietf-cbor-serialization-11 §4.1 rule 5. The span is the whole tag
+/// item and the suggestion is its preferred-plus encoding.
+#[test]
+fn non_preferred_bignums() {
+    preferred("c240", &[(0, 2, 1, NonPreferredBignum, "00")]);
+    preferred("c24101", &[(0, 3, 1, NonPreferredBignum, "01")]);
+    preferred("c24100", &[(0, 3, 1, NonPreferredBignum, "00")]);
+    preferred("c2420100", &[(0, 4, 1, NonPreferredBignum, "190100")]);
+    preferred("c340", &[(0, 2, 1, NonPreferredBignum, "20")]);
+    preferred("c3420001", &[(0, 4, 1, NonPreferredBignum, "21")]);
     preferred(
-        "fb7ff8000000000000",
-        &[(0, 9, 9, NonPreferredFloat, "f97e00")],
+        "c248ffffffffffffffff",
+        &[(0, 10, 1, NonPreferredBignum, "1bffffffffffffffff")],
     );
-    // NaN payloads shrink only when no payload bit is lost.
-    preferred("fa7fc02000", &[(0, 5, 5, NonPreferredFloat, "f97e01")]);
     preferred(
-        "fb7ff8040000000000",
-        &[(0, 9, 9, NonPreferredFloat, "f97e01")],
+        "c348ffffffffffffffff",
+        &[(0, 10, 1, NonPreferredBignum, "3bffffffffffffffff")],
     );
-    preferred("fb7ff0000000000001", &[]);
+    // too big for major type 0/1, but with a leading zero
+    preferred(
+        "c24a00010000000000000000",
+        &[(0, 12, 1, NonPreferredBignum, "c249010000000000000000")],
+    );
+    preferred("c249010000000000000000", &[]);
+    // not a bignum: content is not a byte string
+    preferred("c26161", &[]);
+}
+
+#[test]
+fn bignum_findings_combine_with_others() {
+    // non-preferred tag head: same start, argument finding first
+    preferred(
+        "d80241 01",
+        &[
+            (0, 2, 2, NonPreferredArgument, "c2"),
+            (0, 4, 2, NonPreferredBignum, "01"),
+        ],
+    );
+    // non-preferred byte string head inside the bignum
+    preferred(
+        "c2 5801 01",
+        &[
+            (0, 4, 1, NonPreferredBignum, "01"),
+            (1, 3, 2, NonPreferredArgument, "41"),
+        ],
+    );
+    // indefinite byte string inside the bignum
+    preferred(
+        "c2 5f 4101 ff",
+        &[
+            (0, 5, 1, NonPreferredBignum, "01"),
+            (1, 5, 1, IndefiniteLength, "4101"),
+        ],
+    );
+    // indefinite array containing a bignum: the replacement is preferred-plus
+    preferred(
+        "9f c24101 ff",
+        &[
+            (0, 5, 1, IndefiniteLength, "8101"),
+            (1, 4, 1, NonPreferredBignum, "01"),
+        ],
+    );
+    // bignum map key; deterministic key order uses the rewritten key
+    deterministic(
+        "a2 02 00 c24101 00",
+        &[
+            (0, 7, 1, MapKeyOrder, "a2 01 00 02 00"),
+            (3, 6, 1, NonPreferredBignum, "01"),
+        ],
+    );
+    // equal after rewriting: a duplicate, not an order violation
+    deterministic("a2 01 00 c24101 00", &[(3, 6, 1, NonPreferredBignum, "01")]);
+}
+
+#[test]
+fn indefinite_replacement_canonicalizes_nans() {
+    preferred(
+        "9f f97e01 ff",
+        &[
+            (0, 5, 1, IndefiniteLength, "81f97e00"),
+            (1, 4, 3, NonCanonicalNaN, "f97e00"),
+        ],
+    );
 }
 
 #[test]
@@ -238,7 +343,7 @@ fn findings_in_nested_positions() {
 }
 
 #[test]
-fn preferred_findings_ignore_key_order() {
+fn preferred_plus_findings_ignore_key_order() {
     preferred("a2 02 00 01 00", &[]);
 }
 
@@ -262,7 +367,7 @@ fn deterministic_findings_flag_key_order() {
 }
 
 #[test]
-fn deterministic_findings_include_preferred_findings() {
+fn deterministic_findings_include_preferred_plus_findings() {
     // a2 | 02 : 18 00 | 01 : 00
     deterministic(
         "a2 02 1800 01 00",
@@ -313,12 +418,12 @@ fn indefinite_unsorted_map_reports_both() {
 #[test]
 fn findings_on_built_items() {
     let item = Item::int(1).with_width(Width::U8);
-    let findings = preferred_findings(&item);
+    let findings = preferred_plus_findings(&item);
     assert_eq!(findings.len(), 1);
     assert_eq!(findings[0].kind, NonPreferredArgument);
     assert_eq!(findings[0].preferred_bytes, [0x01]);
     assert_eq!(findings[0].span, Span::default());
-    assert!(preferred_findings(&Item::int(1000)).is_empty());
+    assert!(preferred_plus_findings(&Item::int(1000)).is_empty());
 }
 
 /// Applying a single argument or float finding to the input gives
@@ -333,10 +438,13 @@ fn applying_a_finding_fixes_it() {
         "9f018202039f0405ffff",
         "d80100",
         "9801 1800",
+        "c2 5801 01",
+        "82 c34100 fa7fc02000",
+        "9f c24101 f97c01 ff",
     ] {
         let input = h(hex_in);
         let item = decode(&input).unwrap();
-        let findings = preferred_findings(&item);
+        let findings = preferred_plus_findings(&item);
         assert!(!findings.is_empty(), "{hex_in}");
         for f in &findings {
             let mut fixed = input[..f.span.start].to_vec();
@@ -344,9 +452,9 @@ fn applying_a_finding_fixes_it() {
             fixed.extend_from_slice(&input[f.span.end..]);
             let fixed_item = decode(&fixed)
                 .unwrap_or_else(|e| panic!("{hex_in}: applying {f:?} gave malformed CBOR: {e}"));
-            assert_eq!(sem(&fixed_item), sem(&item), "{hex_in}: {f:?}");
+            assert_eq!(sem_plus(&fixed_item), sem_plus(&item), "{hex_in}: {f:?}");
             assert!(
-                preferred_findings(&fixed_item).len() < findings.len(),
+                preferred_plus_findings(&fixed_item).len() < findings.len(),
                 "{hex_in}: {f:?}"
             );
         }
@@ -362,11 +470,40 @@ fn deterministic_output_has_no_findings() {
         "a3 01 00 00 00 01 01",
         "a1 a2 02 00 01 00 00",
         "c1 fa3fc00000",
+        "a2 02 00 c24101 00",
+        "81 fb7ff0000000000001",
+        "c24a00010000000000000000",
     ] {
         let input = h(hex_in);
         let item = decode(&input).unwrap();
-        let out = encode(&item, EncodeMode::Deterministic);
+        let out = enc(&item, EncodeMode::Deterministic);
         let again = decode(&out).unwrap();
         assert_eq!(deterministic_findings(&again), vec![], "{hex_in}");
     }
+}
+
+#[test]
+fn preferred_plus_output_has_no_preferred_plus_findings() {
+    for hex_in in [
+        "a2 02 1800 01 00",
+        "bf 02 00 01 00 ff",
+        "9f c24101 f97c01 ff",
+        "c34b0000010000000000000000",
+    ] {
+        let input = h(hex_in);
+        let item = decode(&input).unwrap();
+        let out = enc(&item, EncodeMode::PreferredPlus);
+        let again = decode(&out).unwrap();
+        assert_eq!(preferred_plus_findings(&again), vec![], "{hex_in}");
+    }
+    // ... but unsorted maps survive, so deterministic_findings still sees them.
+    let input = h("a2 02 00 01 00");
+    let out = enc(&decode(&input).unwrap(), EncodeMode::PreferredPlus);
+    assert_eq!(
+        simplify(deterministic_findings(&decode(&out).unwrap()))
+            .into_iter()
+            .map(|f| f.3)
+            .collect::<Vec<_>>(),
+        [MapKeyOrder]
+    );
 }
