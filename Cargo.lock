@@ -985,6 +985,14 @@ dependencies = [
 [[package]]
 name = "tokenator-jose"
 version = "0.1.0"
+dependencies = [
+ "base64ct",
+ "proptest",
+ "rand_chacha",
+ "tokenator-crypto",
+ "tokenator-json",
+ "tokenator-keys",
+]
 
 [[package]]
 name = "tokenator-json"

@@ -27,6 +27,31 @@ transformation of a published example, described below.
 | `rfc9901-s8.2-sd-jwt-json-flattened.json` | RFC 9901 §8.2, Flattened JWS JSON SD-JWT (no KB-JWT) |
 | `rfc9901-s8.2-sd-jwt-kb-json-flattened.json` | RFC 9901 §8.2, Flattened JWS JSON SD-JWT+KB |
 | `rfc9901-s8.3-sd-jwt-kb-json-general.json` | RFC 9901 §8.3, General JWS JSON SD-JWT+KB (two signatures) |
+| `rfc9901-s5.2-processed-payload.json` | RFC 9901 §5.2, Processed SD-JWT Payload of the §5.2 presentation |
+| `rfc9901-a1-presentation.txt` | RFC 9901 A.1, SD-JWT presentation (region and country only, no KB-JWT); the payload has decoy digests |
+| `rfc9901-a1-processed-payload.json` | RFC 9901 A.1, its Processed SD-JWT Payload |
+| `rfc9901-a2-presentation.txt` | RFC 9901 A.2, SD-JWT presentation with recursive disclosures inside an array element (no KB-JWT) |
+| `rfc9901-a2-processed-payload.json` | RFC 9901 A.2, its Processed SD-JWT Payload |
+| `rfc9901-a3-sd-jwt.txt` | RFC 9901 A.3, issued SD-JWT VC (`typ: dc+sd-jwt`, 27 disclosures) |
+| `rfc9901-a3-sd-jwt-kb.txt` | RFC 9901 A.3, SD-JWT+KB disclosing `nationalities` and `age_equal_or_over/18` |
+| `rfc9901-a3-processed-payload.json` | RFC 9901 A.3, Processed SD-JWT Payload of the SD-JWT+KB |
+| `rfc9901-a4-sd-jwt.txt` | RFC 9901 A.4, issued SD-JWT (W3C VC data model, 14 disclosures) |
+| `rfc9901-a4-sd-jwt-kb.txt` | RFC 9901 A.4, SD-JWT+KB with four disclosures |
+| `rfc9901-a4-processed-payload.json` | RFC 9901 A.4, Processed SD-JWT Payload of the SD-JWT+KB |
+| `rfc9901-s6-input-claims.json` | RFC 9901 §6, input claims for the nested-data examples |
+| `rfc9901-s6.1-payload.json`, `rfc9901-s6.2-payload.json`, `rfc9901-s6.3-payload.json` | RFC 9901 §6.1–6.3, SD-JWT payloads (flat, structured, recursive); the RFC gives no signed JWT for these |
+| `rfc9901-s6.2-payload-country-plain.json` | RFC 9901 §6.2, the variant with `country` permanently disclosed |
+| `rfc9901-disclosures.json` | Every "SHA-256 Hash" / "Disclosure" pair listed in RFC 9901 §5.1, §6.1–6.3 and A.1–A.4 (87 entries: `section`, `claim` label, `digest`, `disclosure`) |
+
+The `rfc9901-s5.2-*`, `rfc9901-s6*`, `rfc9901-a*` and `rfc9901-disclosures.json` files were extracted by
+`python3 -I crates/tokenator-jose/scripts/extract_rfc9901.py rfc9901.txt testdata/tokens`
+and cross-checked with OpenSSL: every issuer signature verifies with the A.5
+key (`testdata/keys/rfc9901-a5-ec-p256-public.jwk.json`), every disclosure
+digest appears in the payload or another disclosure, every listed digest is the SHA-256 of its disclosure, and every KB-JWT
+verifies with the `cnf` key and has a matching `sd_hash`. In
+`rfc9901-s8.3-sd-jwt-kb-json-general.json` only the first signature
+(`kid: issuer-key-1`) verifies with the A.5 key; the key for the second
+(`issuer-key-2`) is not published.
 | `rfc8392-a1-claims.cbor` | RFC 8392 A.1, CWT Claims Set (binary CBOR map) |
 | `rfc8392-a3-signed-cwt.cbor` | RFC 8392 A.3, signed CWT: COSE_Sign1 with tag 18 (binary) |
 | `rfc8392-a3-signed-cwt.hex` | RFC 8392 A.3, the same as hex text, with the RFC's line breaks (65 hex digits per line, breaking mid-byte) |
