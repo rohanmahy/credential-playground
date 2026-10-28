@@ -114,11 +114,6 @@ pub enum ErrorKind {
     ControlCharacterInString,
     /// `\uD800`-`\uDFFF` escape not part of a valid pair. Offset is the `\`.
     LoneSurrogate,
-    /// Formerly: input is not valid UTF-8. Since issue #3 invalid UTF-8
-    /// inside strings is a [`WarningKind::InvalidUtf8`], and outside strings
-    /// it is an [`ErrorKind::UnexpectedCharacter`].
-    // TODO(impl): remove once parse.rs no longer produces it.
-    InvalidUtf8,
     /// Nesting exceeds [`ParseOptions::max_depth`]. Offset is the `[` or `{`.
     DepthLimitExceeded,
     /// Input starts with a UTF-8 byte order mark. Offset is 0.
@@ -201,7 +196,7 @@ pub enum Value<'a> {
 #[derive(Debug, Clone)]
 pub struct Node<'a> {
     span: Option<Span>,
-    raw: Option<&'a str>,
+    raw: Option<&'a [u8]>,
     value: Value<'a>,
     edited: bool,
 }
@@ -227,14 +222,13 @@ impl<'a> Node<'a> {
     /// and also `None` when the source bytes are not valid UTF-8 (see
     /// [`Node::raw_bytes`]).
     pub fn raw(&self) -> Option<&'a str> {
-        self.raw
+        self.raw.and_then(|b| std::str::from_utf8(b).ok())
     }
 
     /// The exact original source bytes of this node, even when they are not
     /// valid UTF-8. `None` for synthesized nodes.
     pub fn raw_bytes(&self) -> Option<&'a [u8]> {
-        // TODO(impl): store bytes so this works for invalid UTF-8 input.
-        self.raw.map(str::as_bytes)
+        self.raw
     }
 
     /// The value.
@@ -255,7 +249,7 @@ impl<'a> Node<'a> {
     }
 
     /// True if this node and all its descendants are unedited parsed nodes,
-    /// so the printer can copy [`Node::raw`] verbatim.
+    /// so the printer can copy [`Node::raw_bytes`] verbatim.
     pub fn is_original(&self) -> bool {
         !self.edited
             && self.raw.is_some()
@@ -367,7 +361,7 @@ impl<'a> Node<'a> {
 #[derive(Debug, Clone)]
 pub struct Member<'a> {
     key_span: Option<Span>,
-    key_raw: Option<&'a str>,
+    key_raw: Option<&'a [u8]>,
     key: Cow<'a, str>,
     key_edited: bool,
     value: Node<'a>,
@@ -398,13 +392,12 @@ impl<'a> Member<'a> {
     /// Original key text including quotes. `None` if synthesized or if the
     /// source bytes are not valid UTF-8 (see [`Member::key_raw_bytes`]).
     pub fn key_raw(&self) -> Option<&'a str> {
-        self.key_raw
+        self.key_raw.and_then(|b| std::str::from_utf8(b).ok())
     }
 
     /// Exact original key bytes including quotes. `None` if synthesized.
     pub fn key_raw_bytes(&self) -> Option<&'a [u8]> {
-        // TODO(impl): store bytes so this works for invalid UTF-8 input.
-        self.key_raw.map(str::as_bytes)
+        self.key_raw
     }
 
     /// Replace the key. Marks the key as edited.
@@ -490,11 +483,7 @@ pub fn parse_with_options<'a>(
     input: &'a [u8],
     options: &ParseOptions,
 ) -> Result<Parsed<'a>, JsonError> {
-    // TODO(impl): collect warnings (issue #3).
-    parse::parse(input, options).map(|node| Parsed {
-        node,
-        warnings: Vec::new(),
-    })
+    parse::parse(input, options)
 }
 
 /// Serialize `node`. Member order is never changed.
@@ -502,25 +491,28 @@ pub fn parse_with_options<'a>(
 /// In every style, unedited scalars and keys keep their original token text.
 /// New strings use minimal escaping.
 pub fn print(node: &Node<'_>, style: PrintStyle) -> String {
-    print::print(node, style)
+    print_with(
+        node,
+        &PrintOptions {
+            style,
+            inserted: InsertedLayout::Compact,
+        },
+    )
 }
 
 /// Serialize with explicit [`PrintOptions`]. Source bytes that are not
 /// valid UTF-8 come out as U+FFFD; use [`print_bytes`] for exact output.
 pub fn print_with(node: &Node<'_>, options: &PrintOptions) -> String {
-    match options.inserted {
-        InsertedLayout::Compact => print::print(node, options.style),
-        // TODO(impl): issue #4.3/#4.4.
-        #[allow(clippy::unimplemented)]
-        InsertedLayout::Canonical => unimplemented!(),
+    match String::from_utf8(print_bytes(node, options)) {
+        Ok(s) => s,
+        Err(e) => String::from_utf8_lossy(e.as_bytes()).into_owned(),
     }
 }
 
 /// Like [`print_with`], but copies original bytes exactly, even when they
 /// are not valid UTF-8.
 pub fn print_bytes(node: &Node<'_>, options: &PrintOptions) -> Vec<u8> {
-    // TODO(impl): exact bytes for invalid UTF-8 sources.
-    print_with(node, options).into_bytes()
+    print::print(node, options)
 }
 
 /// Split an RFC 6901 pointer into unescaped reference tokens. `None` if it
