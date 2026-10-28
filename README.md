@@ -18,7 +18,7 @@ Phase 2
 - [x] `tokenator-detect`: unwrapping chain + classification
 
 Phase 3
-- [ ] `tokenator-jose`: JWS, JWT, SD-JWT, KB-JWT
+- [x] `tokenator-jose`: JWS, JWT, SD-JWT, KB-JWT
 - [ ] `tokenator-cose`: COSE_Sign1, CWT, SD-CWT, SD-KBT
 
 Phase 4
