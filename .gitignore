@@ -8,3 +8,5 @@ node_modules/
 /fuzz/corpus
 /fuzz/artifacts
 .DS_Store
+/app/test-results
+/app/playwright-report

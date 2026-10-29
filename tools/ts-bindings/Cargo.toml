@@ -1,0 +1,15 @@
+[package]
+name = "ts-bindings"
+description = "Prints the tokenator-core DTOs as one TypeScript module (for app/)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+publish = false
+
+[dependencies]
+tokenator-core = { path = "../../crates/tokenator-core", features = ["ts"] }
+
+[lints]
+workspace = true

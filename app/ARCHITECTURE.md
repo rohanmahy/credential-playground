@@ -61,14 +61,15 @@ construction, and survive re-renders and edits because NodeIds are
 path-based (core TEST-PLAN §4).
 
 - **Main pane, read-only:** `Document.main.text` rendered line by line
-  (`role="tree"`, one `treeitem` per line). A line's node is the outermost
+  (`role="tree"`; lines where a node starts are `treeitem`s, folded lines are
+  not rendered). A line's node is the outermost
   node whose `main.line_start` is that line. A node spanning several lines is
   foldable; folding hides its inner lines. Registry annotations come from
   `Node.annotation` (hover text via `logic/hover.ts`), time hints from
   `Node.time`.
 - **Main pane, live edit:** CodeMirror 6 (JSON, or the EDN mode). Each change
   calls `engine.parseEdit`; a successful parse replaces the document, and
-  signed content changes mark the tab *modified – signature stale*.
+  signed content changes mark the tab _modified – signature stale_.
 - **Raw pane, hex (COSE):** `logic/lines.ts#alignRows` maps every `HexRow`
   to the main-pane line of its node (`node.main.line_start`; key rows use
   the key node). The pane renders one block per main-pane line, empty when
@@ -81,9 +82,9 @@ path-based (core TEST-PLAN §4).
 
 - **CSP** (`csp.config.ts`, injected into the built `index.html` only, so the
   Vite dev server keeps HMR): `default-src 'self'; script-src 'self'
-  'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'
-  https:; img-src 'self' data:; object-src 'none'; base-uri 'none';
-  form-action 'none'; frame-ancestors 'none'`. `connect-src https:` is the
+'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; connect-src 'self'
+https:; img-src 'self' data:; object-src 'none'; base-uri 'none';
+form-action 'none'`. `connect-src https:` is the
   deliberate tradeoff for user-confirmed key URL fetches (root
   ARCHITECTURE.md). `style-src 'unsafe-inline'` is for CodeMirror's injected
   styles. The Tauri CSP goes into `src-tauri/tauri.conf.json` later.
