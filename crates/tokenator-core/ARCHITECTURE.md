@@ -17,6 +17,7 @@ NodeId scheme, document model, validation rules; issues #28–#32).
 | `actions.rs` | `issue`, `redact`, `disclose`, `present`; error mapping; signing |
 | `manipulate.rs` | `resign`, `tamper`, `reencode`, `edit_disclosures`, `decode_embedded` |
 | `edit.rs` | `parse_edit` |
+| `convert.rs` | `convert_claims`: claim sets between JSON and EDN |
 | `keyring.rs` | `KeyRef` resolution (EDN COSE_Keys too), key cards, key panel calls |
 | `annotate.rs`, `reg.rs` | registry adapter; lookups, merge, `info` |
 | `datetime.rs` | the date/time chit, relative strings, time hints |
@@ -43,6 +44,13 @@ NodeId scheme, document model, validation rules; issues #28–#32).
   unchanged parts keep their original encoded text (so unusual base64 and
   the pretty layout survive), changed parts are re-encoded. Text without
   `.` or `~` parses as a one-segment compact JWS (`jose.segment_count`).
+- **EDN text** is classified by the CBOR it encodes, through
+  `tokenator_detect::detect` on the encoding (#44): claims maps stay
+  `edn_claims` (bytes = the text); COSE_Sign1s and COSE_Keys get a
+  `Layer::Edn` (innermost) that `open` applies and `reencode` writes.
+- **JSON ↔ EDN** (`convert_claims`): integer lexemes that fit CBOR become
+  ints, other numbers floats; EDN → JSON reports the first node with no
+  JSON form (`convert.not_representable`, by NodeId of the EDN document).
 - **TypeScript.** Request DTO fields that serde fills in when absent are
   optional in the `ts` export (#34): `field?: T` for `#[serde(default)]`
   fields (an explicit `null` would not deserialize) and `field?: T | null`

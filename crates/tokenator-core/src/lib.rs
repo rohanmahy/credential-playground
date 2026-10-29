@@ -116,6 +116,7 @@
 mod actions;
 mod annotate;
 mod cbor;
+mod convert;
 mod datetime;
 mod detect;
 pub mod dto;
@@ -131,11 +132,12 @@ mod validate;
 mod view;
 
 pub use dto::actions::{
-    AlgValue, CborSerialization, CnfChoice, DecodeEmbeddedRequest, DecoyRequest, DigestOrder,
-    DiscloseRequest, DisclosureOp, DocRef, EditDisclosuresRequest, EditRequest, EditResult,
-    EquivalentEncoding, HeaderOptions, IssueRequest, JoseSerialization, KidChoice, LintRequest,
-    ManualDecode, PartRef, PresentRequest, ReencodeRequest, Reencoded, RenderRequest,
-    ResignRequest, SdOptions, TamperOp, TamperRequest, TypChoice, ValidateRequest,
+    AlgValue, CborSerialization, CnfChoice, ConvertClaimsRequest, ConvertClaimsResult,
+    DecodeEmbeddedRequest, DecoyRequest, DigestOrder, DiscloseRequest, DisclosureOp, DocRef,
+    EditDisclosuresRequest, EditRequest, EditResult, EquivalentEncoding, HeaderOptions,
+    IssueRequest, JoseSerialization, KidChoice, LintRequest, ManualDecode, PartRef, PresentRequest,
+    ReencodeRequest, Reencoded, RenderRequest, ResignRequest, SdOptions, TamperOp, TamperRequest,
+    TypChoice, ValidateRequest,
 };
 pub use dto::common::{
     ByteRange, Bytes, HashName, KidValue, NodeId, Nonce, RawRange, TextRange, escape_segment,

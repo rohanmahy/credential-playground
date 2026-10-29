@@ -109,6 +109,8 @@ pub fn bindings() -> Vec<(String, String)> {
         DisclosureOp,
         DecodeEmbeddedRequest,
         ManualDecode,
+        ConvertClaimsRequest,
+        ConvertClaimsResult,
         // keys
         KeyRef,
         KeyFormat,

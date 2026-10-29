@@ -14,7 +14,7 @@ use crate::util::{TextIndex, json_string};
 use crate::view::jose::{PartLoc, PartWhich, b64u};
 use crate::view::{self, edn_warnings};
 
-fn error_at(text: &str, offset: usize, code: &str, message: String) -> Diagnostic {
+pub(crate) fn error_at(text: &str, offset: usize, code: &str, message: String) -> Diagnostic {
     let index = TextIndex::new(text);
     let end = text
         .get(offset..)

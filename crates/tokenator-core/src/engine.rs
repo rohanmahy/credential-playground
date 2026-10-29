@@ -4,12 +4,13 @@ use tokenator_registry::Registry;
 
 use crate::dto::common::Bytes;
 use crate::dto::detect::Kind;
-use crate::{actions, datetime, detect, edit, keyring, manipulate, reg, validate, view};
+use crate::{actions, convert, datetime, detect, edit, keyring, manipulate, reg, validate, view};
 
 use crate::dto::actions::{
-    DecodeEmbeddedRequest, DiscloseRequest, EditDisclosuresRequest, EditRequest, EditResult,
-    IssueRequest, LintRequest, ManualDecode, PresentRequest, ReencodeRequest, Reencoded,
-    RenderRequest, ResignRequest, TamperRequest, ValidateRequest,
+    ConvertClaimsRequest, ConvertClaimsResult, DecodeEmbeddedRequest, DiscloseRequest,
+    EditDisclosuresRequest, EditRequest, EditResult, IssueRequest, LintRequest, ManualDecode,
+    PresentRequest, ReencodeRequest, Reencoded, RenderRequest, ResignRequest, TamperRequest,
+    ValidateRequest,
 };
 use crate::dto::datetime::{DateTimeForms, DateTimeRequest};
 use crate::dto::detect::Candidate;
@@ -87,6 +88,37 @@ impl Engine {
     /// diagnostics.
     pub fn parse_edit(&self, req: &EditRequest) -> EditResult {
         edit::parse_edit(&self.registry, req)
+    }
+
+    /// Converts a claim set (a draft) between JSON and EDN text (#44).
+    /// Never fails: a text that does not parse, or EDN with no JSON form
+    /// (`convert.not_representable`, naming the node), is a diagnostic.
+    ///
+    /// ```
+    /// use tokenator_core::{ConvertClaimsRequest, Engine, Language, ViewOptions};
+    ///
+    /// let engine = Engine::new()?;
+    /// let mut req = ConvertClaimsRequest {
+    ///     text: r#"{"iss": "https://issuer.example", "exp": 1893456000}"#.into(),
+    ///     from: Language::Json,
+    ///     to: Language::Edn,
+    ///     map_claim_labels: true,
+    ///     view: ViewOptions::default(),
+    /// };
+    /// let edn = engine.convert_claims(&req);
+    /// let text = edn.text.unwrap();
+    /// assert!(text.contains("1: \"https://issuer.example\""), "{text}");
+    ///
+    /// req.text = "{1: h'00'}".into();
+    /// (req.from, req.to) = (Language::Edn, Language::Json);
+    /// let json = engine.convert_claims(&req);
+    /// assert!(!json.ok);
+    /// assert_eq!(json.diagnostics[0].code, "convert.not_representable");
+    /// assert_eq!(json.diagnostics[0].node_id.as_ref().unwrap().as_str(), "1");
+    /// # Ok::<(), tokenator_core::EngineError>(())
+    /// ```
+    pub fn convert_claims(&self, req: &ConvertClaimsRequest) -> ConvertClaimsResult {
+        convert::convert(&self.registry, req)
     }
 
     /// Issues a JWT/CWT, or an SD-JWT/SD-CWT when claims are marked.
