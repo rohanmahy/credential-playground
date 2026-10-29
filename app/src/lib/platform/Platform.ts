@@ -18,7 +18,8 @@ export type FetchErrorKind =
   | 'network'
   /** A response with a non-2xx status. */
   | 'http'
-  /** Not an https URL (the CSP allows https: only). */
+  /** Not an https URL (the CSP allows https: only); on the desktop also a
+   *  redirect to one, or a body over the size cap. */
   | 'blocked';
 
 export class FetchError extends Error {

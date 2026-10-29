@@ -1,0 +1,37 @@
+[package]
+name = "tokenator-desktop"
+description = "The Tokenator desktop shell: tokenator-core as Tauri commands"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+
+[lib]
+name = "tokenator_desktop"
+
+[[bin]]
+name = "tokenator"
+path = "src/main.rs"
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+# The `fetch_url` command: rustls (aws-lc-rs) with the platform verifier,
+# no cookie store, no native-tls.
+reqwest = { version = "0.13", default-features = false, features = ["rustls", "http2", "system-proxy"] }
+serde = { version = "1.0.229", features = ["derive"] }
+tauri = { version = "2", features = [] }
+tauri-plugin-clipboard-manager = "2"
+tauri-plugin-dialog = "2"
+tokenator-core = { path = "../../crates/tokenator-core" }
+
+[dev-dependencies]
+serde_json = "1"
+tauri = { version = "2", features = ["test"] }
+# Temporary dirs for the file and registry cache tests (already in Cargo.lock).
+tempfile = "3"
+
+[lints]
+workspace = true

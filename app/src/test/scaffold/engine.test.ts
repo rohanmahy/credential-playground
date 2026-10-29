@@ -9,8 +9,10 @@ import { TauriPlatform } from '../../lib/platform/TauriPlatform';
 import { WebPlatform } from '../../lib/platform/WebPlatform';
 
 describe('engine and platform selection', () => {
-  it('uses Tauri when window.__TAURI__ exists', async () => {
-    const win = { __TAURI__: {} };
+  // Tauri 2 always injects window.__TAURI_INTERNALS__ (what invoke() uses);
+  // window.__TAURI__ exists only with app.withGlobalTauri, which stays off.
+  it('uses Tauri when window.__TAURI_INTERNALS__ exists', async () => {
+    const win = { __TAURI_INTERNALS__: {} };
     expect(isTauri(win)).toBe(true);
     expect(await selectEngine(win)).toBeInstanceOf(TauriEngine);
     expect(selectPlatform(win)).toBeInstanceOf(TauriPlatform);
