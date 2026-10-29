@@ -1,6 +1,6 @@
 # app/src-tauri test plan
 
-`app/src-tauri` is the macOS desktop shell: a Tauri 2 app that exposes
+`app/src-tauri` is the desktop shell (macOS and Linux): a Tauri 2 app that exposes
 `tokenator-core` as native commands (the desktop `Engine`) and does the
 desktop side effects (the desktop `Platform`). It must add no logic of its
 own to the engine, persist nothing but the registry cache (SPEC §1, §7), and
@@ -113,7 +113,8 @@ connect timeout 10 s (`network`); body cap
 "larger than 8 MiB"); non-2xx is `http` with the status; no cookie store
 (reqwest built without `cookies`), `referer(false)`, no auth, no default
 headers beyond a `User-Agent` of `the-tokenator/<version>`. `rustls` with
-the platform verifier (macOS trust store). The tests use
+the platform verifier (the macOS trust store; on Linux, the system CA
+bundle from `ca-certificates`). The tests use
 `FetchPolicy { allow_loopback_http: true, .. }` with short limits against a
 local plain-HTTP server; `allow_loopback_http` only admits `http://127.0.0.1`
 and `http://[::1]` and is never set by `run()`. "Only on explicit user
@@ -155,22 +156,69 @@ TS: 63 new tests plus the changed selection test; 6 new ones pass
 against the stubs, and 58 fail (57 new + the selection test). The
 other app suites are unchanged.
 
+## Desktop end-to-end (Linux, tauri-driver)
+
+`app/e2e-desktop/` drives the real release binary, with the native
+`TauriEngine` in WebKitGTK, through WebdriverIO → `tauri-driver` →
+`WebKitWebDriver`, headless under Xvfb. WKWebView has no WebDriver, so
+macOS stays manual (`Mac-smoketest-checklist.md`; automation is #40); the
+flows are the Playwright web flows (app TEST-PLAN), selected by the same
+roles and accessible names (`helpers.ts` resolves them in the page).
+
+Run it with `scripts/desktop-e2e-docker.sh` (any host with Docker,
+including macOS), `scripts/desktop-e2e.sh` (Linux with
+`scripts/linux-deps.sh --e2e`), or step by step: `pnpm build:desktop-e2e`,
+then `xvfb-run pnpm test:e2e:desktop`. CI runs it in the `desktop-e2e`
+job, after clippy and `cargo test -p tokenator-desktop` on Linux.
+
+**Two binaries** (`e2e-desktop/build.mjs`). wry gives an `incognito`
+webview an ephemeral WebKitGTK context with automation disabled, so
+WebKitWebDriver cannot attach to the shipped binary ("failed to create a
+new browsing context"). The driven binary, `target/desktop-e2e/tokenator`,
+is built with `tauri.conf.json` except `incognito: false` (the override is
+derived from the file at build time). `target/release/tokenator` has the
+shipped config; `never-persist.e2e.ts` launches it without WebDriver.
+
+Each spec file is one app session; they share one temporary HOME
+(XDG dirs inside it), which `never-persist.e2e.ts` inspects last.
+
+| Spec (`app/e2e-desktop/specs/`) | Checklist | Tests |
+|---|---|---|
+| `launch.e2e.ts` (3) | §1 | the shell renders with no alerts; `__TAURI_INTERNALS__` present and no `.wasm` loaded (native engine); About shows `draft-ietf-spice-sd-cwt-08` and registry dates |
+| `paste-validate.e2e.ts` (14) | §2 | paste → detected type → main and raw panes → Validate for JWT, JWS JSON, SD-JWT, SD-JWT+KB, CWT (tag 18, tag 61, untagged), SD-CWT, SD-KBT; Bearer layer; signature PASS with the published JWT and RFC 9901 keys; a pasted JWK goes to the key panel; a claim set has Validate disabled |
+| `keys.e2e.ts` (3) | §4 | create EC P-256 (well-known seed) → kid = JWK thumbprint → Convert (JWK and COSE_Key) → Export: private gated by the confirmation, public JWK copied to the system clipboard and imported back (Import key → From clipboard) with the same thumbprint, public only; import a private JWK and derive its public key; Ed25519 and ML-DSA-65 keygen |
+| `issue-present.e2e.ts` (3) | §5, §6 | SD-JWT: mark a claim SD, Issue with holder `cnf`, Present (typed audience and nonce) → SD-JWT+KB, Validate PASS with key binding; SD-CWT: Redact tagged EDN → Present → SD-KBT, Validate PASS with key binding; CWT → SD-KBT |
+| `live-edit.e2e.ts` (1) | §7 | Issue a JWT, Live edit, type over a claim value in CodeMirror → "modified – signature stale" → Keep original signature → badge `tampered`, signature FAIL → Re-sign → signature PASS with the edit kept |
+| `tree-sync.e2e.ts` (3) | §3 | main ↔ raw fold sync both ways; selection sync both ways; Show raw pane off/on keeps the fold state |
+| `never-persist.e2e.ts` (3) | §10 | a restart brings back no keys or tabs; after the run the HOME holds only WebKitGTK bookkeeping (salts, the HSTS database, per-origin `origin` files) and system caches: no local storage, IndexedDB, cookies, cache records, or other app files; the shipped binary, run for 5 s, writes nothing beyond the same bookkeeping |
+
+Total: 30 tests. Text fields that hold tokens are filled like a paste (one
+`input` event); short fields and the CodeMirror edit are typed.
+
+**WebKitGTK bookkeeping.** Even with `incognito`, the shipped binary
+leaves `~/.local/share/io.github.rohanmahy.tokenator/` with WebKitGTK's
+salt files and its HSTS database, `hsts-storage.sqlite`, because Tauri
+also creates a persistent web context. They hold no user data; the checks
+allow exactly these.
+
 ## Not covered (future work)
 
-- **tauri-driver end-to-end.** tauri-driver needs a WebDriver server for
-  the platform webview; macOS (WKWebView) has none that tauri-driver
-  supports, so the Playwright flows (app TEST-PLAN) are not run against the
-  `.app` yet. Revisit when tauri-driver supports macOS, or run the same
-  flows on Linux (WebKitGTK) in CI.
-- **The real dialog and clipboard plugins** are exercised by hand
-  (`pnpm tauri dev`); the tests replace them with the `FileDialog` and
-  `Clipboard` traits.
+- **On Linux, by WebDriver:** native file dialogs (Open file…, Save…,
+  Import key → From file…), drag and drop, URL fetches and Update
+  registries (real network), appearance changes, the context-menu
+  Re-encode and Tamper variants, the date/time chit, keyboard navigation,
+  and screen readers. They stay in `Mac-smoketest-checklist.md`, which is
+  also the only desktop check on macOS until #40.
+- **The real dialog plugin** is exercised by hand (`pnpm tauri dev`); the
+  tests replace it with the `FileDialog` trait. The clipboard plugin is
+  covered on Linux by `keys.e2e.ts` (X11 under Xvfb).
 - **Real TLS.** The fetch tests use plain HTTP on loopback through
   `allow_loopback_http`; the https code path differs only in the scheme
   check and in rustls, which is not ours to test.
 - **WKWebView's own data store.** `incognito: true` gives the webview a
   non-persistent store; that it writes nothing is Apple's behaviour, checked
-  by hand (`~/Library/WebKit/<identifier>` stays absent).
+  by hand (`~/Library/WebKit/<identifier>` stays absent). The WebKitGTK
+  equivalent is automated (above).
 - **Parity corpus.** `tests/parity.rs` has its own small corpus; it should
   be unified with `testdata/parity/` from `feat/wasm` once both land.
 
@@ -180,6 +228,17 @@ other app suites are unchanged.
 `pnpm build`, then produces an unsigned
 `target/release/bundle/macos/The Tokenator.app`. `tests/config.rs` pins the
 config; building the bundle is a manual/CI step, not a unit test.
+
+On Linux (Ubuntu 24.04 packages: `scripts/linux-deps.sh`, i.e. WebKitGTK
+4.1, libsoup 3, GTK 3, librsvg, libxdo), `cargo build -p tokenator-desktop`
+and `cargo tauri build` build `target/release/tokenator` (the `app` bundle
+target is macOS-only, so nothing is bundled), and
+`cargo tauri build --bundles deb` adds a `.deb` that depends on
+`libwebkit2gtk-4.1-0` and `libgtk-3-0` (`app/scripts/package-linux-deb.sh`,
+attached to tagged releases). No AppImage: it needs linuxdeploy downloads
+and FUSE for little gain over the raw binary. Nothing in `src/` is
+platform-specific; `main.rs` has only the Windows `windows_subsystem`
+attribute.
 
 ## Notes for the implementer
 

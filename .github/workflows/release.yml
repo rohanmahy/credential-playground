@@ -1,6 +1,7 @@
 # On a v* tag: builds the unsigned universal macOS .app, zips it, and
 # attaches it to the GitHub release for the tag (creating the release if
-# needed). The DMG is a follow-up (#2); signing and notarization come later.
+# needed), then the Linux .deb. The DMG is a follow-up (#2); signing and
+# notarization come later.
 name: Release
 
 on:
@@ -56,3 +57,39 @@ jobs:
             gh release create "$GITHUB_REF_NAME" "$ZIP" --verify-tag --generate-notes \
               --title "The Tokenator $GITHUB_REF_NAME"
           fi
+
+  # The Linux .deb (x86_64), attached after macos-app has created the release.
+  linux-deb:
+    needs: macos-app
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: scripts/linux-deps.sh
+      - run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          cache-bin: true
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        with:
+          tool: wasm-pack@0.15.0
+      - run: cargo install --locked tauri-cli@2.12.4
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: app/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+        working-directory: app
+      - name: Build the .deb
+        id: build
+        run: app/scripts/package-linux-deb.sh "$GITHUB_REF_NAME"
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          DEB: ${{ steps.build.outputs.deb }}
+        run: gh release upload "$GITHUB_REF_NAME" "$DEB" --clobber

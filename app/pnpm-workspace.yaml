@@ -1,0 +1,7 @@
+# Install scripts that may run. The WebdriverIO packages (desktop e2e) pull
+# in edgedriver and geckodriver, whose scripts download browser drivers we
+# don't use; esbuild works from its platform package without its script.
+allowBuilds:
+  edgedriver: false
+  esbuild: false
+  geckodriver: false
