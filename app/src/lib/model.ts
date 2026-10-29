@@ -23,6 +23,8 @@ export type Provenance =
   | { type: 'file'; name: string }
   | { type: 'url'; url: string }
   | { type: 'generated' }
+  /** A draft started from nothing with New (#43). */
+  | { type: 'new' }
   /** A tab derived from another tab by an action. */
   | { type: 'derived'; parent: string; action: ActionId }
   /** A key card derived from another card. */

@@ -2,6 +2,11 @@
 // `engine.detect.mockResolvedValueOnce(...)` etc.
 import { vi } from 'vitest';
 import type { Engine } from '../lib/engine/Engine';
+import type {
+  ConvertClaims,
+  ConvertClaimsRequest,
+  ConvertClaimsResult,
+} from '../lib/engine/pending';
 import type { Candidate, Document, Kind } from '../lib/engine/types';
 import * as fx from './fixtures';
 
@@ -26,7 +31,7 @@ function docFor(kind: Kind): Document {
   }
 }
 
-export class MockEngine implements Engine {
+export class MockEngine implements Engine, ConvertClaims {
   info = vi.fn(async () => fx.info);
   detect = vi.fn(async (_input: Uint8Array): Promise<Candidate[]> => fx.jwtCandidates);
   open = vi.fn(async (_input: Uint8Array, candidate: Candidate) => ({
@@ -95,4 +100,8 @@ export class MockEngine implements Engine {
       iana_updated: null,
     },
   }));
+  /** Proposed core addition for #43 (engine/pending.ts). */
+  convertClaims = vi.fn(async (req: ConvertClaimsRequest): Promise<ConvertClaimsResult> =>
+    req.to === 'edn' ? fx.convertedToEdn : fx.convertedToJson,
+  );
 }

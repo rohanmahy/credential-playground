@@ -53,7 +53,10 @@ app/
   - `Workspace`: tabs (document, candidates, provenance, collapse set,
     selection, live-edit text, stale flag, SD marks, last report, the
     per-tab `manual_decode`/`hide_decoded` lists) and the split, plus the
-    open date/time chit. Every action opens a derived tab whose provenance
+    open date/time chit. Drafts started with New (#43) carry `Tab.draft`
+    (format, detected kind, explicit type; rules in `logic/drafts.ts` and
+    TEST-PLAN.md); `engine/pending.ts` holds the proposed core
+    `convert_claims` (#44) until core has it. Every action opens a derived tab whose provenance
     points at its parent (`{type: "derived", parent, action}`); a derived
     tab whose document has `signature_stale` (Tamper) is labelled
     _tampered_. Live edits are parsed against the bytes the tab had when

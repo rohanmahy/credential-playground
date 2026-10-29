@@ -13,13 +13,16 @@ import type {
   EditResult,
   HeaderOptions,
   JoseSerialization,
+  Kind,
   Layer,
   NodeId,
   TamperOp,
   ValidationReport,
   ViewOptions,
 } from '../engine/types';
-import type { ActionAvailability, ActionId, Crumb, Provenance } from '../model';
+import type { ActionAvailability, ActionId, Crumb, KeyCard, Provenance } from '../model';
+import type { DraftFormat } from '../logic/drafts';
+import { notImplemented } from '../notImplemented';
 import type { Platform } from '../platform/Platform';
 import type { KeyStore } from './keys.svelte';
 import type { Settings } from './settings.svelte';
@@ -61,6 +64,17 @@ export interface Tab {
   manualDecode?: NodeId[];
   /** Decoded views the user turned off (ViewOptions.hide_decoded). */
   hideDecoded?: NodeId[];
+  /** Set for tabs started with New (#43); null/absent otherwise. */
+  draft?: Draft | null;
+}
+
+/** A draft tab's format and type (#43). */
+export interface Draft {
+  format: DraftFormat;
+  /** The top candidate of the last detection of the text (any kind). */
+  detected: Kind | null;
+  /** The type the user set explicitly; kept across edits until changed. */
+  override: Kind | null;
 }
 
 /** The open date/time chit and the node it was opened from. */
@@ -483,6 +497,42 @@ export class Workspace {
       { type: 'derived', parent: tabId, action: req.action },
       { input, tampered: out.signature_stale },
     );
+  }
+
+  // ------------------------------------------------------------ drafts (#43)
+
+  /** New: a tab in Live edit holding DRAFT_TEMPLATES[format], parsed with
+   *  the format's default kind (base: empty), provenance `new`, active. */
+  async newDraft(_format: DraftFormat = 'json'): Promise<Tab> {
+    notImplemented('Workspace.newDraft');
+  }
+
+  /** Switches a draft's Format, converting the text with
+   *  `engine.convertClaims`; when that is missing or fails, asks
+   *  `confirmDiscard` and, if allowed, starts over from the template.
+   *  Returns whether the format changed. */
+  async setDraftFormat(
+    _tabId: string,
+    _format: DraftFormat,
+    _confirmDiscard: () => Promise<boolean>,
+  ): Promise<boolean> {
+    notImplemented('Workspace.setDraftFormat');
+  }
+
+  /** Sets (or with null clears) a draft's explicit type and re-parses. */
+  async setDraftKind(_tabId: string, _kind: Kind | null): Promise<void> {
+    notImplemented('Workspace.setDraftKind');
+  }
+
+  /** A JWK / JWK Set / COSE_Key / COSE_KeySet draft into the key panel. */
+  async importDraftKey(_tabId: string): Promise<KeyCard[]> {
+    notImplemented('Workspace.importDraftKey');
+  }
+
+  /** "Open as …" for a detected kind that is not a draft type (e.g. JWS
+   *  JSON): opens the text as that candidate in a new tab (provenance new). */
+  async openDraftAs(_tabId: string): Promise<Tab> {
+    notImplemented('Workspace.openDraftAs');
   }
 
   /** Validates with the panel keys and settings; stores `tab.report`. */
