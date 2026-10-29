@@ -4,6 +4,7 @@
   import { getAppContext } from '../context';
   import type { Theme } from '../stores/settings.svelte';
   import Dialog from './Dialog.svelte';
+  import RegistryUpdate from './RegistryUpdate.svelte';
 
   let { onClose }: { onClose: () => void } = $props();
 
@@ -88,6 +89,10 @@
         <option value="dark">Dark</option>
       </select>
     </label>
+  </fieldset>
+  <fieldset>
+    <legend>Claims and headers registries</legend>
+    <RegistryUpdate />
   </fieldset>
   <div class="buttons"><button type="button" onclick={onClose}>Close</button></div>
 </Dialog>

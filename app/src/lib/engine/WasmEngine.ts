@@ -8,8 +8,15 @@ import { NotImplemented } from '../notImplemented';
 const stub = (name: string) => () => Promise.reject(new NotImplemented(`WasmEngine.${name}`));
 
 export class WasmEngine implements Engine {
-  static async load(): Promise<WasmEngine> {
-    return new WasmEngine();
+  /** `snapshot` goes to `Engine::with_registry_snapshot` (null: bundled). */
+  static async load(snapshot: Uint8Array | null = null): Promise<WasmEngine> {
+    return new WasmEngine(snapshot);
+  }
+
+  readonly snapshot: Uint8Array | null;
+
+  private constructor(snapshot: Uint8Array | null) {
+    this.snapshot = snapshot;
   }
 
   info = stub('info');

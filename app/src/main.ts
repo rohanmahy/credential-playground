@@ -8,6 +8,8 @@ import { selectPlatform } from './lib/platform/select';
 const target = document.getElementById('app');
 if (!target) throw new Error('#app missing');
 
-const engine = await selectEngine();
 const platform = selectPlatform();
+// The refreshed IANA registry snapshot, if the user updated it earlier.
+const snapshot = await platform.registryCache.get().catch(() => null);
+const engine = await selectEngine(globalThis, snapshot);
 mount(App, { target, props: { ctx: createAppContext(engine, platform) } });

@@ -8,6 +8,13 @@ import { NotImplemented } from '../notImplemented';
 const stub = (name: string) => () => Promise.reject(new NotImplemented(`TauriEngine.${name}`));
 
 export class TauriEngine implements Engine {
+  /** Sent once to the shell so its Engine uses the cached registry snapshot. */
+  readonly snapshot: Uint8Array | null;
+
+  constructor(snapshot: Uint8Array | null = null) {
+    this.snapshot = snapshot;
+  }
+
   info = stub('info');
   detect = stub('detect');
   open = stub('open');
