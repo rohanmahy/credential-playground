@@ -45,10 +45,10 @@ Phase 3
 
 Phase 4
 - [x] `tokenator-core`: Engine facade, document model, actions, lint, datetime
-- [ ] `tokenator-wasm`: wasm-bindgen bindings
+- [x] `tokenator-wasm`: wasm-bindgen bindings
 - [x] `app/src-tauri`: Tauri commands + Platform
-- [ ] `app/`: Svelte UI (tabs, key panel, synced panes, chits)
-- [ ] WASM ↔ native parity suite
-- [ ] Playwright e2e (web + Tauri)
+- [x] `app/`: Svelte UI (tabs, key panel, synced panes, chits)
+- [x] WASM ↔ native parity suite
+- [ ] Playwright e2e (web done; Tauri via tauri-driver pending)
 - [ ] Fuzz targets
 - [ ] CI (fmt, clippy, tests, Pages deploy, `.app` release)
