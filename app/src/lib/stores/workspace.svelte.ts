@@ -181,7 +181,9 @@ export class Workspace {
     const top = candidates[0];
     if (!top) return { type: 'nothing' };
     if (isKey(top.kind)) {
-      const cards = await keys.importBytes(bytes, provenance);
+      // The original input goes in with its candidate, so the engine imports
+      // the unwrapped payload; the cards keep the input's provenance.
+      const cards = await keys.importBytes(bytes, provenance, null, top);
       return { type: 'keys', cardIds: cards.map((c) => c.id) };
     }
     const doc = await engine.open(bytes, top, settings.viewOptions());
