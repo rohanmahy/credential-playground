@@ -11,7 +11,7 @@ decisions the tests encode (#16, #17, #18).
 | `jwk.rs` | `Jwk`, `to_jwk`, `from_jwk`, `params_from_jwk`, `jwk_thumbprint` |
 | `cwk.rs` | `CoseKey`, `to_cwk`, `from_cwk`, `params_from_cwk`, `cose_thumbprint` |
 | `pem.rs` | PEM armor; SPKI, PKCS#8, SEC1, PKCS#1, RFC 9881 ML-DSA forms (import and export) |
-| `format.rs` | `KeyFormat`, detection, `import`/`import_each`, `import_certificate`, `export`/`export_set` |
+| `format.rs` | `KeyFormat`, detection, `import`/`import_each`, `export`/`export_set` |
 | `ops.rs` | `to_public`, `params`, thumbprints and URIs, `generate`, `assign_kid` |
 
 ## Design
@@ -39,11 +39,6 @@ decisions the tests encode (#16, #17, #18).
   `ECPrivateKey` decoding (to report explicit curve parameters as
   `UnsupportedCurve`) and the RFC 9881 private key CHOICE. Exports
   match OpenSSL byte for byte.
-- `import_certificate` reads only an X.509 certificate's
-  SubjectPublicKeyInfo (`x509-cert`, same RustCrypto generation as
-  `der`/`spki` 0.8) for the `x5c`/`x5chain` leaf. Nothing else is checked
-  (no signature, validity, or chain); `import` still rejects
-  `CERTIFICATE` PEM blocks.
 - Secrets that pass through this crate (decoded PEM bodies, private DER,
   decoded `d`/`priv`, raw `PrivateKeyMaterial`) are zeroized after use.
 - COSE_KeySet members are moved out of the decoded array, never cloned.

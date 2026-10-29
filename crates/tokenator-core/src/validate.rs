@@ -73,16 +73,14 @@ struct Selected {
     message: String,
 }
 
-/// SPEC §6 key selection: panel keys by kid, by thumbprint, then every
-/// panel key that fits the alg; without a fitting panel key, the embedded
-/// `x5c`/`x5chain` leaf (untrusted). Keys tried and none verifies is a
+/// SPEC §6 key selection over the panel keys: kid match, thumbprint match,
+/// then every key that fits the alg. Keys tried and none verifies is a
 /// failure; nothing to try is a skip.
 fn select(
     keys: &[Key],
     refs: &[KeyRef],
     alg: Alg,
     kid: Option<&[u8]>,
-    embedded: Option<&Key>,
     verify: &dyn Fn(&Key) -> bool,
 ) -> Selected {
     let fitting: Vec<usize> = (0..keys.len())
@@ -126,19 +124,6 @@ fn select(
         (fitting, KeySelection::PanelUnmatched)
     };
     if tried.is_empty() {
-        if let Some(leaf) = embedded.filter(|k| fits(k, alg)) {
-            let ok = verify(leaf);
-            return Selected {
-                status: if ok { Status::Pass } else { Status::Fail },
-                selection: KeySelection::EmbeddedX5c,
-                index: None,
-                message: format!(
-                    "{} signature {} with the embedded certificate key (untrusted, chain not validated)",
-                    alg_to_jose(alg),
-                    if ok { "verified" } else { "does not verify" }
-                ),
-            };
-        }
         return Selected {
             status: Status::Skip,
             selection: KeySelection::None,
@@ -190,7 +175,7 @@ fn signature_item(
                 .and_then(|i| refs.get(i))
                 .and_then(|r| r.label.clone()),
             selection: sel.selection,
-            untrusted: untrusted || sel.selection == KeySelection::EmbeddedX5c,
+            untrusted,
         }),
         ..check(id, category, sel.status, sel.message.clone(), node_ids)
     }
@@ -398,38 +383,6 @@ fn header_alg(sig: &tj::JwsSignature<'_>) -> tj::AlgFact {
         .unwrap_or(tj::AlgFact::Missing)
 }
 
-/// The public key of the first `x5c` certificate (protected header first).
-fn jose_x5c_leaf(sig: &tj::JwsSignature<'_>) -> Option<Key> {
-    let from = |h: &JNode<'_>| match h.get("x5c")?.index(0)?.value() {
-        JValue::String(s) => Some(s.to_string()),
-        _ => None,
-    };
-    let b64 = sig
-        .protected
-        .as_ref()
-        .and_then(|p| p.json().ok())
-        .and_then(|h| from(&h))
-        .or_else(|| sig.unprotected.as_ref().and_then(from))?;
-    // x5c entries are base64, not base64url (RFC 7515 §4.1.6).
-    let der = <base64ct::Base64 as base64ct::Encoding>::decode_vec(&b64).ok()?;
-    tokenator_keys::import_certificate(&der).ok()
-}
-
-/// The public key of the `x5chain` (33) leaf: the certificate, or the first
-/// of an array (protected header first).
-fn cose_x5chain_leaf(msg: &Sign1<'_>) -> Option<Key> {
-    let (_, value) = msg.header(33)?;
-    let der = match &value.value {
-        tokenator_cbor::Value::Bytes(b) => b.as_ref(),
-        tokenator_cbor::Value::Array(items) => match &items.first()?.value {
-            tokenator_cbor::Value::Bytes(b) => b.as_ref(),
-            _ => return None,
-        },
-        _ => return None,
-    };
-    tokenator_keys::import_certificate(der).ok()
-}
-
 struct Report {
     items: Vec<CheckItem>,
     fetchable: Vec<FetchHint>,
@@ -484,13 +437,11 @@ fn validate_jose(
                 tj::AlgFact::Known(alg) => {
                     let kid = header_kid(sig);
                     let verify = |k: &Key| tj::verify_signature(jws, i, k).is_ok();
-                    let leaf = jose_x5c_leaf(sig);
                     let sel = select(
                         keys,
                         &req.keys,
                         alg,
                         kid.as_deref().map(str::as_bytes),
-                        leaf.as_ref(),
                         &verify,
                     );
                     if sel.status == Status::Skip {
@@ -752,8 +703,7 @@ fn cose_signature(msg: &Sign1<'_>, prefix: &NodeId, keys: &[Key], refs: &[KeyRef
                     .verify(msg, k, &VerifyOptions::default())
                     .is_ok()
             };
-            let leaf = cose_x5chain_leaf(msg);
-            let sel = select(keys, refs, alg, kid.as_deref(), leaf.as_ref(), &verify);
+            let sel = select(keys, refs, alg, kid.as_deref(), &verify);
             if sel.status == Status::Pass {
                 r.verifier = sel.index;
             }

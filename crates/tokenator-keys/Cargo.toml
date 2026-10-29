@@ -21,8 +21,6 @@ pkcs1 = { version = "0.8.0-rc.5", default-features = false, features = ["alloc",
 pkcs8 = { version = "0.11", features = ["alloc", "pem"] }
 sec1 = { version = "0.8", default-features = false, features = ["der", "alloc", "pem"] }
 spki = { version = "0.8", features = ["alloc", "pem"] }
-# X.509: only the leaf's SubjectPublicKeyInfo is read (no chain validation).
-x509-cert = { version = "0.3", default-features = false }
 zeroize = "1"
 
 [dev-dependencies]

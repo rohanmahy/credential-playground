@@ -159,30 +159,6 @@ fn import_cbor(input: &[u8]) -> Result<Vec<Result<Key, KeyError>>, KeyError> {
     }
 }
 
-/// The public key of an X.509 certificate in DER (a JOSE `x5c` entry after
-/// base64 decoding, or a COSE `x5chain` byte string): the certificate's
-/// SubjectPublicKeyInfo, read like a `PUBLIC KEY` PEM block.
-///
-/// Nothing else about the certificate is checked: not its signature,
-/// validity period, extensions, or chain (chain validation is out of scope
-/// for v1, SPEC §12). [`import`] still rejects `CERTIFICATE` PEM blocks.
-///
-/// ```
-/// use tokenator_keys::{import, import_certificate};
-///
-/// // A self-signed certificate for the OpenSSL P-256 fixture key.
-/// let der = include_bytes!("../../../testdata/keys/x509/p256-selfsigned.der");
-/// let key = import_certificate(der)?;
-/// assert!(!key.is_private());
-/// let spki = include_bytes!("../../../testdata/keys/openssl/p256-spki.pem");
-/// assert!(key.same_material(&import(spki, None)?[0]));
-/// assert!(import_certificate(b"not DER").is_err());
-/// # Ok::<(), tokenator_keys::KeyError>(())
-/// ```
-pub fn import_certificate(der: &[u8]) -> Result<Key, KeyError> {
-    pem::from_certificate(der).map(Key::from_public)
-}
-
 /// Serializes one key.
 ///
 /// JWK and JWK Set output is compact JSON (see [`to_jwk`](crate::to_jwk));

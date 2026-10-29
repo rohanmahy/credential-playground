@@ -202,18 +202,6 @@ fn ec_point(curve: Curve, point: &[u8]) -> Result<PublicKeyMaterial, KeyError> {
     }
 }
 
-/// The public key of a DER X.509 certificate: its SubjectPublicKeyInfo.
-pub(crate) fn from_certificate(der: &[u8]) -> Result<PublicKey, KeyError> {
-    let cert = x509_cert::Certificate::from_der(der)
-        .map_err(|_| KeyError::Der("malformed X.509 certificate"))?;
-    let spki = cert
-        .tbs_certificate()
-        .subject_public_key_info()
-        .to_der()
-        .map_err(der_err)?;
-    from_spki(&spki)
-}
-
 fn from_spki(der: &[u8]) -> Result<PublicKey, KeyError> {
     let spki =
         SubjectPublicKeyInfoRef::from_der(der).map_err(|_| KeyError::Der("malformed SPKI"))?;
