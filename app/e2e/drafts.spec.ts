@@ -31,7 +31,11 @@ async function newDraft(page: Page, format: 'JSON' | 'EDN'): Promise<void> {
 
 async function setType(page: Page, label: string): Promise<void> {
   await page.getByRole('button', { name: /detected as/i }).click();
-  await page.getByRole('menuitemradio', { name: new RegExp(`^${label}`) }).click();
+  // Exact label, optionally marked "(detected)": `^COSE_Key` alone also
+  // matches COSE_KeySet.
+  await page
+    .getByRole('menuitemradio', { name: new RegExp(`^${label}( \\(detected\\))?$`) })
+    .click();
   await expect(page.getByTestId('detected-type')).toHaveText(label);
 }
 

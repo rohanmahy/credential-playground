@@ -4,6 +4,7 @@
   import type { Provenance } from '../model';
   import { getAppContext } from '../context';
   import type { OpenResult } from '../stores/workspace.svelte';
+  import type { DraftFormat } from '../logic/drafts';
   import { errorMessage } from '../ui';
   import KeyPanel from './KeyPanel.svelte';
   import TabArea from './TabArea.svelte';
@@ -42,6 +43,16 @@
       notice = errorMessage(e);
     } finally {
       busy = false;
+    }
+  }
+
+  /** New (#43): a draft tab in Live edit. */
+  async function startDraft(format: DraftFormat) {
+    notice = null;
+    try {
+      await workspace.newDraft(format);
+    } catch (e) {
+      notice = errorMessage(e);
     }
   }
 
@@ -100,6 +111,11 @@
         }}></textarea>
       <div class="buttons">
         <button type="submit" class="primary" disabled={busy}>Open</button>
+        <button
+          type="button"
+          title="Start a JSON draft in Live edit"
+          onclick={() => void startDraft('json')}>New</button
+        >
         <button
           type="button"
           disabled={busy}

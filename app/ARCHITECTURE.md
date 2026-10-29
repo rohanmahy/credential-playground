@@ -55,8 +55,13 @@ app/
     per-tab `manual_decode`/`hide_decoded` lists) and the split, plus the
     open date/time chit. Drafts started with New (#43) carry `Tab.draft`
     (format, detected kind, explicit type; rules in `logic/drafts.ts` and
-    TEST-PLAN.md); `engine/pending.ts` holds the proposed core
-    `convert_claims` (#44) until core has it. Every action opens a derived tab whose provenance
+    TEST-PLAN.md): every edit re-runs `detect` on the text and `parse_edit`
+    (empty base) with the draft's type, the stale flag never applies, and a
+    Format switch goes through `convertClaims` (#44) or, when that fails,
+    an alertdialog that names the reason and selects the node it reports.
+    Editor changes go through `scheduleEdit` (the text at once, the parse
+    after 150 ms); actions and draft operations `flushEdit` first, so they
+    always see what was typed. Every action opens a derived tab whose provenance
     points at its parent (`{type: "derived", parent, action}`); a derived
     tab whose document has `signature_stale` (Tamper) is labelled
     _tampered_. Live edits are parsed against the bytes the tab had when

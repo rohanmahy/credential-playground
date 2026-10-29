@@ -142,10 +142,10 @@ Behaviour tests fail against the stubs (stub methods throw
   - _Detected as…_ sets `draft.override` (and re-parses); it is kept across
     edits and Format switches that support it, and cleared by _Auto-detect_
     or by switching to a format without that type.
-  - Format switch: same format is a no-op; otherwise
-    `engine.convertClaims({text, from, to, map_claim_labels: true, view})`
-    (proposed, `engine/pending.ts`); on success the text and document are
-    replaced. When the engine lacks it or returns `ok: false`, the user is
+  - Format switch: same format is a no-op; an untouched draft (the
+    template, no explicit type) takes the other template; otherwise
+    `engine.convertClaims({text, from, to, map_claim_labels: true, view})`;
+    on success the text and document are replaced. When the engine lacks it or returns `ok: false`, the user is
     asked; declining keeps everything, agreeing starts over from the new
     format's template.
   - Key drafts: _Add to key panel_ imports the text (JWK, format `jwk` /
@@ -178,26 +178,15 @@ COSE_Key drafts to the key panel, and switches Format both ways. Two specs
 (EDN COSE_Sign1 detected as CWT; JSON → EDN conversion) also need the core
 additions of #44.
 
-## Core additions needed (#43, filed as #44)
+## Core additions for #43 (#44, done)
 
-Already sufficient, pinned by `src/test/wasm/drafts.test.ts`: `parse_edit`
-with an empty `base` and an explicit `kind` (`json_claims`, `edn_claims`,
-`cwt`, `cose_sign1`, `cose_key`) builds the draft's document, so explicit
-type needs no `open`/`render` override. Missing:
-
-1. **`detect` on EDN text that is not a map** returns nothing today (and an
-   EDN COSE_Key only `edn_claims`). Proposal: classify the CBOR the EDN
-   encodes like binary input, with a new `Layer::Edn` so `open` can unwrap
-   it; rank `cose_key` above `edn_claims`. Until then, such drafts need an
-   explicit type.
-2. **`convert_claims`** (JSON ↔ EDN claim sets) for Format switches. The
-   DTOs are in `src/lib/engine/pending.ts` (`ConvertClaimsRequest {text,
-   from, to, map_claim_labels, view}` → `ConvertClaimsResult {ok, text,
-   document, diagnostics}`; `convert.not_representable` for byte strings,
-   non-text keys, tags, other simple values, undefined, non-finite floats).
-   It is kept out of the `Engine` interface (the Tauri test pins `Engine`
-   to the core methods) and used when present (`hasConvertClaims`); add it
-   to `Engine`, the wasm binding, and the Tauri command when core has it.
+`detect` classifies EDN text by the CBOR it encodes (`Layer::Edn`; an EDN
+COSE_Sign1 detects as a CWT, an EDN COSE_Key ranks above `edn_claims`),
+and `convert_claims` (JSON ↔ EDN claim sets) is part of `Engine`
+(`convertClaims`, the wasm binding, and `engine_convert_claims`).
+`parse_edit` with an empty `base` and an explicit `kind` builds a draft's
+document, so an explicit type needs no `open`/`render` override. All pinned
+by `src/test/wasm/drafts.test.ts`.
 
 ## CSP
 

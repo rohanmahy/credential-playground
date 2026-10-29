@@ -21,8 +21,14 @@ import type {
   ViewOptions,
 } from '../engine/types';
 import type { ActionAvailability, ActionId, Crumb, KeyCard, Provenance } from '../model';
-import type { DraftFormat } from '../logic/drafts';
-import { notImplemented } from '../notImplemented';
+import {
+  DRAFT_TEMPLATES,
+  draftParseKind,
+  effectiveDraftKind,
+  isDraftKind,
+  type DiscardReason,
+  type DraftFormat,
+} from '../logic/drafts';
 import type { Platform } from '../platform/Platform';
 import type { KeyStore } from './keys.svelte';
 import type { Settings } from './settings.svelte';
@@ -378,6 +384,7 @@ export class Workspace {
    *  store the diagnostics. */
   async applyEdit(tabId: string, text: string): Promise<EditResult> {
     const tab = this.#get(tabId);
+    if (tab.draft) return this.#editDraft(tab, tab.draft, text);
     tab.editText = text;
     const result = await this.deps.engine.parseEdit({
       kind: $state.snapshot(tab.doc.kind),
@@ -397,6 +404,33 @@ export class Workspace {
       if (tab.editDiagnostics.length === 0) tab.editDiagnostics = result.diagnostics;
     }
     return result;
+  }
+
+  /** Pending (debounced) live edits by tab id. Not state: nothing renders them. */
+  #scheduled: Record<string, { timer: ReturnType<typeof setTimeout>; text: string } | undefined> =
+    {};
+
+  /** Live edit from the editor: `editText` follows at once, the parse after
+   *  a short pause. Actions flush it first, so they see the latest text. */
+  scheduleEdit(tabId: string, text: string, delay = 150): void {
+    this.#get(tabId).editText = text;
+    const pending = this.#scheduled[tabId];
+    if (pending) clearTimeout(pending.timer);
+    this.#scheduled[tabId] = {
+      text,
+      timer: setTimeout(() => void this.flushEdit(tabId).catch(() => undefined), delay),
+    };
+  }
+
+  /** Runs a scheduled edit now, unless the text was replaced since (a
+   *  Format switch, a date/time Insert). */
+  async flushEdit(tabId: string): Promise<void> {
+    const pending = this.#scheduled[tabId];
+    if (!pending) return;
+    clearTimeout(pending.timer);
+    this.#scheduled[tabId] = undefined;
+    const tab = this.tab(tabId);
+    if (tab && tab.editText === pending.text) await this.applyEdit(tabId, pending.text);
   }
 
   /** "Keep original signature": keep the stale bytes, label the tab tampered. */
@@ -419,6 +453,7 @@ export class Workspace {
 
   /** Runs a credential-producing action; opens and activates a derived tab. */
   async runAction(tabId: string, req: ActionRequest): Promise<Tab> {
+    await this.flushEdit(tabId);
     const tab = this.#get(tabId);
     const { engine, keys, settings } = this.deps;
     const doc = docRef(tab.doc);
@@ -505,40 +540,173 @@ export class Workspace {
 
   /** New: a tab in Live edit holding DRAFT_TEMPLATES[format], parsed with
    *  the format's default kind (base: empty), provenance `new`, active. */
-  async newDraft(_format: DraftFormat = 'json'): Promise<Tab> {
-    notImplemented('Workspace.newDraft');
+  async newDraft(format: DraftFormat = 'json'): Promise<Tab> {
+    const text = DRAFT_TEMPLATES[format];
+    const kind = effectiveDraftKind(format, null, null);
+    const result = await this.deps.engine.parseEdit({
+      kind,
+      base: '',
+      text,
+      view: this.deps.settings.viewOptions(),
+    });
+    if (!result.ok || !result.document) {
+      throw new Error(result.diagnostics[0]?.message ?? 'the draft template did not parse');
+    }
+    const tab = this.#newTab(result.document, { type: 'new' });
+    tab.liveEdit = true;
+    tab.editText = text;
+    tab.editBase = '';
+    tab.draft = { format, detected: null, override: null };
+    this.#retitle(tab);
+    return tab;
+  }
+
+  #draftOf(tabId: string): { tab: Tab; draft: Draft } {
+    const tab = this.#get(tabId);
+    if (!tab.draft) throw new Error(`${tab.title} is not a draft`);
+    return { tab, draft: tab.draft };
+  }
+
+  /** The draft's type, from its format, detection, and explicit choice. */
+  draftKind(tab: Tab): Kind | null {
+    const d = tab.draft;
+    return d ? effectiveDraftKind(d.format, d.detected, d.override) : null;
+  }
+
+  #retitle(tab: Tab): void {
+    const kind = this.draftKind(tab) ?? tab.doc.kind;
+    tab.title = `Tab ${tab.number} · ${kindLabel(kind)}`;
+  }
+
+  /** Re-detects a draft's text, then parses it as the draft's type. */
+  async #editDraft(tab: Tab, draft: Draft, text: string): Promise<EditResult> {
+    tab.editText = text;
+    const candidates = await this.deps.engine.detect(utf8(text));
+    if (tab.editText !== text) return this.#parseDraft(tab, draft, text);
+    draft.detected = candidates[0] ? $state.snapshot(candidates[0].kind) : null;
+    return this.#parseDraft(tab, draft, text);
+  }
+
+  /** Drafts have no original: the base is empty, and `signature_stale`
+   *  (reported for signed kinds against that empty base) is ignored. */
+  async #parseDraft(tab: Tab, draft: Draft, text: string): Promise<EditResult> {
+    const kind = draftParseKind(effectiveDraftKind(draft.format, draft.detected, draft.override));
+    const result = await this.deps.engine.parseEdit({
+      kind: $state.snapshot(kind),
+      base: '',
+      text,
+      view: this.viewFor(tab),
+    });
+    if (tab.editText !== text) return result; // a newer edit is under way
+    if (result.ok && result.document) {
+      tab.doc = result.document;
+      tab.editDiagnostics = [];
+      tab.report = null;
+    } else {
+      tab.editDiagnostics = result.diagnostics.filter((d) => d.severity === 'error');
+      if (tab.editDiagnostics.length === 0) tab.editDiagnostics = result.diagnostics;
+    }
+    tab.stale = false;
+    tab.tampered = false;
+    this.#retitle(tab);
+    return result;
   }
 
   /** Switches a draft's Format, converting the text with
    *  `engine.convertClaims`; when that is missing or fails, asks
-   *  `confirmDiscard` and, if allowed, starts over from the template.
-   *  Returns whether the format changed. */
+   *  `confirmDiscard` (with the reason) and, if allowed, starts over from
+   *  the template. An untouched draft (the template, no explicit type)
+   *  just takes the other template. Returns whether the format changed. */
   async setDraftFormat(
-    _tabId: string,
-    _format: DraftFormat,
-    _confirmDiscard: () => Promise<boolean>,
+    tabId: string,
+    format: DraftFormat,
+    confirmDiscard: (reason: DiscardReason) => Promise<boolean>,
   ): Promise<boolean> {
-    notImplemented('Workspace.setDraftFormat');
+    await this.flushEdit(tabId);
+    const { tab, draft } = this.#draftOf(tabId);
+    const from = draft.format;
+    if (from === format) return true;
+    const text = tab.editText;
+    let next: string | null = null;
+    let reason: DiscardReason = {
+      message: `This engine cannot convert ${from.toUpperCase()} to ${format.toUpperCase()}.`,
+      nodeId: null,
+    };
+    if (text.trim() === DRAFT_TEMPLATES[from] && draft.override === null) {
+      next = DRAFT_TEMPLATES[format];
+    } else if (typeof this.deps.engine.convertClaims === 'function') {
+      const result = await this.deps.engine.convertClaims({
+        text,
+        from,
+        to: format,
+        map_claim_labels: true,
+        view: this.viewFor(tab),
+      });
+      if (result.ok && result.text !== null) next = result.text;
+      else {
+        const problem =
+          result.diagnostics.find((d) => d.severity === 'error') ?? result.diagnostics[0];
+        reason = {
+          message: problem?.message ?? `The draft has no ${format.toUpperCase()} form.`,
+          nodeId: problem?.node_id ?? null,
+        };
+      }
+    }
+    if (next === null) {
+      if (!(await confirmDiscard(reason))) return false;
+      next = DRAFT_TEMPLATES[format];
+    }
+    draft.format = format;
+    if (draft.override && !isDraftKind(format, draft.override)) draft.override = null;
+    await this.#editDraft(tab, draft, next);
+    return true;
   }
 
   /** Sets (or with null clears) a draft's explicit type and re-parses. */
-  async setDraftKind(_tabId: string, _kind: Kind | null): Promise<void> {
-    notImplemented('Workspace.setDraftKind');
+  async setDraftKind(tabId: string, kind: Kind | null): Promise<void> {
+    await this.flushEdit(tabId);
+    const { tab, draft } = this.#draftOf(tabId);
+    draft.override = kind ? $state.snapshot(kind) : null;
+    await this.#parseDraft(tab, draft, tab.editText);
   }
 
-  /** A JWK / JWK Set / COSE_Key / COSE_KeySet draft into the key panel. */
-  async importDraftKey(_tabId: string): Promise<KeyCard[]> {
-    notImplemented('Workspace.importDraftKey');
+  /** A JWK / JWK Set / COSE_Key / COSE_KeySet draft into the key panel:
+   *  the JSON text, or the CBOR the EDN was parsed to. */
+  async importDraftKey(tabId: string): Promise<KeyCard[]> {
+    await this.flushEdit(tabId);
+    const { tab } = this.#draftOf(tabId);
+    const kind = this.draftKind(tab);
+    const provenance: Provenance = { type: 'new' };
+    switch (kind?.type) {
+      case 'jwk':
+      case 'jwk_set':
+        return this.deps.keys.importBytes(utf8(tab.editText), provenance, { type: kind.type });
+      case 'cose_key':
+      case 'cose_key_set':
+        return this.deps.keys.importBytes(fromB64u(tab.doc.bytes), provenance, {
+          type: kind.type,
+        });
+      default:
+        throw new Error(`${kind ? kindLabel(kind) : 'This draft'} is not a key`);
+    }
   }
 
   /** "Open as …" for a detected kind that is not a draft type (e.g. JWS
    *  JSON): opens the text as that candidate in a new tab (provenance new). */
-  async openDraftAs(_tabId: string): Promise<Tab> {
-    notImplemented('Workspace.openDraftAs');
+  async openDraftAs(tabId: string): Promise<Tab> {
+    await this.flushEdit(tabId);
+    const { tab } = this.#draftOf(tabId);
+    const bytes = utf8(tab.editText);
+    const candidates = await this.deps.engine.detect(bytes);
+    const top = candidates[0];
+    if (!top) throw new Error('Nothing was detected in the draft');
+    const doc = await this.deps.engine.open(bytes, top, this.deps.settings.viewOptions());
+    return this.#newTab(doc, { type: 'new' }, { input: bytes, candidates });
   }
 
   /** Validates with the panel keys and settings; stores `tab.report`. */
   async validate(tabId: string): Promise<ValidationReport> {
+    await this.flushEdit(tabId);
     const tab = this.#get(tabId);
     const { engine, keys, settings } = this.deps;
     const report = await engine.validate({
