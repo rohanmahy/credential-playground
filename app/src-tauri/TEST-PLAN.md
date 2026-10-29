@@ -82,7 +82,7 @@ Engine (one per method; 27 + `engine_init`):
 | `engine_info` | — | `info` |
 | `engine_detect` | `input: Bytes` | `detect` |
 | `engine_open` | `input: Bytes, candidate, view` | `open` |
-| `engine_render`, `engine_parse_edit`, `engine_issue`, `engine_redact`, `engine_disclose`, `engine_present`, `engine_validate`, `engine_lint`, `engine_resign`, `engine_tamper`, `engine_reencode`, `engine_edit_disclosures`, `engine_decode_embedded`, `engine_key_import`, `engine_key_export`, `engine_key_generate`, `engine_key_thumbprint`, `engine_key_assign_kid`, `engine_key_to_jwk`, `engine_key_to_cwk`, `engine_datetime`, `engine_registry_merge` | `req` | same name |
+| `engine_render`, `engine_parse_edit`, `engine_convert_claims` (#44), `engine_issue`, `engine_redact`, `engine_disclose`, `engine_present`, `engine_validate`, `engine_lint`, `engine_resign`, `engine_tamper`, `engine_reencode`, `engine_edit_disclosures`, `engine_decode_embedded`, `engine_key_import`, `engine_key_export`, `engine_key_generate`, `engine_key_thumbprint`, `engine_key_assign_kid`, `engine_key_to_jwk`, `engine_key_to_cwk`, `engine_datetime`, `engine_registry_merge` | `req` | same name |
 | `engine_key_public` | `key: KeyRef` | `key_public` |
 | `engine_registry_lookup` | `query: RegistryQuery` | `registry_lookup` |
 

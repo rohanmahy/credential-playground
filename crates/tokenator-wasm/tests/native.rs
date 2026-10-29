@@ -30,6 +30,7 @@ fn call(engine: &TokenatorEngine, case: &Case) -> String {
         "open" => engine.open(&bytes(0), &text(1), &text(2)),
         "render" => engine.render(&text(0)),
         "parse_edit" => engine.parse_edit(&text(0)),
+        "convert_claims" => engine.convert_claims(&text(0)),
         "issue" => engine.issue(&text(0)),
         "redact" => engine.redact(&text(0)),
         "disclose" => engine.disclose(&text(0)),

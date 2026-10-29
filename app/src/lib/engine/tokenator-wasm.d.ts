@@ -14,6 +14,7 @@ declare module 'tokenator-wasm' {
     open(input: Uint8Array, candidate: string, view: string): string;
     render(req: string): string;
     parse_edit(req: string): string;
+    convert_claims(req: string): string;
     issue(req: string): string;
     redact(req: string): string;
     disclose(req: string): string;

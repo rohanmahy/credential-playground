@@ -24,11 +24,11 @@
 //! `build.rs` (#27). See `TEST-PLAN.md`.
 
 use tokenator_core::{
-    AssignKidRequest, Candidate, DateTimeRequest, DecodeEmbeddedRequest, DiscloseRequest,
-    EditDisclosuresRequest, EditRequest, Engine, EngineError, ErrorCode, IssueRequest,
-    KeyConvertRequest, KeyExportRequest, KeyGenRequest, KeyImportRequest, KeyRef, LintRequest,
-    PresentRequest, ReencodeRequest, RegistryMergeRequest, RegistryQuery, RenderRequest,
-    ResignRequest, TamperRequest, ThumbprintRequest, ValidateRequest, ViewOptions,
+    AssignKidRequest, Candidate, ConvertClaimsRequest, DateTimeRequest, DecodeEmbeddedRequest,
+    DiscloseRequest, EditDisclosuresRequest, EditRequest, Engine, EngineError, ErrorCode,
+    IssueRequest, KeyConvertRequest, KeyExportRequest, KeyGenRequest, KeyImportRequest, KeyRef,
+    LintRequest, PresentRequest, ReencodeRequest, RegistryMergeRequest, RegistryQuery,
+    RenderRequest, ResignRequest, TamperRequest, ThumbprintRequest, ValidateRequest, ViewOptions,
 };
 use wasm_bindgen::prelude::*;
 
@@ -131,6 +131,12 @@ impl TokenatorEngine {
     /// well-formed request.
     pub fn parse_edit(&self, req: &str) -> String {
         envelope!(parse!(EditRequest, req).map(|r| self.engine.parse_edit(&r)))
+    }
+
+    /// `Engine::convert_claims` (`ConvertClaimsRequest` JSON). Always
+    /// `{"ok":…}` for a well-formed request.
+    pub fn convert_claims(&self, req: &str) -> String {
+        envelope!(parse!(ConvertClaimsRequest, req).map(|r| self.engine.convert_claims(&r)))
     }
 
     /// `Engine::issue` (`IssueRequest` JSON).

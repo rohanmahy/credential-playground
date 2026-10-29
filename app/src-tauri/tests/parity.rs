@@ -42,6 +42,7 @@ fn direct(engine: &Engine, cmd: &str, a: &Value) -> Result<String, Value> {
         "engine_open" => core_json(engine.open(&input(), &arg(a, "candidate"), &arg(a, "view"))),
         "engine_render" => core_json(engine.render(&arg(a, "req"))),
         "engine_parse_edit" => core_json(Ok(engine.parse_edit(&arg(a, "req")))),
+        "engine_convert_claims" => core_json(Ok(engine.convert_claims(&arg(a, "req")))),
         "engine_issue" => core_json(engine.issue(&arg(a, "req"))),
         "engine_redact" => core_json(engine.redact(&arg(a, "req"))),
         "engine_disclose" => core_json(engine.disclose(&arg(a, "req"))),
@@ -226,6 +227,21 @@ fn corpus(fx: &Fx) -> Vec<Case> {
         "engine_decode_embedded",
         json!({ "req": { "doc": cwt.clone(), "node_id": "signature" } }),
     ));
+    for (text, from, to) in [
+        (
+            r#"{"iss": "https://issuer.example", "exp": 1893456000, "n": 1.5}"#,
+            "json",
+            "edn",
+        ),
+        ("{1: \"x\", 4: 1893456000}", "edn", "json"),
+        ("{1: h'00'}", "edn", "json"),
+    ] {
+        cases.push(case(
+            format!("convert claims {from} to {to}: {text}"),
+            "engine_convert_claims",
+            json!({ "req": { "text": text, "from": from, "to": to, "map_claim_labels": true } }),
+        ));
+    }
     cases.push(case(
         "parse edit",
         "engine_parse_edit",

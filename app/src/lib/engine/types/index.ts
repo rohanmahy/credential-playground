@@ -221,7 +221,8 @@ export type Layer =
        * Tag number.
        */
       tag: number;
-    };
+    }
+  | { type: 'edn' };
 
 export type JsonPathSegment = string | number;
 
@@ -1411,6 +1412,54 @@ export type ManualDecode = {
   tree: Node;
   /**
    * `cbor.trailing_bytes` and other warnings.
+   */
+  diagnostics: Array<Diagnostic>;
+};
+
+export type ConvertClaimsRequest = {
+  /**
+   * The claim set text.
+   */
+  text: string;
+  /**
+   * Its language.
+   */
+  from: Language;
+  /**
+   * The language to convert to.
+   */
+  to: Language;
+  /**
+   * Map registered JWT claim names to CWT labels (JSON → EDN) and back
+   * (EDN → JSON), through the registry (SPEC §7). Top-level claims only.
+   */
+  map_claim_labels?: boolean;
+  /**
+   * View options for the returned document.
+   */
+  view?: ViewOptions;
+};
+
+export type ConvertClaimsResult = {
+  /**
+   * The text converted.
+   */
+  ok: boolean;
+  /**
+   * The converted text.
+   */
+  text: string | null;
+  /**
+   * The converted claim set (`json_claims` / `edn_claims`).
+   */
+  document: Document | null;
+  /**
+   * Why it did not convert: a parse error of `text` (`json.syntax`,
+   * `edn.syntax`, with its position), or `convert.not_representable`
+   * naming the first node JSON cannot hold (a byte string, a non-text
+   * key that is not a mapped claim label, a tag, a simple value other
+   * than true/false/null, undefined, a non-finite float, or nesting
+   * beyond JSON's 128 levels).
    */
   diagnostics: Array<Diagnostic>;
 };

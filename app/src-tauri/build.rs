@@ -10,6 +10,7 @@ const COMMANDS: &[&str] = &[
     "engine_open",
     "engine_render",
     "engine_parse_edit",
+    "engine_convert_claims",
     "engine_issue",
     "engine_redact",
     "engine_disclose",

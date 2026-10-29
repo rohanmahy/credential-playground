@@ -7,6 +7,7 @@
 // app/src-tauri/TEST-PLAN.md.
 import { invoke } from '@tauri-apps/api/core';
 import { type Engine, EngineFailure } from './Engine';
+import type { ConvertClaims } from './pending';
 import { toB64u } from './bytes';
 import type { EngineError } from './types';
 
@@ -35,7 +36,7 @@ async function call<T>(cmd: string, args: Record<string, unknown>): Promise<T> {
   }
 }
 
-export class TauriEngine implements Engine {
+export class TauriEngine implements Engine, ConvertClaims {
   /** Sent once to the shell so its Engine uses the cached registry snapshot. */
   readonly snapshot: Uint8Array | null;
   private ready: Promise<void> | null = null;
@@ -63,6 +64,8 @@ export class TauriEngine implements Engine {
     this.run('engine_open', { input: toB64u(input), candidate, view });
   render: Engine['render'] = (req) => this.run('engine_render', { req });
   parseEdit: Engine['parseEdit'] = (req) => this.run('engine_parse_edit', { req });
+  convertClaims: ConvertClaims['convertClaims'] = (req) =>
+    this.run('engine_convert_claims', { req });
   issue: Engine['issue'] = (req) => this.run('engine_issue', { req });
   redact: Engine['redact'] = (req) => this.run('engine_redact', { req });
   disclose: Engine['disclose'] = (req) => this.run('engine_disclose', { req });

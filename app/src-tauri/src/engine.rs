@@ -12,13 +12,13 @@ use std::sync::{Arc, RwLock};
 
 use tauri::State;
 use tokenator_core::{
-    AssignKidRequest, Bytes, Candidate, CheckItem, DateTimeForms, DateTimeRequest,
-    DecodeEmbeddedRequest, DiscloseRequest, Document, EditDisclosuresRequest, EditRequest,
-    EditResult, Engine, EngineError, EngineInfo, IssueRequest, KeyConvertRequest, KeyExport,
-    KeyExportRequest, KeyGenRequest, KeyImportRequest, KeyInfo, KeyRef, LintRequest, ManualDecode,
-    PresentRequest, ReencodeRequest, Reencoded, RegistryEntry, RegistryMergeRequest,
-    RegistryMergeResult, RegistryQuery, RenderRequest, ResignRequest, TamperRequest, Thumbprint,
-    ThumbprintRequest, ValidateRequest, ValidationReport, ViewOptions,
+    AssignKidRequest, Bytes, Candidate, CheckItem, ConvertClaimsRequest, ConvertClaimsResult,
+    DateTimeForms, DateTimeRequest, DecodeEmbeddedRequest, DiscloseRequest, Document,
+    EditDisclosuresRequest, EditRequest, EditResult, Engine, EngineError, EngineInfo, IssueRequest,
+    KeyConvertRequest, KeyExport, KeyExportRequest, KeyGenRequest, KeyImportRequest, KeyInfo,
+    KeyRef, LintRequest, ManualDecode, PresentRequest, ReencodeRequest, Reencoded, RegistryEntry,
+    RegistryMergeRequest, RegistryMergeResult, RegistryQuery, RenderRequest, ResignRequest,
+    TamperRequest, Thumbprint, ThumbprintRequest, ValidateRequest, ValidationReport, ViewOptions,
 };
 
 /// The engine the commands use. `engine_init` replaces it (registry
@@ -159,6 +159,15 @@ pub async fn engine_parse_edit(
     req: EditRequest,
 ) -> Result<EditResult, EngineError> {
     Ok(state.current().parse_edit(&req))
+}
+
+/// `Engine::convert_claims` (infallible in core, #44).
+#[tauri::command(rename_all = "snake_case")]
+pub async fn engine_convert_claims(
+    state: State<'_, EngineState>,
+    req: ConvertClaimsRequest,
+) -> Result<ConvertClaimsResult, EngineError> {
+    Ok(state.current().convert_claims(&req))
 }
 
 /// `Engine::key_public`.
