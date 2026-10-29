@@ -1,12 +1,32 @@
-# fmt, clippy, tests, wasm32 and doc builds, the app checks (unit tests,
-# WASM parity, Playwright), the Linux desktop build and its WebDriver e2e,
-# and fuzz smoke runs. Every step is a plain command that also runs locally
-# (README.md, "Building and testing").
+# Every step is a plain command that also runs locally (README.md,
+# "Building and testing").
+#
+# What runs when (#39):
+#
+#   event                      unit   Linux set   macOS
+#   push to a branch (not main)  x        -          -     (skipped while the branch has an open PR)
+#   pull_request                 -        x          -
+#   push to main (a merge)       -        x          x
+#   workflow_dispatch            -        x          x
+#
+# unit:      cargo test (Linux, all features, without tokenator-desktop
+#            to stay fast) and the app's Vitest unit tests.
+# Linux set: fmt; clippy, both test feature sets, and rustdoc for the whole
+#            workspace including tokenator-desktop (WebKitGTK installed);
+#            wasm32 builds; the app (typecheck, lint, Vitest, bindings
+#            check, build, WASM parity, Playwright); desktop-e2e; fuzz smoke.
+# macOS:     clippy and both test feature sets of the whole workspace.
+#
+# A push to a branch with an open PR also fires pull_request, whose Linux
+# set includes the unit tests, so the unit job checks for an open PR and
+# skips itself. Within one event and ref, a newer run cancels an older one
+# (except on main, where every merge is tested to completion).
+# Tags are left to release.yml.
 name: CI
 
 on:
   push:
-    branches: [main]
+    branches: ["**"]
   pull_request:
   workflow_dispatch:
 
@@ -14,8 +34,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: ci-${{ github.ref }}
-  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+  group: ci-${{ github.event_name }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
 
 env:
   CARGO_TERM_COLOR: always
@@ -23,7 +43,50 @@ env:
   RUST_BACKTRACE: 1
 
 jobs:
+  # Pushes to branches other than main: the unit tests only, unless the
+  # branch has an open PR (whose pull_request run covers them).
+  open-pr:
+    if: github.event_name == 'push' && github.ref != 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: read
+    outputs:
+      count: ${{ steps.pr.outputs.count }}
+    steps:
+      - id: pr
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          n=$(gh pr list --repo "$GITHUB_REPOSITORY" --head "$GITHUB_REF_NAME" --state open --json number --jq length)
+          echo "count=$n" >>"$GITHUB_OUTPUT"
+          if [ "$n" -gt 0 ]; then
+            echo "$GITHUB_REF_NAME has an open PR, which runs the full set; unit skipped." >>"$GITHUB_STEP_SUMMARY"
+          fi
+
+  unit:
+    needs: open-pr
+    if: needs.open-pr.outputs.count == '0'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install stable --profile minimal && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          shared-key: unit
+      - run: cargo test --locked --workspace --exclude tokenator-desktop --all-features
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: app/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile && pnpm test
+        working-directory: app
+
   fmt:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -31,21 +94,28 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo fmt --manifest-path fuzz/Cargo.toml --check
 
-  # Linux: the whole workspace except tokenator-desktop, which needs the
-  # WebKitGTK dev packages (#36); desktop-e2e and the macOS job cover it.
+  # Linux: the whole workspace, tokenator-desktop included (WebKitGTK).
   rust-linux:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: scripts/linux-deps.sh
       - run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
-      - run: cargo clippy --locked --workspace --exclude tokenator-desktop --all-targets --all-features -- -D warnings
-      - run: cargo test --locked --workspace --exclude tokenator-desktop --all-features
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --all-features
       # Default features too: tokenator-edn's feature-off tests are cfg-gated
       # against the `hash` tests (crates/tokenator-edn/TEST-PLAN.md).
-      - run: cargo test --locked --workspace --exclude tokenator-desktop
+      - run: cargo test --locked --workspace
+      - name: rustdoc
+        run: cargo doc --locked --workspace --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
 
+  # Only for merges to main (and manual runs): macOS minutes are costly.
   rust-macos:
+    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && github.ref == 'refs/heads/main')
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -55,7 +125,8 @@ jobs:
       - run: cargo test --locked --workspace --all-features
       - run: cargo test --locked --workspace
 
-  wasm-and-docs:
+  wasm:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -67,12 +138,9 @@ jobs:
           -p tokenator-cbor -p tokenator-json -p tokenator-crypto -p tokenator-registry
           -p tokenator-edn -p tokenator-keys -p tokenator-detect -p tokenator-jose
           -p tokenator-cose -p tokenator-core -p tokenator-wasm
-      - name: rustdoc
-        run: cargo doc --locked --workspace --exclude tokenator-desktop --no-deps --all-features
-        env:
-          RUSTDOCFLAGS: -D warnings
 
   app:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -126,16 +194,17 @@ jobs:
           path: app/test-results
           retention-days: 7
 
-  # The desktop app on Linux (WebKitGTK): clippy and tests of the shell,
-  # the release binary, then the WebdriverIO suite (app/e2e-desktop) against
-  # it through tauri-driver under Xvfb. scripts/desktop-e2e-docker.sh runs
-  # the same steps locally in a container.
+  # The desktop app on Linux (WebKitGTK): the release binary, then the
+  # WebdriverIO suite (app/e2e-desktop) against it through tauri-driver
+  # under Xvfb (rust-linux covers its clippy and tests).
+  # scripts/desktop-e2e-docker.sh runs the same steps locally in a container.
   desktop-e2e:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - run: scripts/linux-deps.sh --e2e
-      - run: rustup toolchain install stable --profile minimal --component clippy --target wasm32-unknown-unknown && rustup default stable
+      - run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
       - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
         with:
           shared-key: desktop
@@ -146,8 +215,6 @@ jobs:
           tool: wasm-pack@0.15.0
       # A no-op when the cached binaries already have these versions.
       - run: cargo install --locked tauri-cli@2.12.4 tauri-driver@2.1.0
-      - run: cargo clippy --locked -p tokenator-desktop --all-targets -- -D warnings
-      - run: cargo test --locked -p tokenator-desktop
       - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
         with:
           package_json_file: app/package.json
@@ -173,8 +240,10 @@ jobs:
           retention-days: 7
           if-no-files-found: ignore
 
-  # Each cargo-fuzz target for about 60 s from the testdata/ seeds (fuzz/README.md).
+  # Each cargo-fuzz target for about 60 s from the testdata/ seeds, on the
+  # pinned nightly (fuzz-nightly.yml runs longer, on the latest nightly).
   fuzz-smoke:
+    if: github.event_name != 'push' || github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     env:
       FUZZ_TOOLCHAIN: nightly-2026-02-01

@@ -269,7 +269,10 @@ confidence, layers, payload range, breadcrumb), and confirms low-confidence
 becomes `edn_claims`; anything else is dropped. `key_import` also accepts
 COSE_Keys and COSE_KeySets written as EDN. Key kinds (`jwk`, `jwk_set`,
 `cose_key`, `cose_key_set`, `pem`) are returned as candidates so the UI can
-route them to the key panel. Breadcrumbs end with `Kind::label()`.
+route them to the key panel; `KeyImportRequest.candidate` takes such a
+candidate and unwraps its layers before importing, as `open` does for
+credentials (so hex or base64 keys import, #42). Breadcrumbs end with
+`Kind::label()`.
 
 ## 8. Validation report (SPEC §6)
 

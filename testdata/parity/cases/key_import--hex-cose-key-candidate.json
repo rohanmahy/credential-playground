@@ -1,0 +1,39 @@
+{
+  "method": "key_import",
+  "source": "keys/rfc8392-a2.3-ec-p256.cosekey.cbor as hex",
+  "args": [
+    {
+      "json": {
+        "bytes": "YTcyMzU4MjA2YzEzODI3NjVhZWM1MzU4ZjExNzczM2QyODFjMWM3YmRjMzk4ODRkMDRhNDVhMWU2YzY3Yzg1OGJjMjA2YzE5MjI1ODIwNjBmN2YxYTc4MGQ4YTc4M2JmYjdhMmRkNmIyNzk2ZTgxMjhkYmJjZWY5ZDNkMTY4ZGI5NTI5OTcxYTM2ZTdiOTIxNTgyMDE0MzMyOWNjZTc4NjhlNDE2OTI3NTk5Y2Y2NWEzNGYzY2UyZmZkYTU1YTdlY2E2OWVkODkxOWEzOTRkNDJmMGYyMDAxMDEwMjAyNTI0MTczNzk2ZDZkNjU3NDcyNjk2MzQ1NDM0NDUzNDEzMjM1MzYwMzI2Cg",
+        "candidate": {
+          "breadcrumb": [
+            "hex",
+            "COSE_Key"
+          ],
+          "confidence": 87,
+          "kind": {
+            "type": "cose_key"
+          },
+          "layers": [
+            {
+              "leading": "",
+              "trailing": "\n",
+              "type": "trim"
+            },
+            {
+              "separator": null,
+              "type": "hex",
+              "upper": false,
+              "wrap": null
+            }
+          ],
+          "payload_range": {
+            "end": 264,
+            "start": 0
+          }
+        },
+        "format": null
+      }
+    }
+  ]
+}

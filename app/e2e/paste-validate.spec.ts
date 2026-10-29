@@ -168,3 +168,19 @@ test('a key pasted into the input goes to the key panel', async ({ page }) => {
     1,
   );
 });
+
+test('a hex COSE_Key (xxd -p) pasted into the input goes to the key panel (#42)', async ({
+  page,
+}) => {
+  // `xxd -p` wraps at 60 hex characters per line.
+  const hex = fixtureHex('keys/rfc8392-a2.3-ec-p256.cosekey.cbor')
+    .match(/.{1,60}/g)
+    ?.join('\n');
+  await paste(page, `${hex}\n`);
+  const cards = page.getByRole('complementary', { name: 'Keys' }).getByRole('article');
+  await expect(cards).toHaveCount(1);
+  await expect(cards.first()).toContainText('P-256');
+  await expect(cards.first()).toContainText('Pasted');
+  await expect(page.getByRole('tab')).toHaveCount(0);
+  await expect(page.getByText(/TrailingBytes/)).toHaveCount(0);
+});

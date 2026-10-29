@@ -687,6 +687,7 @@ impl Builder<'_> {
                 let req = KeyImportRequest {
                     bytes: Bytes(self.read(&rel)?),
                     format: None,
+                    candidate: None,
                 };
                 self.add(
                     format!("key_import--{}", slug(&rel)),
@@ -701,6 +702,7 @@ impl Builder<'_> {
             let req = KeyImportRequest {
                 bytes: Bytes(self.read(&rel)?),
                 format: None,
+                candidate: None,
             };
             self.add(
                 format!("key_import--{}", slug(&rel)),
@@ -722,6 +724,7 @@ impl Builder<'_> {
             let req = KeyImportRequest {
                 bytes: Bytes(bytes),
                 format,
+                candidate: None,
             };
             self.add(
                 format!("key_import--{name}"),
@@ -730,6 +733,28 @@ impl Builder<'_> {
                 vec![json(&req)?],
             );
         }
+
+        // A key pasted as `xxd -p` hex: import the detected candidate (#42).
+        let cose_key = self.read("keys/rfc8392-a2.3-ec-p256.cosekey.cbor")?;
+        let hex_text: String = cose_key.iter().map(|b| format!("{b:02x}")).collect();
+        let hex_input = format!("{hex_text}\n").into_bytes();
+        let candidate = self
+            .e
+            .detect(&hex_input)
+            .into_iter()
+            .next()
+            .ok_or("no candidate for the hex COSE_Key")?;
+        let req = KeyImportRequest {
+            bytes: Bytes(hex_input),
+            format: None,
+            candidate: Some(candidate),
+        };
+        self.add(
+            "key_import--hex-cose-key-candidate".into(),
+            "keys/rfc8392-a2.3-ec-p256.cosekey.cbor as hex",
+            "key_import",
+            vec![json(&req)?],
+        );
 
         // Generate: every spec, seeded; plus well-known, entropy, kid sources.
         let specs: Vec<(&str, KeySpec)> = vec![

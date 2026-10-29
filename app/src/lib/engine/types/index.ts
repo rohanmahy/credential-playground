@@ -1582,13 +1582,20 @@ export type KeyInfo = {
 
 export type KeyImportRequest = {
   /**
-   * The bytes.
+   * The bytes: the key itself, or (with `candidate`) the input `detect`
+   * was given.
    */
   bytes: Bytes;
   /**
    * Format hint.
    */
   format?: KeyFormat | null;
+  /**
+   * A key candidate from `detect(bytes)`: its layers (hex, base64,
+   * quotes, a JSON field, ...) are unwrapped first, as `open` does for
+   * credentials.
+   */
+  candidate?: Candidate | null;
 };
 
 export type KeyExportRequest = {

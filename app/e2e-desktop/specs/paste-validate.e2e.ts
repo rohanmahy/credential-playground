@@ -133,9 +133,10 @@ describe('paste and validate', () => {
     await expectThat(report).toContainText(/disclosure/i);
   });
 
-  it('a key pasted into the input goes to the key panel', async () => {
-    await paste(fixtureText('keys/sd-cwt-08-c1-holder-private.jwk.json'));
+  it('a hex COSE_Key pasted into the input goes to the key panel (#42)', async () => {
+    await paste(fixtureHex('keys/rfc8392-a2.3-ec-p256.cosekey.cbor'));
     await expectThat(keyCards()).toHaveCount(1);
+    await expectThat(keyCards().first()).toContainText('P-256');
     await expectThat(page.getByRole('tab')).toHaveCount(0);
   });
 

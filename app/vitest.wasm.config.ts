@@ -1,11 +1,14 @@
 // `pnpm test:wasm`: tests that need the built wasm module
 // (crates/tokenator-wasm/pkg, from `pnpm build:wasm`), run in Node: the
 // parity check against testdata/parity, WasmEngine over the real module,
-// and checks on the binary. See crates/tokenator-wasm/TEST-PLAN.md.
+// checks on the binary, and the Workspace store over the real engine. See crates/tokenator-wasm/TEST-PLAN.md.
+import { svelte } from '@sveltejs/vite-plugin-svelte';
 import { defineConfig } from 'vitest/config';
 import { WASM_PKG } from './vite.config.ts';
 
 export default defineConfig({
+  // The stores use Svelte runes (keyPaste.test.ts drives the Workspace).
+  plugins: [svelte()],
   resolve: {
     alias: { 'tokenator-wasm': `${WASM_PKG}/tokenator_wasm.js` },
   },

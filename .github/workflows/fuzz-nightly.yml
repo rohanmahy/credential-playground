@@ -1,0 +1,100 @@
+# Nightly fuzzing: every cargo-fuzz target for 15 minutes, in parallel, on
+# the latest nightly toolchain. Each target's corpus is kept in the Actions
+# cache, so the runs build on each other. On a finding the job fails, the
+# inputs are minimized (fuzz/minimize.sh), and the crash, the minimized
+# input, and the logs are uploaded as the fuzz-<target> artifact; GitHub
+# then mails the failed scheduled run to the repository's watchers.
+#
+# The PR smoke job (ci.yml) stays on the pinned FUZZ_TOOLCHAIN, so this
+# workflow is also the canary for nightly drift: a failure in "Build" means
+# the latest nightly (or cargo-fuzz on it) broke the build, not a bug found.
+# Reproduce a finding locally (fuzz/README.md):
+#   cargo +nightly fuzz run <target> fuzz/artifacts/<target>/minimized-from-…
+name: Fuzz (nightly)
+
+on:
+  schedule:
+    - cron: "17 2 * * *"
+  workflow_dispatch:
+    inputs:
+      seconds:
+        description: Seconds per target
+        default: "900"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fuzz-nightly
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+  FUZZ_TOOLCHAIN: nightly
+  FUZZ_SECONDS: ${{ inputs.seconds || '900' }}
+
+jobs:
+  fuzz:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    strategy:
+      fail-fast: false
+      matrix:
+        target:
+          - cbor_decode
+          - edn_parse
+          - edn_print
+          - json_parse
+          - detect
+          - jose
+          - cose
+          - keys
+          - engine_open
+          - engine_validate
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install nightly --profile minimal && rustc +nightly --version
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: fuzz
+          shared-key: fuzz-nightly
+          cache-bin: true
+          # One matrix job saves the shared build cache.
+          save-if: ${{ matrix.target == 'cbor_decode' }}
+      - run: cargo install --locked cargo-fuzz@0.13.2
+      - name: Build
+        run: cargo +nightly fuzz build
+      - uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
+          restore-keys: fuzz-corpus-${{ matrix.target }}-
+      - run: fuzz/seed-corpora.sh "${{ matrix.target }}"
+      - name: Fuzz
+        id: fuzz
+        run: FUZZ_JOBS=1 fuzz/smoke.sh "$FUZZ_SECONDS" "${{ matrix.target }}"
+      - name: Minimize findings
+        if: failure() && steps.fuzz.outcome == 'failure'
+        run: |
+          fuzz/minimize.sh "${{ matrix.target }}"
+          {
+            echo "### ${{ matrix.target }}: finding"
+            echo '```'
+            ls -l "fuzz/artifacts/${{ matrix.target }}"
+            grep -m1 -A20 -E 'panicked|ERROR: libFuzzer|SUMMARY' "fuzz/logs/${{ matrix.target }}.log" || true
+            echo '```'
+          } >>"$GITHUB_STEP_SUMMARY"
+      - if: failure() && steps.fuzz.outcome == 'failure'
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-${{ matrix.target }}
+          path: |
+            fuzz/artifacts/${{ matrix.target }}
+            fuzz/logs
+          retention-days: 30
+      # Saved after a clean run as well as a finding, so coverage accumulates.
+      - if: always() && steps.fuzz.outcome != 'skipped'
+        uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: fuzz/corpus/${{ matrix.target }}
+          key: fuzz-corpus-${{ matrix.target }}-${{ github.run_id }}
