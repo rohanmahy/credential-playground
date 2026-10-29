@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 /// Input of [`Engine::datetime`](crate::Engine::datetime).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct DateTimeRequest {
     /// The value being edited.
     pub input: DateTimeInput,
@@ -13,6 +14,7 @@ pub struct DateTimeRequest {
     pub now: Option<i64>,
     /// Local offset east of UTC in minutes (the platform knows the zone).
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<i32>", optional))]
     pub local_offset_minutes: i32,
 }
 

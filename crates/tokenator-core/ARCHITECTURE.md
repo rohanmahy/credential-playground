@@ -43,6 +43,10 @@ NodeId scheme, document model, validation rules; issues #28–#32).
   unchanged parts keep their original encoded text (so unusual base64 and
   the pretty layout survive), changed parts are re-encoded. Text without
   `.` or `~` parses as a one-segment compact JWS (`jose.segment_count`).
+- **TypeScript.** Request DTO fields that serde fills in when absent are
+  optional in the `ts` export (#34): `field?: T` for `#[serde(default)]`
+  fields (an explicit `null` would not deserialize) and `field?: T | null`
+  for `Option` fields.
 - **Validation** renders the document first (for node ids), so unreadable
   bytes are a `parse` error. Report node ids are mapped to the nearest
   existing node. Lint inside `validate` checks only the key that verified.

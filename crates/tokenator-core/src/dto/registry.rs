@@ -11,6 +11,7 @@ use super::document::SpecLink;
 /// All given fields must match; an empty query matches nothing.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 #[serde(default)]
 pub struct RegistryQuery {
     /// Entry kind.
@@ -132,6 +133,7 @@ pub enum RegistryId {
 /// Input of [`Engine::registry_merge`](crate::Engine::registry_merge).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct RegistryMergeRequest {
     /// Snapshot to merge into; the engine's current registry when absent.
     #[serde(default)]

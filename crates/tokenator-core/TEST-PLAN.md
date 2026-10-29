@@ -373,10 +373,11 @@ bad signature gives `fail`.
    alg → `skip`; future `iat` → `warn`; claim sets cannot be validated;
    presenting a presentation again is refused (#31). `lint` also accepts
    claim sets (encoding and duplicate findings in drafts).
-5. Gaps in merged crates (#32): x5c/x5chain leaf keys now come from
-   `tokenator_keys::import_certificate` (`tests/x5c.rs`); no COSE payload
-   digest edits (`unsupported`), relative-time formatting done in core,
-   EDN COSE_Keys parsed with tokenator-edn before `tokenator_keys::import`.
+5. Gaps in merged crates, worked around in core for now (#32): no
+   x5c/x5chain key extraction (tokenator-keys reads no certificates), no
+   COSE payload digest edits (`unsupported`), relative-time formatting
+   done in core, EDN COSE_Keys parsed with tokenator-edn before
+   `tokenator_keys::import`.
 
 ## 11. Files
 
