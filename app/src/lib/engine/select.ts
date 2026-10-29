@@ -2,9 +2,10 @@ import type { Engine } from './Engine';
 import { TauriEngine } from './TauriEngine';
 import { WasmEngine } from './WasmEngine';
 
-/** Whether the app runs inside the Tauri shell. */
+/** Whether the app runs inside the Tauri shell. Tauri 2 always injects
+ *  `__TAURI_INTERNALS__`; `__TAURI__` needs `withGlobalTauri`, which is off. */
 export function isTauri(win: object = globalThis): boolean {
-  return '__TAURI__' in win;
+  return '__TAURI_INTERNALS__' in win;
 }
 
 /** TauriEngine inside the desktop app, WasmEngine on the web. `snapshot`
