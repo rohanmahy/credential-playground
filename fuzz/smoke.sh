@@ -26,7 +26,7 @@ run() {
   if cargo "+$FUZZ_TOOLCHAIN" fuzz run "$t" "fuzz/corpus/$t" -- \
     -max_total_time="$FUZZ_SECONDS" -timeout=10 -rss_limit_mb=4096 \
     >"fuzz/logs/$t.log" 2>&1; then
-    echo "ok    $t: $(grep -o '#[0-9]* *DONE.*' "fuzz/logs/$t.log" | tail -1)"
+    echo "ok    $t: $(grep -o 'Done [0-9]* runs.*' "fuzz/logs/$t.log" | tail -1)"
   else
     echo "FAIL  $t (fuzz/logs/$t.log)"
     tail -n 30 "fuzz/logs/$t.log"
