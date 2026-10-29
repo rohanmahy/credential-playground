@@ -80,17 +80,17 @@ export class KeyStore {
   }
 
   #nextId(): string {
-    const used = new Set(this.cards.map((c) => c.id));
+    const used = this.cards.map((c) => c.id);
     let n = this.cards.length + 1;
-    while (used.has(`key-${n}`)) n++;
+    while (used.includes(`key-${n}`)) n++;
     return `key-${n}`;
   }
 
   #uniqueLabel(base: string): string {
-    const used = new Set(this.cards.map((c) => c.label));
-    if (!used.has(base)) return base;
+    const used = this.cards.map((c) => c.label);
+    if (!used.includes(base)) return base;
     let n = 2;
-    while (used.has(`${base} ${n}`)) n++;
+    while (used.includes(`${base} ${n}`)) n++;
     return `${base} ${n}`;
   }
 

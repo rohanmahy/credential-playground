@@ -17,6 +17,7 @@ import type {
   NodeId,
   TamperOp,
   ValidationReport,
+  ViewOptions,
 } from '../engine/types';
 import type { ActionAvailability, ActionId, Crumb, Provenance } from '../model';
 import type { Platform } from '../platform/Platform';
@@ -57,6 +58,16 @@ export interface Tab {
   report: ValidationReport | null;
   /** Bytes live edits are compared against (set when live edit starts). */
   editBase?: Bytes | null;
+  /** Byte strings the user chose to decode as CBOR (ViewOptions.manual_decode). */
+  manualDecode?: NodeId[];
+  /** Decoded views the user turned off (ViewOptions.hide_decoded). */
+  hideDecoded?: NodeId[];
+}
+
+/** The open date/time chit and the node it was opened from. */
+export interface ChitTarget {
+  tabId: string | null;
+  nodeId: NodeId | null;
 }
 
 export type OpenResult =
@@ -73,6 +84,7 @@ export type ActionRequest =
       alg?: string | null;
       header?: HeaderOptions;
       jose?: JoseSerialization;
+      coseTags?: number[] | null;
     }
   | { action: 'disclose'; keep: number[] }
   | {
@@ -106,6 +118,7 @@ export class Workspace {
   activeId = $state<string | null>(null);
   /** Two tabs side by side, or null. */
   split = $state<[string, string] | null>(null);
+  chit = $state<ChitTarget | null>(null);
 
   readonly deps: WorkspaceDeps;
 
@@ -245,10 +258,10 @@ export class Workspace {
   /** Root first, ending with this tab. */
   breadcrumb(tabId: string): Crumb[] {
     const crumbs: Crumb[] = [];
-    const seen = new Set<string>();
+    const seen: string[] = [];
     let tab = this.tab(tabId);
-    while (tab && !seen.has(tab.id)) {
-      seen.add(tab.id);
+    while (tab && !seen.includes(tab.id)) {
+      seen.push(tab.id);
       const p = tab.provenance;
       crumbs.unshift({
         tabId: tab.id,
@@ -288,16 +301,53 @@ export class Workspace {
     else marks.add(id);
   }
 
+  /** The settings' view options plus the tab's own decode choices. */
+  viewFor(tab: Tab): ViewOptions {
+    return {
+      ...this.deps.settings.viewOptions(),
+      manual_decode: [...(tab.manualDecode ?? [])],
+      hide_decoded: [...(tab.hideDecoded ?? [])],
+    };
+  }
+
   /** Re-render with the current settings (view toggles). Keeps view state. */
   async rerender(tabId: string): Promise<void> {
     const tab = this.#get(tabId);
     const doc = await this.deps.engine.render({
       doc: docRef(tab.doc),
       layers: $state.snapshot(tab.doc.layers),
-      view: this.deps.settings.viewOptions(),
+      view: this.viewFor(tab),
     });
     tab.doc = doc;
     if (!tab.liveEdit) tab.editText = doc.main.text;
+  }
+
+  async rerenderAll(): Promise<void> {
+    await Promise.all(this.tabs.map((t) => this.rerender(t.id)));
+  }
+
+  /** "Decode as CBOR" at a byte string the format does not define. */
+  async decodeAsCbor(tabId: string, id: NodeId): Promise<void> {
+    const tab = this.#get(tabId);
+    tab.manualDecode = [...(tab.manualDecode ?? []).filter((n) => n !== id), id];
+    await this.rerender(tabId);
+  }
+
+  /** Turns a node's decoded view off or back on. */
+  async toggleDecodedView(tabId: string, id: NodeId): Promise<void> {
+    const tab = this.#get(tabId);
+    const hidden = tab.hideDecoded ?? [];
+    tab.hideDecoded = hidden.includes(id) ? hidden.filter((n) => n !== id) : [...hidden, id];
+    tab.manualDecode = (tab.manualDecode ?? []).filter((n) => n !== id);
+    await this.rerender(tabId);
+  }
+
+  openChit(tabId: string | null = null, nodeId: NodeId | null = null): void {
+    this.chit = { tabId, nodeId };
+  }
+
+  closeChit(): void {
+    this.chit = null;
   }
 
   setLiveEdit(tabId: string, on: boolean): void {
@@ -318,7 +368,7 @@ export class Workspace {
       kind: $state.snapshot(tab.doc.kind),
       base: tab.editBase ?? tab.doc.bytes,
       text,
-      view: this.deps.settings.viewOptions(),
+      view: this.viewFor(tab),
     });
     if (tab.editText !== text) return result; // a newer edit is under way
     if (result.ok && result.document) {
@@ -371,7 +421,7 @@ export class Workspace {
           sd: { ...defaultSdOptions(), marks: [...tab.sdMarks] },
           cnf: req.holderKeyId ? { type: 'key' as const, key: keys.ref(req.holderKeyId) } : null,
           jose_serialization: req.jose ?? 'compact',
-          cose_tags: null,
+          cose_tags: req.coseTags ? [...req.coseTags] : null,
           randomness: this.#randomness(),
           view,
         };
