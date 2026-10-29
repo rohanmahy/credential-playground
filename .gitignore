@@ -13,3 +13,4 @@ node_modules/
 # wasm-pack without --no-pack copies the workspace license-file here
 # (crates/tokenator-wasm/ARCHITECTURE.md)
 /crates/LICENSE
+/fuzz/logs
