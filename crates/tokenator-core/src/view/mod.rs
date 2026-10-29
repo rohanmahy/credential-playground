@@ -407,6 +407,7 @@ fn sd_view(sd: &SdCwt<'_>, base: usize, prefix: &NodeId, index: &[(usize, usize,
         })
     };
     let mut marks = Vec::new();
+    let mut decoys = Vec::new();
     let mut infos = Vec::with_capacity(sd.disclosures.len());
     for d in &sd.disclosures {
         let i = d.index;
@@ -439,13 +440,22 @@ fn sd_view(sd: &SdCwt<'_>, base: usize, prefix: &NodeId, index: &[(usize, usize,
         };
         let digest = d.digest.clone().map(|dg| hex(&dg)).unwrap_or_default();
         if let (Some(m), Some(sid)) = (matched, &slot) {
+            // A slot filled by a decoy disclosure hides no claim: it is
+            // listed as undisclosed (a decoy) and its mark links nothing.
             marks.push((
                 sid.clone(),
                 SdMark::Slot {
                     digest: hex(&m.slot.digest),
-                    disclosure: Some(u32_of(i)),
+                    disclosure: (!decoy).then_some(u32_of(i)),
                 },
             ));
+            if decoy {
+                decoys.push(SlotInfo {
+                    node_id: sid.clone(),
+                    digest: hex(&m.slot.digest),
+                    array_element: m.slot.kind == SlotKind::ArrayElement,
+                });
+            }
         }
         marks.push((node_id.clone(), SdMark::Disclosure { index: u32_of(i) }));
         infos.push(DisclosureInfo {
@@ -460,7 +470,7 @@ fn sd_view(sd: &SdCwt<'_>, base: usize, prefix: &NodeId, index: &[(usize, usize,
             slot,
         });
     }
-    let mut undisclosed = Vec::new();
+    let mut undisclosed = decoys;
     for s in &report.undisclosed {
         let Some(id) = slot_node(s) else { continue };
         marks.push((

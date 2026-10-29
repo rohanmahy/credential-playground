@@ -7,7 +7,7 @@ use tokenator_crypto::{Alg, DeclaredAlg, KeyType, MlDsaParams, alg_to_jose, algs
 use tokenator_keys as tk;
 use tokenator_keys::{Key, Kid, ThumbprintKind as TkThumb};
 
-use crate::dto::common::{Bytes, HashName, KidValue};
+use crate::dto::common::{Bytes, KidValue};
 use crate::dto::error::{EngineError, ErrorCode};
 use crate::dto::keys::{
     AssignKidRequest, KeyConvertRequest, KeyExport, KeyExportRequest, KeyFormat, KeyGenRequest,
@@ -369,20 +369,9 @@ pub(crate) fn thumbprints(key: &Key) -> (String, Vec<u8>) {
     )
 }
 
-/// The hash name of a thumbprint request (for tests of the mapping).
-#[cfg(test)]
-pub(crate) fn hash_name_of(h: HashName) -> &'static str {
-    hash_alg(h).name()
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn hash_names_follow_tokenator_crypto() {
-        assert_eq!(hash_name_of(HashName::Sha384), "sha-384");
-    }
 
     #[test]
     fn edn_cose_keys_import() {

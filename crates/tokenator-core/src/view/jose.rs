@@ -31,16 +31,6 @@ pub(crate) enum PartWhich {
     KbSignature,
 }
 
-impl PartWhich {
-    /// Whether a change to this part's bytes invalidates a signature.
-    pub(crate) fn signed(self) -> bool {
-        matches!(
-            self,
-            PartWhich::Protected(_) | PartWhich::Payload | PartWhich::KbProtected | PartWhich::KbPayload
-        )
-    }
-}
-
 /// Where a part is in the token and in the main text.
 #[derive(Clone, Debug)]
 pub(crate) struct PartLoc {

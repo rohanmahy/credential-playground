@@ -1,12 +1,10 @@
 //! The Engine facade. Every method is a pure function of the engine's
 //! registry and its arguments.
-#![allow(unused_variables, clippy::unused_self)]
-
 use tokenator_registry::Registry;
 
 use crate::dto::common::Bytes;
 use crate::dto::detect::Kind;
-use crate::{datetime, detect, keyring, reg, view};
+use crate::{actions, datetime, detect, edit, keyring, manipulate, reg, validate, view};
 
 use crate::dto::actions::{
     DecodeEmbeddedRequest, DiscloseRequest, EditDisclosuresRequest, EditRequest, EditResult,
@@ -82,60 +80,60 @@ impl Engine {
     /// unedited regions byte for byte. Never fails; problems are
     /// diagnostics.
     pub fn parse_edit(&self, req: &EditRequest) -> EditResult {
-        unimplemented!()
+        edit::parse_edit(&self.registry, req)
     }
 
     /// Issues a JWT/CWT, or an SD-JWT/SD-CWT when claims are marked.
     pub fn issue(&self, req: &IssueRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        actions::issue(&self.registry, req)
     }
 
     /// Like [`Engine::issue`], but fails with `nothing_to_redact` when no
     /// claim is marked (no `sd.marks`, no tags 58/62).
     pub fn redact(&self, req: &IssueRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        actions::redact(&self.registry, req)
     }
 
     /// Keeps a subset of disclosures (no key binding).
     pub fn disclose(&self, req: &DiscloseRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        actions::disclose(&self.registry, req)
     }
 
     /// Presents with key binding: SD-JWT+KB, or an SD-KBT around an SD-CWT
     /// or a plain CWT.
     pub fn present(&self, req: &PresentRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        actions::present(&self.registry, req)
     }
 
     /// The validation checklist (SPEC §6).
     pub fn validate(&self, req: &ValidateRequest) -> Result<ValidationReport, EngineError> {
-        unimplemented!()
+        validate::validate(&self.registry, req)
     }
 
     /// The conformance lint items alone (the same ones `validate` reports).
     pub fn lint(&self, req: &LintRequest) -> Result<Vec<CheckItem>, EngineError> {
-        unimplemented!()
+        validate::lint(&self.registry, req)
     }
 
     /// Signs the document's current content again.
     pub fn resign(&self, req: &ResignRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        manipulate::resign(&self.registry, req)
     }
 
     /// Breaks the document on purpose, without re-signing.
     pub fn tamper(&self, req: &TamperRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        manipulate::tamper(&self.registry, req)
     }
 
     /// Changes outer layers, COSE tags, CBOR serialization, or JOSE
     /// serialization.
     pub fn reencode(&self, req: &ReencodeRequest) -> Result<Reencoded, EngineError> {
-        unimplemented!()
+        manipulate::reencode(&self.registry, req)
     }
 
     /// Adds, removes, reorders, or forges disclosures and decoys.
     pub fn edit_disclosures(&self, req: &EditDisclosuresRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        manipulate::edit_disclosures(&self.registry, req)
     }
 
     /// Decodes one byte string node as CBOR on request (SPEC §4.1).
@@ -143,7 +141,7 @@ impl Engine {
         &self,
         req: &DecodeEmbeddedRequest,
     ) -> Result<ManualDecode, EngineError> {
-        unimplemented!()
+        manipulate::decode_embedded(&self.registry, req)
     }
 
     /// Imports keys (a set gives several).
