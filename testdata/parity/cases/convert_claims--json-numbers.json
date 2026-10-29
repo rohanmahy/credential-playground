@@ -1,0 +1,27 @@
+{
+  "method": "convert_claims",
+  "source": "constructed claim sets (#44)",
+  "args": [
+    {
+      "json": {
+        "from": "json",
+        "map_claim_labels": false,
+        "text": "{\"a\": 1, \"b\": -1, \"c\": 1.5, \"d\": 18446744073709551616, \"e\": 1e2}",
+        "to": "edn",
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"ok":{"ok":false,"text":null,"document":null,"diagnostics":[{"severity":"error","code":"edn.syntax","message":"UnexpectedChar('z')","node_id":null,"main":{"start":4,"end":5,"line_start":0,"line_end":1},"raw":null}]}}

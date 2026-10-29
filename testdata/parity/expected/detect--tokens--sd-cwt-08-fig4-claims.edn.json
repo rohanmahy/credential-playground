@@ -1,1 +1,1 @@
-{"ok":[{"kind":{"type":"edn_claims"},"confidence":40,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":1044},"breadcrumb":["EDN claim set"]}]}
+{"ok":[{"kind":{"type":"edn_claims"},"confidence":54,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":1044},"breadcrumb":["EDN claim set"]},{"kind":{"type":"cose_key"},"confidence":49,"layers":[{"type":"trim","leading":"","trailing":"\n"},{"type":"edn"}],"payload_range":{"start":0,"end":1044},"breadcrumb":["EDN","COSE_Key"]}]}
