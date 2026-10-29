@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "constructed: garbage around RFC 7515 A.3 / RFC 8392 A.3",
+  "args": [
+    {
+      "bytes": "AP8gbm90IGEgdG9rZW4g_g"
+    }
+  ]
+}

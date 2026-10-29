@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc8392-a7-maced-cwt-float.cbor",
+  "args": [
+    {
+      "bytes": "0YRDoQEEoQRMU3ltbWV0cmljMjU2S6EG-0HVhDZ8IAAASLiBbzTAVCiS"
+    }
+  ]
+}

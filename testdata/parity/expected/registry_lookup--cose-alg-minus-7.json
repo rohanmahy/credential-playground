@@ -1,0 +1,1 @@
+{"ok":[{"kind":"cose_alg","label":-7,"name":"ES256","description":"ECDSA w/ SHA-256","value_type":null,"spec":[{"text":"RFC 9053","url":"https://www.rfc-editor.org/rfc/rfc9053"},{"text":"RFC 9864","url":"https://www.rfc-editor.org/rfc/rfc9864"}],"source":"iana","temporary":false,"jwt_name":null}]}

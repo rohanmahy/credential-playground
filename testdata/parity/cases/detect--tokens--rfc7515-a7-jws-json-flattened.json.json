@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc7515-a7-jws-json-flattened.json",
+  "args": [
+    {
+      "bytes": "ewogInBheWxvYWQiOgogICJleUpwYzNNaU9pSnFiMlVpTEEwS0lDSmxlSEFpT2pFek1EQTRNVGt6T0RBc0RRb2dJbWgwZEhBNkx5OWxlR0Z0Y0d4bExtTnZiUzlwYzE5eWIyOTBJanAwY25WbGZRIiwKICJwcm90ZWN0ZWQiOiJleUpoYkdjaU9pSkZVekkxTmlKOSIsCiAiaGVhZGVyIjoKICB7ImtpZCI6ImU5YmMwOTdhLWNlNTEtNDAzNi05NTYyLWQyYWRlODgyZGIwZCJ9LAogInNpZ25hdHVyZSI6CiAgIkR0RWhVM2xqYkVnOEwzOFZXQWZVQXFPeUtBTTYtWHgtRjRHYXd4YWVwbVhGQ2dmVGpEeHc1ZGp4TGE4SVNsU0FwbVdReGZLVFVKcVBQMy1LZzZOVTFRIgp9Cg"
+    }
+  ]
+}

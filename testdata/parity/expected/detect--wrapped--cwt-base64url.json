@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cwt"},"confidence":90,"layers":[{"type":"base64_url","padded":false,"wrap":null},{"type":"cbor_tag","tag":18}],"payload_range":{"start":0,"end":234},"breadcrumb":["base64url","COSE_Sign1 tag 18","CWT"]}]}

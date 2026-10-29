@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"sd_jwt","kb":true},"confidence":95,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":2588},"breadcrumb":["SD-JWT+KB"]}]}

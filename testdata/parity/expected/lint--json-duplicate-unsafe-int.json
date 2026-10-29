@@ -1,0 +1,1 @@
+{"ok":[{"id":"lint.json_number","category":"lint","status":"warn","message":"integer beyond 2^53 - 1","node_ids":["~i1"],"raw":null,"detail":null},{"id":"lint.duplicate_key","category":"lint","status":"warn","message":"duplicate member \"a\"","node_ids":["~i1"],"raw":null,"detail":null}]}

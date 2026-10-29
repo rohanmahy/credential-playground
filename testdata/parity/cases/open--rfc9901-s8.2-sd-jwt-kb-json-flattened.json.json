@@ -1,0 +1,48 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-s8.2-sd-jwt-kb-json-flattened.json",
+  "args": [
+    {
+      "bytes": "ewogICJoZWFkZXIiOiB7CiAgICAiZGlzY2xvc3VyZXMiOiBbCiAgICAgICJXeUkyU1dvM2RFMHRZVFZwVmxCSFltOVROWFJ0ZGxaQklpd2dJbVpoYldsc2VWOXVZVzFsSWl3Z0lrUnZaU0pkIiwKICAgICAgIld5SmxiSFZXTlU5bk0yZFRUa2xKT0VWWmJuTjRRVjlCSWl3Z0ltZHBkbVZ1WDI1aGJXVWlMQ0FpU205b2JpSmQiCiAgICBdLAogICAgImtiX2p3dCI6ICJleUpoYkdjaU9pQWlSVk15TlRZaUxDQWlkSGx3SWpvZ0ltdGlLMnAzZENKOS5leUp1YjI1alpTSTZJQ0l4TWpNME5UWTNPRGt3SWl3Z0ltRjFaQ0k2SUNKb2RIUndjem92TDNabGNtbG1hV1Z5TG1WNFlXMXdiR1V1YjNKbklpd2dJbWxoZENJNklERTNORGcxTXpjeU5EUXNJQ0p6WkY5b1lYTm9Jam9nSWxacWRGQnpaMXB3VVZSU2VFdEtka1J3VTBvdGJsaHNXa3RGT1ZvNVRHZEVORVo1UTNkM2IwNU5VbmNpZlEuR3JEdkoyamhZTm1VdnFkd1ZFSXJ4ZVRGRXVJNXFLU003STZQOTVKbUE2V2tvLUZCQjV2UEdRbjB3dm1kZ2pMQ0UyaURSaDFyODJ6Y2hqbUFCUTNWOHciCiAgfSwKICAicGF5bG9hZCI6ICJleUpmYzJRaU9pQmJJalJJUW00MllVbFpNMWQwZFVkSFYxUjRMWEZWYWpaalpHczJWMEp3V25sbmJIUmtSbUYyVUdFM1RGa2lMQ0FpT0hOdE1WRkRaakF5TVhCT2JraEJRMGsxYzFBMGJUUkxXbWQ1VGs5UFFWbGpWR281U0U1aFF6RjNXU0lzSUNKalowWmthSEZRYnpnemVGbE9iRXBtWVdOaFEyRmhOM1ZRT1ZKRFVqVXdWa1UxVWpSTVFWRTVhWEZWSWl3Z0ltcE5RMWhXZWkwdE9XSTRlRE0zV1dOdlJHWllVV2x1ZW5jeGQxcGpZMk5tUmxKQ1EwWkhjV1JITW04aVhTd2dJbWx6Y3lJNklDSm9kSFJ3Y3pvdkwybHpjM1ZsY2k1bGVHRnRjR3hsTG1OdmJTSXNJQ0pwWVhRaU9pQXhOamd6TURBd01EQXdMQ0FpWlhod0lqb2dNVGc0TXpBd01EQXdNQ3dnSWw5elpGOWhiR2NpT2lBaWMyaGhMVEkxTmlJc0lDSmpibVlpT2lCN0ltcDNheUk2SUhzaWEzUjVJam9nSWtWRElpd2dJbU55ZGlJNklDSlFMVEkxTmlJc0lDSjRJam9nSWxSRFFVVlNNVGxhZG5VelQwaEdOR28wVnpSMlpsTldiMGhKVURGSlRHbHNSR3h6TjNaRFpVZGxiV01pTENBaWVTSTZJQ0phZUdwcFYxZGlXazFSUjBoV1YwdFdVVFJvWWxOSmFYSnpWbVoxWldORFJUWjBOR3BVT1VZeVNGcFJJbjE5ZlEiLAogICJwcm90ZWN0ZWQiOgogICAgImV5SmhiR2NpT2lBaVJWTXlOVFlpTENBaWRIbHdJam9nSW1WNFlXMXdiR1VyYzJRdGFuZDBJbjAiLAogICJzaWduYXR1cmUiOiAiM29PdHZQeFUzUWREV1VtZkdleFZCNXJXeU9OMmYxYXRnNXJMODI1YnZ2RDFnN3l3aktES3kyVUhxSG9IMlFTNEZBOTlKYkc1cW5scUZhR1hGQ2hmalEiCn0K"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "SD-JWT+KB JSON"
+        ],
+        "confidence": 93,
+        "kind": {
+          "general": false,
+          "kb": true,
+          "type": "sd_jwt_json"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 1325,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

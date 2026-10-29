@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/sd-cwt-08-decoy-sd-cwt.cbor",
+  "args": [
+    {
+      "bytes": "0oRYLqQBOCIEWCBodHRwczovL2lzc3Vlci5leGFtcGxlL2Nvc2Uta2V5MxAZASUYqi-hEYRVglAr_quTFYKf4MgqFbLFekeyYmZyUoFQwQabwFbiNNZPWLr_int3a1aDULA5J3LK79CBeCGPhvPis6n1GQH0UoFQicQcJw3QbNNRfTccnd8rq1kBI6gBdmh0dHBzOi8vaXNzdWVyLmV4YW1wbGUCdmh0dHBzOi8vaG9sZGVyLmV4YW1wbGUEGmbWdKgFGmbVIfwGGmbVIygIoQGkAQIgASFYIIVU6yddzW-9HHrGQaoskNkgIv0NMCS1rxjHzGGtUnotIlggTceuLGd-ltDMgll2Vc6S1VA_VCk9h4ddHnnOR3AZQ0MYYoLYPFgg3F91O2as2J14SBA5k0qGzBT5lZxkxAN96j-HK5qEU_HYPFggP4CWOhJGtBLWVn8qXKRG_RmgHdjPwpG-1p6MV1xav7j4O4JYIL0P2IEnswcf9UM-71ml48Xxg0HyXFvRGcQf00gCqXl7WCDu7JcIl6W5EI8k9EdRuu2rtTofPSQatrYMnzCfEU7PiFhgqW2S80DjerVlhsdPI3pQ778Xb3MmqIpUKQhKKDuCpRQndTgF_r2YmHwT-KQVhv7a31B-mNbSavbwnrAdD0pWRP3QXnusCDM4x6h3CmiJbfPC955UUP0Z9du9GGiJjphL"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "COSE_Sign1 tag 18",
+          "SD-CWT"
+        ],
+        "confidence": 94,
+        "kind": {
+          "type": "sd_cwt"
+        },
+        "layers": [
+          {
+            "tag": 18,
+            "type": "cbor_tag"
+          }
+        ],
+        "payload_range": {
+          "end": 528,
+          "start": 1
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

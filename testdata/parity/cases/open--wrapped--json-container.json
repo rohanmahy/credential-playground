@@ -1,0 +1,48 @@
+{
+  "method": "open",
+  "source": "constructed: json-container",
+  "args": [
+    {
+      "bytes": "eyJjcmVkZW50aWFsIjogImV5SmhiR2NpT2lKRlV6STFOaUo5LmV5SnBjM01pT2lKcWIyVWlMQTBLSUNKbGVIQWlPakV6TURBNE1Ua3pPREFzRFFvZ0ltaDBkSEE2THk5bGVHRnRjR3hsTG1OdmJTOXBjMTl5YjI5MElqcDBjblZsZlEuRHRFaFUzbGpiRWc4TDM4VldBZlVBcU95S0FNNi1YeC1GNEdhd3hhZXBtWEZDZ2ZUakR4dzVkanhMYThJU2xTQXBtV1F4ZktUVUpxUFAzLUtnNk5VMVEiLCAib3RoZXIiOiAxfQ"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON field /credential",
+          "JWT"
+        ],
+        "confidence": 90,
+        "kind": {
+          "type": "jwt"
+        },
+        "layers": [
+          {
+            "path": [
+              "credential"
+            ],
+            "type": "json_field"
+          }
+        ],
+        "payload_range": {
+          "end": 218,
+          "start": 16
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

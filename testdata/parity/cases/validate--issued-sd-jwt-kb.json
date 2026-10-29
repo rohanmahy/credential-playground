@@ -1,0 +1,36 @@
+{
+  "method": "validate",
+  "source": "presented above",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "ZXlKaGJHY2lPaUpGVXpJMU5pSjkuZXlKZmMyUWlPbHNpTTNwQlp6UlJjMkpuVjFKc1QzUnpaRlp2UldoWFFucFNOelIxVFRCSlFUUlJZWE5WVm5VdGJVTTRNQ0lzSWt0Vk1saE9ibGcxZWxCTmRtUmlWakZNTVROTFZqVnBWMVJ0V0ZOd2QyWllUMUJGVnpjNWVYTlhhMFVpTENKTVMweG5SblJOVEhnMVVuTXdXRWN3VEhSWGFrdzBWMmRIVVdkSVdFNTNka3BmZEZSTFVEbG1XVlJySWl3aWVUVnBhV2h2YlhCcVRtNUpRVFJQZGxRNWJWTTBja3R2V1hsaWJFRTBZamREYlVKaVpIbHZZbUZMTUNKZExDSnpkV0lpT2lKMWMyVnlYelF5SWl3aVoybDJaVzVmYm1GdFpTSTZJa3B2YUc0aUxDSm1ZVzFwYkhsZmJtRnRaU0k2SWtSdlpTSXNJbkJvYjI1bFgyNTFiV0psY2lJNklpc3hMVEl3TWkwMU5UVXRNREV3TVNJc0luQm9iMjVsWDI1MWJXSmxjbDkyWlhKcFptbGxaQ0k2ZEhKMVpTd2lZbWx5ZEdoa1lYUmxJam9pTVRrME1DMHdNUzB3TVNJc0luVndaR0YwWldSZllYUWlPakUxTnpBd01EQXdNREFzSW01aGRHbHZibUZzYVhScFpYTWlPbHQ3SWk0dUxpSTZJbVpIZW1Ga2VXTXplSFJaTUhVdFZGTkxaRzVzZVdSa01FdE1OWE0zU0RoTE4xSnZMV2xzZUVneVRGVWlmU3dpUkVVaVhTd2lZMjVtSWpwN0ltcDNheUk2ZXlKcmRIa2lPaUpQUzFBaUxDSmpjbllpT2lKRlpESTFOVEU1SWl3aWVDSTZJbWRVYkRORWNXZzVSakU1VjI4eFVtMTNNSGd0ZWsxMVRtbHdSekEzYW1WcFdHWlpVRmMwWDBwek5WRWlmWDE5LmlWeFdJYVltMXR5Y3ZiV0RkZTZYaDE3MnZRbzZxdWdIOGFwVjJDRG1JVzNsUHBId2piNG5fZkhsV3VnM2h1M0hIVlZvT1FjTkVuakVoNTU5QnhpaEJRfld5SkNiMU16TTNFNWNqUXdaVkpVVnpZMVltNVpVR1ZCSWl3aVpXMWhhV3dpTENKcWIyaHVaRzlsUUdWNFlXMXdiR1V1WTI5dElsMH5XeUpoWlhaamNEUktkRk14Y3psdk9YWkRTVFJxZGpOUklpd2lWVk1pWFF-ZXlKaGJHY2lPaUpGWkRJMU5URTVJaXdpZEhsd0lqb2lhMklyYW5kMEluMC5leUp1YjI1alpTSTZJbTR0TkRJaUxDSmhkV1FpT2lKb2RIUndjem92TDNabGNtbG1hV1Z5TG1WNFlXMXdiR1VpTENKcFlYUWlPakU0TURBd01EQXdNREFzSW5Oa1gyaGhjMmdpT2lKdWVFRlFaVTB4Y0hCVWFXSm5iRmc1TFZweGREZDZRMFl6V1ZWV2EyUmZaWEZaZDI1VlZtNVhUelYzSW4wLkFMdzNobDVfVmRtY0JCWlc4YkdfbE9BbVU3MTcwVlMxRkRBYmFPMnoxVmVXa1RtOE1pZllXUmhsVlMxc3g3NXdvQ0Rac1hYbXlVUG9sWHp2V1RvLUFB",
+          "kind": {
+            "kb": true,
+            "type": "sd_jwt"
+          }
+        },
+        "expected_aud": "https://verifier.example",
+        "expected_nonce": {
+          "type": "text",
+          "value": "n-42"
+        },
+        "keys": [
+          {
+            "bytes": "eyJrdHkiOiJFQyIsImNydiI6IlAtMjU2IiwieCI6IlpaQmFPc1pRNkZ0ZkR5SzN5eXRlOWFtMy1HaDJhR3FrYjNVM1NKVnMzamsiLCJ5IjoiWV8xTGZqeDJ3VkhWX0Z1SVRNeHY4T0FyNUszVml4SDJhQ2FQMmtnNk9RYyJ9",
+            "format": {
+              "type": "jwk"
+            },
+            "index": 0,
+            "label": null,
+            "role": null
+          }
+        ],
+        "max_kb_age": null,
+        "now": 1800000005,
+        "skew": 60
+      }
+    }
+  ]
+}

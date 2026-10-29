@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc9901-s6.3-payload.json",
+  "args": [
+    {
+      "bytes": "ewogICJfc2QiOiBbCiAgICAiSHZyS1g2ZlBWMHY5S195Q1ZGQmlMRkhzTWF4Y0RfMTE0RW02VlQ4eDFsZyIKICBdLAogICJpc3MiOiAiaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS5jb20iLAogICJpYXQiOiAxNjgzMDAwMDAwLAogICJleHAiOiAxODgzMDAwMDAwLAogICJzdWIiOiAiNmM1YzBhNDktYjU4OS00MzFkLWJhZTctMjE5MTIyYTllYzJjIiwKICAiX3NkX2FsZyI6ICJzaGEtMjU2Igp9Cg"
+    }
+  ]
+}

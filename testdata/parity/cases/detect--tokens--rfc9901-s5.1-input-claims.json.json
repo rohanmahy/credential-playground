@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc9901-s5.1-input-claims.json",
+  "args": [
+    {
+      "bytes": "ewogICJzdWIiOiAidXNlcl80MiIsCiAgImdpdmVuX25hbWUiOiAiSm9obiIsCiAgImZhbWlseV9uYW1lIjogIkRvZSIsCiAgImVtYWlsIjogImpvaG5kb2VAZXhhbXBsZS5jb20iLAogICJwaG9uZV9udW1iZXIiOiAiKzEtMjAyLTU1NS0wMTAxIiwKICAicGhvbmVfbnVtYmVyX3ZlcmlmaWVkIjogdHJ1ZSwKICAiYWRkcmVzcyI6IHsKICAgICJzdHJlZXRfYWRkcmVzcyI6ICIxMjMgTWFpbiBTdCIsCiAgICAibG9jYWxpdHkiOiAiQW55dG93biIsCiAgICAicmVnaW9uIjogIkFueXN0YXRlIiwKICAgICJjb3VudHJ5IjogIlVTIgogIH0sCiAgImJpcnRoZGF0ZSI6ICIxOTQwLTAxLTAxIiwKICAidXBkYXRlZF9hdCI6IDE1NzAwMDAwMDAsCiAgIm5hdGlvbmFsaXRpZXMiOiBbCiAgICAiVVMiLAogICAgIkRFIgogIF0KfQo"
+    }
+  ]
+}

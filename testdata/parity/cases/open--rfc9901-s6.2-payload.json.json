@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-s6.2-payload.json",
+  "args": [
+    {
+      "bytes": "ewogICJpc3MiOiAiaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS5jb20iLAogICJpYXQiOiAxNjgzMDAwMDAwLAogICJleHAiOiAxODgzMDAwMDAwLAogICJzdWIiOiAiNmM1YzBhNDktYjU4OS00MzFkLWJhZTctMjE5MTIyYTllYzJjIiwKICAiYWRkcmVzcyI6IHsKICAgICJfc2QiOiBbCiAgICAgICI2dmg5YnEtelM0R0tNXzdHcGdnVmJZenp1Nm9PR1hybU5WR1BIUDc1VWQwIiwKICAgICAgIjlnalZ1WHRkRlJPQ2dScnROY0dVWG1GNjVyZGV6aV82RXJfajc2a21ZeU0iLAogICAgICAiS1VSRFBoNFpDMTktM3Rpei1EZjM5VjhlaWR5MW9WM2EzSDFEYTJOMGc4OCIsCiAgICAgICJXTjlyOWRDQko4SFRDc1MyaktBU3hUakV5VzVtNXg2NV9aXzJybzJqZlhNIgogICAgXQogIH0sCiAgIl9zZF9hbGciOiAic2hhLTI1NiIKfQo"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON claim set"
+        ],
+        "confidence": 60,
+        "kind": {
+          "type": "json_claims"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 406,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

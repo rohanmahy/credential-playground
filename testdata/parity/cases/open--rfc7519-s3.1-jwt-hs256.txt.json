@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc7519-s3.1-jwt-hs256.txt",
+  "args": [
+    {
+      "bytes": "ZXlKMGVYQWlPaUpLVjFRaUxBMEtJQ0poYkdjaU9pSklVekkxTmlKOS5leUpwYzNNaU9pSnFiMlVpTEEwS0lDSmxlSEFpT2pFek1EQTRNVGt6T0RBc0RRb2dJbWgwZEhBNkx5OWxlR0Z0Y0d4bExtTnZiUzlwYzE5eWIyOTBJanAwY25WbGZRLmRCamZ0SmVaNENWUC1tQjkySzI3dWhiVUpVMXAxcl93VzFnRldGT0VqWGsK"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JWT"
+        ],
+        "confidence": 90,
+        "kind": {
+          "type": "jwt"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 179,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

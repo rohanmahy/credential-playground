@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cbor_claims"},"confidence":55,"layers":[],"payload_range":{"start":0,"end":80},"breadcrumb":["CBOR claim set"]},{"kind":{"type":"cose_key"},"confidence":50,"layers":[],"payload_range":{"start":0,"end":80},"breadcrumb":["COSE_Key"]}]}

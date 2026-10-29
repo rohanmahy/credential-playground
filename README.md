@@ -4,6 +4,28 @@ A local-only playground for issuing, presenting, validating, viewing, and
 manipulating JWT, SD-JWT, CWT, and SD-CWT credentials and their keys, for the
 web and macOS (Tauri). See [SPEC.md](SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE.md).
 
+## Building and testing
+
+Needs Rust (with the `wasm32-unknown-unknown` target), wasm-pack 0.15,
+Node 22+, and pnpm.
+
+```sh
+cargo test --workspace            # Rust unit tests, vectors, native parity
+cd app && pnpm install
+pnpm build:wasm                   # crates/tokenator-wasm → crates/tokenator-wasm/pkg (gitignored)
+pnpm dev                          # build:wasm, then the Vite dev server
+pnpm build                        # build:wasm, then the static site in app/dist
+pnpm test                         # UI unit tests (no Rust build needed)
+pnpm test:wasm                    # WasmEngine, the binary, and WASM ↔ native parity
+pnpm test:e2e                     # Playwright against the production build
+                                  # (first time: pnpm exec playwright install chromium)
+pnpm parity:regen                 # rewrite testdata/parity goldens after a deliberate core change
+```
+
+The web build uses the `wasm-release` Cargo profile (size-optimized).
+See `crates/tokenator-wasm/TEST-PLAN.md` for the parity corpus and the
+WASM stack and size budgets.
+
 ## Progress
 
 Phase 1: foundations

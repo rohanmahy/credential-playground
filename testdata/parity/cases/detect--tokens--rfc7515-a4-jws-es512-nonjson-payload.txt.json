@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc7515-a4-jws-es512-nonjson-payload.txt",
+  "args": [
+    {
+      "bytes": "ZXlKaGJHY2lPaUpGVXpVeE1pSjkuVUdGNWJHOWhaQS5BZHdNZ2Vlcnd0SG9oLWwxOTJsNjBocDl3QUhaRlZKYkxmRF9VeE1pNzBjd25aT1lhUkkxYktQV1JPYy1tWlpxd3FUMlNJLUtHREtCMzRYTzBhd183WGR0QUc4R2FTd0ZLZENBUFpnb1hEMllCSlpDUEVYM3hLcFJ3Y2RPTzhLcEVId0pqeXFPZ3pETzdpS3ZVOHZjbndOcm14WWJTVzlFUkJYdWtPWG9sTHplT19Kbgo"
+    }
+  ]
+}

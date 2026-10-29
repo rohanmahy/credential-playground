@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "keys/rfc7517-a3-symmetric.jwks.json",
+  "args": [
+    {
+      "bytes": "eyJrZXlzIjoKICBbCiAgICB7Imt0eSI6Im9jdCIsCiAgICAgImFsZyI6IkExMjhLVyIsCiAgICAgImsiOiJHYXdnZ3VGeUdyV0thdjdBWDRWS1VnIn0sCiAgICB7Imt0eSI6Im9jdCIsCiAgICAgImsiOiJBeU0xU3lzUHBieURmZ1psZDN1bWoxcXpLT2J3Vk1rb3FRLUVzdEpRTHJfVC0xcVMwZ1pINzVhS3RNTjNZajBpUFM0aGNnVXVUd2pBelpyMVo5Q0FvdyIsCiAgICAgImtpZCI6IkhNQUMga2V5IHVzZWQgaW4gSldTIHNwZWMgQXBwZW5kaXggQS4xIGV4YW1wbGUifQogIF0KfQo"
+    }
+  ]
+}

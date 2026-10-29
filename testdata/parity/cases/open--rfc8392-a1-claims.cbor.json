@@ -1,0 +1,40 @@
+{
+  "method": "open",
+  "source": "tokens/rfc8392-a1-claims.cbor",
+  "args": [
+    {
+      "bytes": "pwF1Y29hcDovL2FzLmV4YW1wbGUuY29tAmVlcmlrdwN4GGNvYXA6Ly9saWdodC5leGFtcGxlLmNvbQQaVhKusAUaVhDZ8AYaVhDZ8AdCC3E"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "CBOR claim set"
+        ],
+        "confidence": 55,
+        "kind": {
+          "type": "cbor_claims"
+        },
+        "layers": [],
+        "payload_range": {
+          "end": 80,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

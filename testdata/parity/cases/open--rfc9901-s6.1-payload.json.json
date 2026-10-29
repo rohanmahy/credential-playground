@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-s6.1-payload.json",
+  "args": [
+    {
+      "bytes": "ewogICJfc2QiOiBbCiAgICAiZk9CVVNRdm80NnlRTy13UndYQmNHcXZuYktJdWVJU0VMOTYxX1NqZDRkbyIKICBdLAogICJpc3MiOiAiaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS5jb20iLAogICJpYXQiOiAxNjgzMDAwMDAwLAogICJleHAiOiAxODgzMDAwMDAwLAogICJzdWIiOiAiNmM1YzBhNDktYjU4OS00MzFkLWJhZTctMjE5MTIyYTllYzJjIiwKICAiX3NkX2FsZyI6ICJzaGEtMjU2Igp9Cg"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON claim set"
+        ],
+        "confidence": 60,
+        "kind": {
+          "type": "json_claims"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 222,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

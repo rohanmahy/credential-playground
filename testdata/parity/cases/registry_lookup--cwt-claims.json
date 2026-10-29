@@ -1,0 +1,14 @@
+{
+  "method": "registry_lookup",
+  "source": "bundled registry",
+  "args": [
+    {
+      "json": {
+        "kind": "cwt_claim",
+        "label": null,
+        "name": null,
+        "prefix": null
+      }
+    }
+  ]
+}

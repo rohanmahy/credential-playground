@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"jwt"},"confidence":90,"layers":[{"type":"bearer_prefix","prefix":"Bearer "}],"payload_range":{"start":7,"end":209},"breadcrumb":["Bearer","JWT"]}]}

@@ -1,0 +1,34 @@
+{
+  "method": "reencode",
+  "source": "opened fixture",
+  "args": [
+    {
+      "json": {
+        "cbor": "preferred_plus",
+        "cose_tags": null,
+        "deep": false,
+        "doc": {
+          "bytes": "0oRFoRgBOAahBFJBc3ltbWV0cmljRUNEU0EyNTZYUKcBdWNvYXA6Ly9hcy5leGFtcGxlLmNvbQJlZXJpa3cDeBhjb2FwOi8vbGlnaHQuZXhhbXBsZS5jb20EGlYSrrAFGlYQ2fAGGlYQ2fAHQgtxWEBUJ8H_KNI_utHynEx8alVeYB1vop-Rebw9dDi6yspazQjI1NT5YTFoDEKaAfhZUezudDpSubY2MsVyCRIOHJ4w",
+          "kind": {
+            "type": "cwt"
+          }
+        },
+        "jose": null,
+        "layers": [],
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

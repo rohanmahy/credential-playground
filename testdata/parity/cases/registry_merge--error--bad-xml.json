@@ -1,0 +1,13 @@
+{
+  "method": "registry_merge",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "base_snapshot": null,
+        "which": "jose",
+        "xml": "PG5vdC1hLXJlZ2lzdHJ5Lz4"
+      }
+    }
+  ]
+}

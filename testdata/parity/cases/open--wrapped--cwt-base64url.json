@@ -1,0 +1,52 @@
+{
+  "method": "open",
+  "source": "constructed: cwt-base64url",
+  "args": [
+    {
+      "bytes": "MG9SRG9RRW1vUVJTUVhONWJXMWxkSEpwWTBWRFJGTkJNalUyV0ZDbkFYVmpiMkZ3T2k4dllYTXVaWGhoYlhCc1pTNWpiMjBDWldWeWFXdDNBM2dZWTI5aGNEb3ZMMnhwWjJoMExtVjRZVzF3YkdVdVkyOXRCQnBXRXE2d0JScFdFTm53QmhwV0VObndCMElMY1ZoQVZDZkJfeWpTUDdyUjhweE1mR3BWWG1BZGI2S2ZrWG04UFhRNHVzcktXczBJeU5UVS1XRXhhQXhDbWdINFdWSHM3blE2VXJtMk5qTEZjZ2tTRGh5ZU1B"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "base64url",
+          "COSE_Sign1 tag 18",
+          "CWT"
+        ],
+        "confidence": 90,
+        "kind": {
+          "type": "cwt"
+        },
+        "layers": [
+          {
+            "padded": false,
+            "type": "base64_url",
+            "wrap": null
+          },
+          {
+            "tag": 18,
+            "type": "cbor_tag"
+          }
+        ],
+        "payload_range": {
+          "end": 234,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

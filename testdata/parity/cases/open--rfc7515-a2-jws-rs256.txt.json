@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc7515-a2-jws-rs256.txt",
+  "args": [
+    {
+      "bytes": "ZXlKaGJHY2lPaUpTVXpJMU5pSjkuZXlKcGMzTWlPaUpxYjJVaUxBMEtJQ0psZUhBaU9qRXpNREE0TVRrek9EQXNEUW9nSW1oMGRIQTZMeTlsZUdGdGNHeGxMbU52YlM5cGMxOXliMjkwSWpwMGNuVmxmUS5jQzRoaVVQb2o5RWV0ZGd0djNoRjgwRUdyaHVCX19kekVSYXQwWEY5ZzJWdFFncjlQSmJ1M1hPaVpqNVJabWg3QUF1SEltNEJoLTBRY19sRjVZS3RfTzhXMkZwNWp1akdiZHM5dUpkYkY5Q1VBcjd0MWRuWmNBY1FqYktCWU5YNEJBeW5SRmRpdUItLWZfblpMZ3JuYnlUeVd6Tzc1dlJLNWg2eEJBckxJQVJOUHZrU2p0UUJNSGxiMUwwN1FlN0swR2FyWlJtQl9lU045MzgzTGNPTG42X2RPLS14aTEyanpEd3VzQy1lT2tIV0VzcXRGWkVTYzZCZkk3bm9PUHF2aEoxcGhDbnZXaDZJZVlJMnc5UU9ZRVVpcFVUSThucDZMYmdHWTlGczk4cnFWdDVBWExJaFdrV3l3bFZtdFZyQnAwaWdjTl9Jb3lwR2xVUFFHZTc3UncK"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JWT"
+        ],
+        "confidence": 90,
+        "kind": {
+          "type": "jwt"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 458,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

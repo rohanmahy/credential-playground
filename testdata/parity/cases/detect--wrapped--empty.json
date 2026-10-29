@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "constructed: empty around RFC 7515 A.3 / RFC 8392 A.3",
+  "args": [
+    {
+      "bytes": ""
+    }
+  ]
+}

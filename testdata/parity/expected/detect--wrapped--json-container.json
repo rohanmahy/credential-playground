@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"jwt"},"confidence":90,"layers":[{"type":"json_field","path":["credential"]}],"payload_range":{"start":16,"end":218},"breadcrumb":["JSON field /credential","JWT"]},{"kind":{"type":"json_claims"},"confidence":60,"layers":[],"payload_range":{"start":0,"end":232},"breadcrumb":["JSON claim set"]}]}

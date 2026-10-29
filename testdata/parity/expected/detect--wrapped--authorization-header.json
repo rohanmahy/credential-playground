@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"jwt"},"confidence":90,"layers":[{"type":"authorization_header","prefix":"Authorization: "},{"type":"bearer_prefix","prefix":"Bearer "}],"payload_range":{"start":22,"end":224},"breadcrumb":["Authorization header","Bearer","JWT"]}]}

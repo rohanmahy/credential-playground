@@ -1,0 +1,12 @@
+{
+  "method": "key_import",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "bytes": "ezE6IDEsIC0xOiA2LCAtMjogaCdkNzVhOTgwMTgyYjEwYWI3ZDU0YmZlZDNjOTY0MDczYTBlZTE3MmYzZGFhNjIzMjVhZjAyMWE2OGY3MDc1MTFhJ30",
+        "format": null
+      }
+    }
+  ]
+}

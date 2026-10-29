@@ -1,0 +1,1 @@
+{"err":{"code":"registry","message":"malformed jose registry XML: root element is <not-a-registry>, not <registry>","node_id":null}}

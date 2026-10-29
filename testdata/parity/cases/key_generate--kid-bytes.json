@@ -1,0 +1,22 @@
+{
+  "method": "key_generate",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "kid": {
+          "type": "bytes",
+          "value": "AQID"
+        },
+        "role": null,
+        "seed": {
+          "bytes": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+          "type": "seed"
+        },
+        "spec": {
+          "type": "p384"
+        }
+      }
+    }
+  ]
+}

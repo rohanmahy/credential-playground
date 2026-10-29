@@ -1,0 +1,15 @@
+{
+  "method": "key_public",
+  "source": "key fixture",
+  "args": [
+    {
+      "json": {
+        "bytes": "bm9wZQ",
+        "format": null,
+        "index": 0,
+        "label": null,
+        "role": null
+      }
+    }
+  ]
+}

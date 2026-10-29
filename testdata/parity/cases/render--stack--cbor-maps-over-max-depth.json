@@ -1,0 +1,31 @@
+{
+  "method": "render",
+  "source": "constructed: cbor-maps-over-max-depth",
+  "stack": true,
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "oQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAoQChAKEAAA",
+          "kind": {
+            "type": "cbor_claims"
+          }
+        },
+        "layers": [],
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

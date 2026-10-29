@@ -1,0 +1,12 @@
+{
+  "method": "key_import",
+  "source": "keys/rfc8392-a2.3-ec-p256.cosekey.cbor",
+  "args": [
+    {
+      "json": {
+        "bytes": "pyNYIGwTgnZa7FNY8RdzPSgcHHvcOYhNBKRaHmxnyFi8IGwZIlggYPfxp4DYp4O_t6LdayeW6BKNu87509Fo25Uplxo257khWCAUMynM54aOQWknWZz2WjTzzi_9pVp-ymntiRmjlNQvDyABAQICUkFzeW1tZXRyaWNFQ0RTQTI1NgMm",
+        "format": null
+      }
+    }
+  ]
+}

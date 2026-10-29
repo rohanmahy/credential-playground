@@ -1,0 +1,58 @@
+{
+  "method": "open",
+  "source": "tokens/rfc8392-a3-signed-cwt.hex",
+  "args": [
+    {
+      "bytes": "ZDI4NDQzYTEwMTI2YTEwNDUyNDE3Mzc5NmQ2ZDY1NzQ3MjY5NjM0NTQzNDQ1MzQxMzIzNTM2NTg1MGE3MDE3NTYKMzZmNjE3MDNhMmYyZjYxNzMyZTY1Nzg2MTZkNzA2YzY1MmU2MzZmNmQwMjY1NjU3MjY5NmI3NzAzNzgxODYzNmYKNjE3MDNhMmYyZjZjNjk2NzY4NzQyZTY1Nzg2MTZkNzA2YzY1MmU2MzZmNmQwNDFhNTYxMmFlYjAwNTFhNTYxMGQKOWYwMDYxYTU2MTBkOWYwMDc0MjBiNzE1ODQwNTQyN2MxZmYyOGQyM2ZiYWQxZjI5YzRjN2M2YTU1NWU2MDFkNmYKYTI5ZjkxNzliYzNkNzQzOGJhY2FjYTVhY2QwOGM4ZDRkNGY5NjEzMTY4MGM0MjlhMDFmODU5NTFlY2VlNzQzYTUKMmI5YjYzNjMyYzU3MjA5MTIwZTFjOWUzMAo"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "hex",
+          "COSE_Sign1 tag 18",
+          "CWT"
+        ],
+        "confidence": 91,
+        "kind": {
+          "type": "cwt"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          },
+          {
+            "separator": null,
+            "type": "hex",
+            "upper": false,
+            "wrap": null
+          },
+          {
+            "tag": 18,
+            "type": "cbor_tag"
+          }
+        ],
+        "payload_range": {
+          "end": 355,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"jwt"},"confidence":89,"layers":[{"type":"url_encoded"}],"payload_range":{"start":0,"end":206},"breadcrumb":["URL-encoded","JWT"]}]}

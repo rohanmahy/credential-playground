@@ -1,0 +1,17 @@
+{
+  "method": "lint",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "eyJhIjoxLCJhIjo5MDA3MTk5MjU0NzQwOTkzfQ",
+          "kind": {
+            "type": "json_claims"
+          }
+        },
+        "keys": []
+      }
+    }
+  ]
+}

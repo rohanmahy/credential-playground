@@ -1,0 +1,17 @@
+{
+  "method": "lint",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "vwEC_w",
+          "kind": {
+            "type": "cbor_claims"
+          }
+        },
+        "keys": []
+      }
+    }
+  ]
+}

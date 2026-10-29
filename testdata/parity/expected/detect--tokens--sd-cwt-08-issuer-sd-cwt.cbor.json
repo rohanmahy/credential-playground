@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"sd_cwt"},"confidence":94,"layers":[{"type":"cbor_tag","tag":18}],"payload_range":{"start":1,"end":658},"breadcrumb":["COSE_Sign1 tag 18","SD-CWT"]}]}

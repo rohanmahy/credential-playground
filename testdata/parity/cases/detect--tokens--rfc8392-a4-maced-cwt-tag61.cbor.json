@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc8392-a4-maced-cwt-tag61.cbor",
+  "args": [
+    {
+      "bytes": "2D3RhEOhAQShBExTeW1tZXRyaWMyNTZYUKcBdWNvYXA6Ly9hcy5leGFtcGxlLmNvbQJlZXJpa3cDeBhjb2FwOi8vbGlnaHQuZXhhbXBsZS5jb20EGlYSrrAFGlYQ2fAGGlYQ2fAHQgtxSAkxAe9teJIA"
+    }
+  ]
+}

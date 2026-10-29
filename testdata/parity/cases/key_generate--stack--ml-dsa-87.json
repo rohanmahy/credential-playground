@@ -1,0 +1,20 @@
+{
+  "method": "key_generate",
+  "source": "seeded ML-DSA-87 key",
+  "stack": true,
+  "args": [
+    {
+      "json": {
+        "kid": null,
+        "role": null,
+        "seed": {
+          "bytes": "DQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0NDQ0",
+          "type": "seed"
+        },
+        "spec": {
+          "type": "ml_dsa87"
+        }
+      }
+    }
+  ]
+}

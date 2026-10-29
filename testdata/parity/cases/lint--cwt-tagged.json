@@ -1,0 +1,17 @@
+{
+  "method": "lint",
+  "source": "tokens/rfc8392-a3-signed-cwt.cbor",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRDoQEmoQRSQXN5bW1ldHJpY0VDRFNBMjU2WFCnAXVjb2FwOi8vYXMuZXhhbXBsZS5jb20CZWVyaWt3A3gYY29hcDovL2xpZ2h0LmV4YW1wbGUuY29tBBpWEq6wBRpWENnwBhpWENnwB0ILcVhAVCfB_yjSP7rR8pxMfGpVXmAdb6KfkXm8PXQ4usrKWs0IyNTU-WExaAxCmgH4WVHs7nQ6Urm2NjLFcgkSDhyeMA",
+          "kind": {
+            "type": "cwt"
+          }
+        },
+        "keys": []
+      }
+    }
+  ]
+}

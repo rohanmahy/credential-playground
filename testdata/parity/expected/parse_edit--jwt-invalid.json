@@ -1,0 +1,1 @@
+{"ok":{"ok":false,"bytes":null,"document":null,"signature_stale":false,"diagnostics":[{"severity":"error","code":"json.syntax","message":"UnexpectedCharacter at byte 1","node_id":null,"main":{"start":1,"end":2,"line_start":0,"line_end":1},"raw":null}]}}

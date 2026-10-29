@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"jwk_set"},"confidence":90,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":1858},"breadcrumb":["JWK Set"]},{"kind":{"type":"json_claims"},"confidence":60,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":1858},"breadcrumb":["JSON claim set"]}]}

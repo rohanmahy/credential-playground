@@ -1,0 +1,20 @@
+{
+  "method": "key_generate",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "kid": null,
+        "role": null,
+        "seed": {
+          "bytes": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+          "type": "seed"
+        },
+        "spec": {
+          "bits": 1000,
+          "type": "rsa"
+        }
+      }
+    }
+  ]
+}

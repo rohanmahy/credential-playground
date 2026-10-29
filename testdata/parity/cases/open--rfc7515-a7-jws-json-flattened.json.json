@@ -1,0 +1,47 @@
+{
+  "method": "open",
+  "source": "tokens/rfc7515-a7-jws-json-flattened.json",
+  "args": [
+    {
+      "bytes": "ewogInBheWxvYWQiOgogICJleUpwYzNNaU9pSnFiMlVpTEEwS0lDSmxlSEFpT2pFek1EQTRNVGt6T0RBc0RRb2dJbWgwZEhBNkx5OWxlR0Z0Y0d4bExtTnZiUzlwYzE5eWIyOTBJanAwY25WbGZRIiwKICJwcm90ZWN0ZWQiOiJleUpoYkdjaU9pSkZVekkxTmlKOSIsCiAiaGVhZGVyIjoKICB7ImtpZCI6ImU5YmMwOTdhLWNlNTEtNDAzNi05NTYyLWQyYWRlODgyZGIwZCJ9LAogInNpZ25hdHVyZSI6CiAgIkR0RWhVM2xqYkVnOEwzOFZXQWZVQXFPeUtBTTYtWHgtRjRHYXd4YWVwbVhGQ2dmVGpEeHc1ZGp4TGE4SVNsU0FwbVdReGZLVFVKcVBQMy1LZzZOVTFRIgp9Cg"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JWS JSON"
+        ],
+        "confidence": 90,
+        "kind": {
+          "general": false,
+          "type": "jws_json"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 318,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

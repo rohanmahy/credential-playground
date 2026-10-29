@@ -1,0 +1,1 @@
+{"ok":[{"id":"lint.encoding","category":"lint","status":"info","message":"indefinite_length: preferred a10102","node_ids":[""],"raw":{"start":0,"end":4},"detail":{"type":"encoding","finding":"indefinite_length","preferred_hex":"a10102"}}]}

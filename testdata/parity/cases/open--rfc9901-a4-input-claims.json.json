@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-a4-input-claims.json",
+  "args": [
+    {
+      "bytes": "ewogICJAY29udGV4dCI6IFsKICAgICJodHRwczovL3d3dy53My5vcmcvMjAxOC9jcmVkZW50aWFscy92MSIsCiAgICAiaHR0cHM6Ly93M2lkLm9yZy92YWNjaW5hdGlvbi92MSIKICBdLAogICJ0eXBlIjogWwogICAgIlZlcmlmaWFibGVDcmVkZW50aWFsIiwKICAgICJWYWNjaW5hdGlvbkNlcnRpZmljYXRlIgogIF0sCiAgImlzc3VlciI6ICJodHRwczovL2V4YW1wbGUuY29tL2lzc3VlciIsCiAgImlzc3VhbmNlRGF0ZSI6ICIyMDIzLTAyLTA5VDExOjAxOjU5WiIsCiAgImV4cGlyYXRpb25EYXRlIjogIjIwMjgtMDItMDhUMTE6MDE6NTlaIiwKICAibmFtZSI6ICJDT1ZJRC0xOSBWYWNjaW5hdGlvbiBDZXJ0aWZpY2F0ZSIsCiAgImRlc2NyaXB0aW9uIjogIkNPVklELTE5IFZhY2NpbmF0aW9uIENlcnRpZmljYXRlIiwKICAiY3JlZGVudGlhbFN1YmplY3QiOiB7CiAgICAidmFjY2luZSI6IHsKICAgICAgInR5cGUiOiAiVmFjY2luZSIsCiAgICAgICJhdGNDb2RlIjogIkowN0JYMDMiLAogICAgICAibWVkaWNpbmFsUHJvZHVjdE5hbWUiOiAiQ09WSUQtMTkgVmFjY2luZSBNb2Rlcm5hIiwKICAgICAgIm1hcmtldGluZ0F1dGhvcml6YXRpb25Ib2xkZXIiOiAiTW9kZXJuYSBCaW90ZWNoIgogICAgfSwKICAgICJuZXh0VmFjY2luYXRpb25EYXRlIjogIjIwMjEtMDgtMTZUMTM6NDA6MTJaIiwKICAgICJjb3VudHJ5T2ZWYWNjaW5hdGlvbiI6ICJHRSIsCiAgICAiZGF0ZU9mVmFjY2luYXRpb24iOiAiMjAyMS0wNi0yM1QxMzo0MDoxMloiLAogICAgIm9yZGVyIjogIjMvMyIsCiAgICAicmVjaXBpZW50IjogewogICAgICAidHlwZSI6ICJWYWNjaW5lUmVjaXBpZW50IiwKICAgICAgImdlbmRlciI6ICJGZW1hbGUiLAogICAgICAiYmlydGhEYXRlIjogIjE5NjEtMDgtMTciLAogICAgICAiZ2l2ZW5OYW1lIjogIk1hcmlvbiIsCiAgICAgICJmYW1pbHlOYW1lIjogIk11c3Rlcm1hbm4iCiAgICB9LAogICAgInR5cGUiOiAiVmFjY2luYXRpb25FdmVudCIsCiAgICAiYWRtaW5pc3RlcmluZ0NlbnRyZSI6ICJQcmF4aXMgU29tbWVyZ2FydGVuIiwKICAgICJiYXRjaE51bWJlciI6ICIxNjI2MzgyNzM2IiwKICAgICJoZWFsdGhQcm9mZXNzaW9uYWwiOiAiODgzMTEwMDAwMDE1Mzc2IgogIH0KfQo"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON claim set"
+        ],
+        "confidence": 60,
+        "kind": {
+          "type": "json_claims"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 1123,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

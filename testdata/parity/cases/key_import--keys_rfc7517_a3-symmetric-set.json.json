@@ -1,0 +1,12 @@
+{
+  "method": "key_import",
+  "source": "keys/rfc7517/a3-symmetric-set.json",
+  "args": [
+    {
+      "json": {
+        "bytes": "eyJrZXlzIjpbeyJrdHkiOiJvY3QiLCJhbGciOiJBMTI4S1ciLCJrIjoiR2F3Z2d1RnlHcldLYXY3QVg0VktVZyJ9LHsia3R5Ijoib2N0IiwiayI6IkF5TTFTeXNQcGJ5RGZnWmxkM3VtajFxektPYndWTWtvcVEtRXN0SlFMcl9ULTFxUzBnWkg3NWFLdE1OM1lqMGlQUzRoY2dVdVR3akF6WnIxWjlDQW93Iiwia2lkIjoiSE1BQyBrZXkgdXNlZCBpbiBKV1Mgc3BlYyBBcHBlbmRpeCBBLjEgZXhhbXBsZSJ9XX0K",
+        "format": null
+      }
+    }
+  ]
+}

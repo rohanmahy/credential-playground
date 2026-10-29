@@ -11,7 +11,8 @@ correctly. `app/ARCHITECTURE.md` describes the modules under test.
 | Command | What |
 |---|---|
 | `pnpm test` | Vitest: unit (pure logic and stores) and component tests in jsdom |
-| `pnpm test:e2e` | Playwright against `vite preview` of the production build; skipped unless `TOKENATOR_E2E=1` |
+| `pnpm test:e2e` | Playwright against `vite preview` of the production build (real WASM engine) |
+| `pnpm test:wasm` | WasmEngine, the wasm binary, and WASM ↔ native parity in Node (`src/test/wasm/`, needs `pnpm build:wasm`; see `crates/tokenator-wasm/TEST-PLAN.md`) |
 | `pnpm typecheck` | `svelte-check` (strict TS), which also type-checks fixtures against the generated DTOs |
 | `pnpm lint` | ESLint + Prettier check |
 | `pnpm check:types` | Generated DTO types are up to date with `tokenator-core` |
@@ -123,21 +124,26 @@ Behaviour tests fail against the stubs (stub methods throw
 
 ## End-to-end (Playwright)
 
-`e2e/` holds the main flows against the real WASM engine: paste a JWT,
-SD-JWT, CWT, and SD-CWT from `testdata/tokens/` → Validate; Issue → Present
-→ Validate (JOSE and COSE, with created keys); key create → convert (JWK and
-CWK side by side) → export. They need `crates/tokenator-wasm/pkg` and run
-only with `TOKENATOR_E2E=1` (the config then builds and previews the app);
-otherwise every spec is skipped. **tauri-driver specs come later**, once
-`app/src-tauri` exists; they will reuse these flows.
+`e2e/` holds the main flows against the real WASM engine (`vite preview`
+of `pnpm build`, which builds `crates/tokenator-wasm` first): every token
+family pasted → detected → validated; Issue → Present → Validate (JOSE
+and COSE, with created keys); key create/convert/export, import, derive,
+kid; tree sync between the panes; no network traffic outside the app's
+origin except user-confirmed fetches; and the CSP in the browser. They
+are no longer gated by `TOKENATOR_E2E`. Details and counts are in
+`crates/tokenator-wasm/TEST-PLAN.md` §5. **tauri-driver specs come
+later**, once `app/src-tauri` exists; they will reuse these flows.
 
 ## CSP
 
 `scaffold/csp.test.ts` builds the app with Vite into a temporary directory
 and parses the built `index.html`: exactly one CSP `<meta>`, `script-src` is
 `'self'` (plus `'wasm-unsafe-eval'`, which WebAssembly needs), no
-`'unsafe-inline'`/`'unsafe-eval'` for scripts, `object-src 'none'`, and no
-inline `<script>` without `src`.
+`'unsafe-inline'`/`'unsafe-eval'` for scripts, `object-src 'none'`,
+`connect-src` exactly `'self' https:` (user-confirmed key URLs and
+`https://www.iana.org`), and no inline `<script>` without `src`.
+`e2e/csp.spec.ts` checks the same policy in the browser with the wasm
+engine running.
 
 ## Decisions (issues filed)
 

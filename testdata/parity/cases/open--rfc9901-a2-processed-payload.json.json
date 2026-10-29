@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-a2-processed-payload.json",
+  "args": [
+    {
+      "bytes": "ewogICJpc3MiOiAiaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS5jb20iLAogICJpYXQiOiAxNjgzMDAwMDAwLAogICJleHAiOiAxODgzMDAwMDAwLAogICJ2ZXJpZmllZF9jbGFpbXMiOiB7CiAgICAidmVyaWZpY2F0aW9uIjogewogICAgICAidHJ1c3RfZnJhbWV3b3JrIjogImRlX2FtbCIsCiAgICAgICJldmlkZW5jZSI6IFsKICAgICAgICB7CiAgICAgICAgICAibWV0aG9kIjogInBpcHAiCiAgICAgICAgfQogICAgICBdLAogICAgICAidGltZSI6ICIyMDEyLTA0LTIzVDE4OjI1WiIKICAgIH0sCiAgICAiY2xhaW1zIjogewogICAgICAiZ2l2ZW5fbmFtZSI6ICJNYXgiLAogICAgICAiZmFtaWx5X25hbWUiOiAiTcO8bGxlciIsCiAgICAgICJhZGRyZXNzIjogewogICAgICAgICJsb2NhbGl0eSI6ICJNYXhzdGFkdCIsCiAgICAgICAgInBvc3RhbF9jb2RlIjogIjEyMzQ0IiwKICAgICAgICAiY291bnRyeSI6ICJERSIsCiAgICAgICAgInN0cmVldF9hZGRyZXNzIjogIldlaWRlbnN0cmHDn2UgMjIiCiAgICAgIH0KICAgIH0KICB9Cn0K"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON claim set"
+        ],
+        "confidence": 60,
+        "kind": {
+          "type": "json_claims"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 527,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "method": "datetime",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "input": {
+          "text": "2026-10-29",
+          "type": "date"
+        },
+        "local_offset_minutes": 0,
+        "now": null
+      }
+    }
+  ]
+}

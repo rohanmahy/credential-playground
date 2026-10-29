@@ -1,0 +1,22 @@
+{
+  "method": "validate",
+  "source": "tokens/rfc7515-a3-jws-es256.txt",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "ZXlKaGJHY2lPaUpGVXpJMU5pSjkuZXlKcGMzTWlPaUpxYjJVaUxBMEtJQ0psZUhBaU9qRXpNREE0TVRrek9EQXNEUW9nSW1oMGRIQTZMeTlsZUdGdGNHeGxMbU52YlM5cGMxOXliMjkwSWpwMGNuVmxmUS5EdEVoVTNsamJFZzhMMzhWV0FmVUFxT3lLQU02LVh4LUY0R2F3eGFlcG1YRkNnZlRqRHh3NWRqeExhOElTbFNBcG1XUXhmS1RVSnFQUDMtS2c2TlUxUQ",
+          "kind": {
+            "type": "jwt"
+          }
+        },
+        "expected_aud": null,
+        "expected_nonce": null,
+        "keys": [],
+        "max_kb_age": null,
+        "now": 1300819000,
+        "skew": 60
+      }
+    }
+  ]
+}

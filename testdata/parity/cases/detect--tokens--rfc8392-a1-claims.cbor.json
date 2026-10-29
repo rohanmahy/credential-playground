@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc8392-a1-claims.cbor",
+  "args": [
+    {
+      "bytes": "pwF1Y29hcDovL2FzLmV4YW1wbGUuY29tAmVlcmlrdwN4GGNvYXA6Ly9saWdodC5leGFtcGxlLmNvbQQaVhKusAUaVhDZ8AYaVhDZ8AdCC3E"
+    }
+  ]
+}

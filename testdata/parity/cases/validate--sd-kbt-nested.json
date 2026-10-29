@@ -1,0 +1,33 @@
+{
+  "method": "validate",
+  "source": "tokens/sd-cwt-08-nested-sd-kbt.cbor",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRZA5ajASYN0oRYLqQBOCIEWCBodHRwczovL2lzc3Vlci5leGFtcGxlL2Nvc2Uta2V5MxAZASUYqi-hEYdYZoJQzZmzhY8dZZ-dFgOav4xfuqMZAfT1GQH2GmPHSQT4O4JYIK83XcP7odCCRIZCwAvnsve7BcnY-2HPwjDd_ftGFqaTWCCdFRq-uACtzBH_EP9h-9PXWUTBNLQKJKvvF4fTrmWDqlaDUFLaneXcYbM3dfk0i5kdPXhiY2ECWCGDUFkesggbBb4ty7b4RZzA_lFrRENCQS0xMDE3NzcZAfVYYYNQSD5LPBlN9gc6nEHKnydAZ6IBYnVz-DuCWCAkcPuRdbBiw0erPDoZd20CR2ESoXzXz8lBZmS8BYwiC1ggzzl6CJF1KGJMo7Myye3MVKcslBHdWYP2gBfOFg9wn1IZAfdYIYNQuuYRBnu4I0hnl9oeu7Uvg2tBQkNELTEyMzQ1NhkB9Vhhg1DCOk0ZK-ddvVg75XBILejdogFidXP4O4JYIBuJcXFn851R7sCLE7rtpXDv9dCu2qHX0IIRhcM2NKWgWCBJQSiE-h43h8F9EyC91I9uDlNl2gEM3gVx1Kfv_RPMKhkB91hmglAt99LBBbW_Os-caY82WFUvoxkB9PUZAfYaXFxrkPg7glggcleoaX36QCIQebAPtl_lh8MQ5so9oaozsJAzXeZuyBBYIMJMZGtS_s13PG6gHGyqWnNCK4XTr6WQD6mYM22DqIAlWQEBpwF2aHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZQJ2aHR0cHM6Ly9ob2xkZXIuZXhhbXBsZQQaZtZ0qAUaZtUh_AYaZtUjKAihAaQBAiABIVgghVTrJ13Nb70cesZBqiyQ2SAi_Q0wJLWvGMfMYa1Sei0iWCBNx64sZ36W0MyCWXZVzpLVUD9UKT2Hh10eec5HcBlDQxkB-IPYPFggymuFFogjZ0T_DPCBRQjk8YHTgRv-xO1buKzngjEy28DYPFggDf3GnQ77Ze7BS_KK94zY8Gyr_o4rGgYR74vKhpzjW2HYPFggINm7ETY7rkmFHP1KPxZlOdCqAEM8MK7eGDgL-pjXgdxYYIwemVe1cxkcR6n0JEq8S-J8mUTCqZLgFahuGcJLBBGVUe6SAGEGbtsigjEU-W2sKhv6nHpQPjAzoM1arW2RZfdUg-mnnrMfm_37B99ft7jlDaisurrZdJmdEglvSui0IBAZASagWDmjA3gcaHR0cHM6Ly92ZXJpZmllci5leGFtcGxlL2FwcAYaZtUjTRgnUIwPX1I7lb6kSppIxkkkCANYQN20g1nw9xY8r5fz-w54A1A64nHSJRmTfFoKmZ92dOc47nFvIMgrVsnDQoa63R1rofSBWcTh0QZHfQRjNkvOGQo",
+          "kind": {
+            "type": "sd_kbt"
+          }
+        },
+        "expected_aud": "https://verifier.example/app",
+        "expected_nonce": {
+          "type": "bytes",
+          "value": "jA9fUjuVvqRKmkjGSSQIAw"
+        },
+        "keys": [
+          {
+            "bytes": "pwECAnggaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS9jd2szLmNib3IDODIgAiFYMMMXmLDHiF-jUo-_h35bTDptxnpaXcazB7cow3JZJvKr5ftJZM2R45SKVJP267bLvyJYMI9sfsdhaRytN0xNqpOHRT8YBY7OWOsKjoSgVaMft_khSydQlSLBWedk-HEeEWCVVCNYMHHFTSIhk36mEtsSIfDT3fdxyTgcTjvkHVqgqJ1oXwnP73TEu_EEeD_VfoerIn0HTA",
+            "format": null,
+            "index": 0,
+            "label": "sd-cwt-08-c2-issuer-private.cosekey.cbor",
+            "role": null
+          }
+        ],
+        "max_kb_age": null,
+        "now": 1725244240,
+        "skew": 60
+      }
+    }
+  ]
+}

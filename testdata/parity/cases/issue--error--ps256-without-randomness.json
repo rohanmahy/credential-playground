@@ -1,0 +1,60 @@
+{
+  "method": "issue",
+  "source": "seeded keys and randomness",
+  "args": [
+    {
+      "json": {
+        "alg": "PS256",
+        "claims": {
+          "bytes": "ewogICJzdWIiOiAidXNlcl80MiIsCiAgImdpdmVuX25hbWUiOiAiSm9obiIsCiAgImZhbWlseV9uYW1lIjogIkRvZSIsCiAgImVtYWlsIjogImpvaG5kb2VAZXhhbXBsZS5jb20iLAogICJwaG9uZV9udW1iZXIiOiAiKzEtMjAyLTU1NS0wMTAxIiwKICAicGhvbmVfbnVtYmVyX3ZlcmlmaWVkIjogdHJ1ZSwKICAiYWRkcmVzcyI6IHsKICAgICJzdHJlZXRfYWRkcmVzcyI6ICIxMjMgTWFpbiBTdCIsCiAgICAibG9jYWxpdHkiOiAiQW55dG93biIsCiAgICAicmVnaW9uIjogIkFueXN0YXRlIiwKICAgICJjb3VudHJ5IjogIlVTIgogIH0sCiAgImJpcnRoZGF0ZSI6ICIxOTQwLTAxLTAxIiwKICAidXBkYXRlZF9hdCI6IDE1NzAwMDAwMDAsCiAgIm5hdGlvbmFsaXRpZXMiOiBbCiAgICAiVVMiLAogICAgIkRFIgogIF0KfQo",
+          "kind": {
+            "type": "json_claims"
+          }
+        },
+        "cnf": null,
+        "cose_tags": null,
+        "header": {
+          "extra": null,
+          "kid": {
+            "type": "none"
+          },
+          "typ": {
+            "type": "auto"
+          },
+          "unprotected_extra": null,
+          "x5c": []
+        },
+        "issuer": {
+          "bytes": "LS0tLS1CRUdJTiBQUklWQVRFIEtFWS0tLS0tCk1JSUV2Z0lCQURBTkJna3Foa2lHOXcwQkFRRUZBQVNDQktnd2dnU2tBZ0VBQW9JQkFRQ3J0Y2ZMYTJQNDdWaXYKZ3F5OVNTV2NZSFIyVHcvcnA3emVpSkFORmZwMEhLSHlwVm11MW00bkdyRVFHR2JTUFNtQkRKckFvTmJDNWhTVgpFUmNlYzBtZUwvSTV0Q2dVNmlFOUxuRVVDS0pqdnpTTW5nUkZpa2RIYU4yalRYeG9ROExGZXFYQ0M0MGN6TGlSCmNDZ2l5UVNLSVdEMWZ6d0xDWitRUTkxM1dyR2ZMOFQ3WXVia0dUNk04Mk94SzlDUDhJT0xpOUFLK0hCWEdRSVcKTU1ZKy9MSTNabkRVYmFCR3F0Z01TWFk5aXZveTd6bWpWQUlibDNxeUV1NUUvUVZ6TFF2ZU1iNUFudFc4TW5zaQpIek9tY0kwVlc1Z0t0cHNHZUtGOENnL2ZBc0h6dnRuZGFGdXArcGxOSDI2anpXbytGVmdCUWo4clJjd2J2MHVsCnQrZjVyazZIQWdNQkFBRUNnZ0VBT1N1Mm9JdWFoeXliWFNDQW5DdHBHdVpna0cybGl0eFgvYTN4YkhIM2FFYUsKUTB4N2prTjEvSTRlQ3hKYzFiNG9mZit3M05jUWVtYjV6bUlZMVBva3RrY1hlcy81a25FYjdROXo5ZXdrQ1ZzRgp4NVhyTFM0cnFtS0hmUkpWRERBWGZ3SGxnN1N0NEx0bTdvR3QwMXNqcUV3UnlOdDZwZUFuNFBRL25qZ3pzS0MrCjBKeE56d2dHbDJrL1RUWThPOENUMFVTaXhDb0RpT0w1Tit2bXFXOTE2RWdWcm1XcE1RR1N2TkhJOXlIbWVzczkKUUUyanFkbXhKSmo0ckovU0hrbUZqNStkUHd4a2NUVjgwckJUdHd6ZGQzdERnNFFPR215ZzJBdUVMdmNIbEZ2aApVOEI4YmxwMkZJL2trUnpmZUpIMjEvVWliamovejNocnBjUWd0Z3ZVTFFLQmdRRGJHa1Vxb0UyL21SaGFjMUtpClBRK0Y4RzJWTmEvV0ZTSk5admRwSjdrSyt1VGJvNUdGSUdNcm5FV2ZPa21Mc2FBVzNHbEVidllrOW9rdENSM2QKWStleFdBZ1NGRGxqWWdiOS9sbnBsOGxxNCsvWlh4UTd2R3hVcGI4K2RYWGZCcDRHdGRtemJkcFZXbnZLTTFQKwp0b0ExbzJodGxZMFU1RnFiM3ZkWDFNTU96UUtCZ1FESW9GOEpnc1RScEJ2UDlFeXFtSlRYdkkrYU9TVFN2N1BGCjVBdmdtb2I4VFlrUCtxWE5sTFNENFlqTzJxRUMrKytxVzc3aGdwY0l3VVNVU1lFamVKeVczY21sbm9BOHJUN2cKTDVERmovYUdQditCTDJjREtFeElwdzM5aG5HbjNrYWZtS2dobVcwOWpEVHAxQ2FicmNQd3Z5VXkyM1U0ZVpuQwozaitUTE1kcW93S0JnUUNzNk9aODVWVjJSMU80emhvQWZ6K283RDBPNi9lQWM5MUdTR1FvVUhqditXQnpGWHJhCkhOMG1wWVVzUzh1T3V2Y2tFMzNmeTlIbENjcm9CN0hSN2U0RFB2M2ZocVpqa0JFRWtaNVRncjRwNVFoNysxVDAKYjVidWxuOSt3eVBxaGtaZjlWT0JEc2luWTJrZUFiUGY2QmIyUGFkRUZDbnF1dXZtNXVjOElXUnVZUUtCZ0Z4MgpiTlo1U2pSRUtmMUJYa1FSWmllM1k0ZDBacUFxY2JQMlVmTUZ4TWhyQTR3MXZFeHZDSEx2Y3BuQzhRbnJDcDI5CkFzL3oyNS9SVXNYMHltdUtuc0I1SHdJUmRwQ0FWOFlDcGZvblN6cTd0ZzNYeHVZUm9IYXJaeXM4MXd6Q3lGR3QKalc5T3dxWG5CRXZ2MW90UkhraktEMTdNL2MwMVhjUU5vY2Mya0FGNUFvR0JBTktZdkE2MkFBQ3dOUzdxaUVuQwptMHZRdlJUV0wxQ2VZa1JQelNtcTJMUFdiK3BkQ0VrdEVRZ3Bpd1VEb3lMaGpQY2h2bkRHblFNZWNsOFEweUxoCnRQQ0QrUkJ2ZmM5YlRuU2ZzZkJrSjB0QkwrZXpiUGVseFJvNTFHYWVFL1NzVzQvRTJqM2RuSnFUdy9haEZOam4KU2JTQjhkclRkUnI1cFU5cVZOWldHNy9uCi0tLS0tRU5EIFBSSVZBVEUgS0VZLS0tLS0K",
+          "format": null,
+          "index": 0,
+          "label": "openssl/rsa2048-pkcs8.pem",
+          "role": null
+        },
+        "jose_serialization": "compact",
+        "randomness": null,
+        "sd": {
+          "decoys": [],
+          "digest_order": "sorted",
+          "fixed_salts": [],
+          "force_sd": false,
+          "marks": [],
+          "sd_alg": null
+        },
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

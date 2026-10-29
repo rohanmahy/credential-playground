@@ -1,0 +1,19 @@
+{
+  "method": "key_generate",
+  "source": "seed [7; 32]",
+  "args": [
+    {
+      "json": {
+        "kid": null,
+        "role": null,
+        "seed": {
+          "bytes": "BwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwcHBwc",
+          "type": "seed"
+        },
+        "spec": {
+          "type": "ml_dsa44"
+        }
+      }
+    }
+  ]
+}

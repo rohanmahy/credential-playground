@@ -1,0 +1,30 @@
+{
+  "method": "validate",
+  "source": "tokens/rfc8392-a3-signed-cwt.cbor",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRDoQEmoQRSQXN5bW1ldHJpY0VDRFNBMjU2WFCnAXVjb2FwOi8vYXMuZXhhbXBsZS5jb20CZWVyaWt3A3gYY29hcDovL2xpZ2h0LmV4YW1wbGUuY29tBBpWEq6wBRpWENnwBhpWENnwB0ILcVhAVCfB_yjSP7rR8pxMfGpVXmAdb6KfkXm8PXQ4usrKWs0IyNTU-WExaAxCmgH4WVHs7nQ6Urm2NjLFcgkSDhyeMA",
+          "kind": {
+            "type": "cwt"
+          }
+        },
+        "expected_aud": null,
+        "expected_nonce": null,
+        "keys": [
+          {
+            "bytes": "pyNYIGwTgnZa7FNY8RdzPSgcHHvcOYhNBKRaHmxnyFi8IGwZIlggYPfxp4DYp4O_t6LdayeW6BKNu87509Fo25Uplxo257khWCAUMynM54aOQWknWZz2WjTzzi_9pVp-ymntiRmjlNQvDyABAQICUkFzeW1tZXRyaWNFQ0RTQTI1NgMm",
+            "format": null,
+            "index": 0,
+            "label": "rfc8392-a2.3-ec-p256.cosekey.cbor",
+            "role": null
+          }
+        ],
+        "max_kb_age": null,
+        "now": 1444000000,
+        "skew": 60
+      }
+    }
+  ]
+}
