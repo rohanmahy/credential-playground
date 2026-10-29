@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 // The e2e specs run against `vite preview` of the production build, with
 // the real WasmEngine (`pnpm build` runs `pnpm build:wasm` first, so the
 // Rust toolchain, the wasm32 target, and wasm-pack are needed).
-// tauri-driver specs come later (app/TEST-PLAN.md).
+// The desktop app has its own suite: e2e-desktop/ (tauri-driver, Linux).
 export const ORIGIN = 'http://127.0.0.1:4173';
 
 export default defineConfig({
