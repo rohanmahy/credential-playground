@@ -3,7 +3,6 @@
 import type { Platform } from '../platform/Platform';
 import type { ViewOptions } from '../engine/types';
 import { defaultViewOptions } from '../engine/defaults';
-import { notImplemented } from '../notImplemented';
 
 export type Theme = 'system' | 'light' | 'dark';
 
@@ -33,12 +32,19 @@ export class Settings {
   /** The clock for validation, KB `iat`, and relative times: the override,
    *  else `Platform.now()`. */
   now(): number {
-    notImplemented('Settings.now');
+    return this.clockOverride ?? this.#platform.now();
   }
 
   /** View options from the toggles, with `now` and the local offset filled in. */
   viewOptions(): ViewOptions {
-    void defaultViewOptions;
-    notImplemented('Settings.viewOptions');
+    const now = this.now();
+    return {
+      ...defaultViewOptions(),
+      decoded_views: this.decodedViews,
+      annotations: this.annotations,
+      json_layout: this.jsonPretty ? 'pretty' : 'original',
+      now,
+      local_offset_minutes: this.#platform.localOffsetMinutes(now),
+    };
   }
 }

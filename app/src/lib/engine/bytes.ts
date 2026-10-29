@@ -17,7 +17,8 @@ export function fromB64u(text: Bytes): Uint8Array {
 }
 
 export function utf8(text: string): Uint8Array {
-  return new TextEncoder().encode(text);
+  // Re-wrap: some environments (jsdom) return a Uint8Array of another realm.
+  return new Uint8Array(new TextEncoder().encode(text));
 }
 
 export function fromUtf8(bytes: Uint8Array): string {

@@ -3,10 +3,12 @@
 import { SvelteSet } from 'svelte/reactivity';
 import type { Engine } from '../engine/Engine';
 import type {
+  Bytes,
   Candidate,
   CborSerialization,
   Diagnostic,
   DisclosureOp,
+  DocRef,
   Document,
   EditResult,
   HeaderOptions,
@@ -20,7 +22,11 @@ import type { ActionAvailability, ActionId, Crumb, Provenance } from '../model';
 import type { Platform } from '../platform/Platform';
 import type { KeyStore } from './keys.svelte';
 import type { Settings } from './settings.svelte';
-import { notImplemented } from '../notImplemented';
+import { defaultHeaderOptions, defaultSdOptions } from '../engine/defaults';
+import { fromB64u, toB64u, utf8 } from '../engine/bytes';
+import { actionAvailability } from '../logic/actions';
+import { isKey, kindLabel } from '../logic/kinds';
+import { ancestorIds } from '../logic/tree';
 
 export interface Tab {
   id: string;
@@ -49,6 +55,8 @@ export interface Tab {
   /** JSON claims marked selectively disclosable (Redact/Issue). */
   sdMarks: SvelteSet<NodeId>;
   report: ValidationReport | null;
+  /** Bytes live edits are compared against (set when live edit starts). */
+  editBase?: Bytes | null;
 }
 
 export type OpenResult =
@@ -109,104 +117,352 @@ export class Workspace {
     return this.tabs.find((t) => t.id === this.activeId);
   }
 
-  tab(_id: string): Tab | undefined {
-    notImplemented('Workspace.tab');
+  tab(id: string): Tab | undefined {
+    return this.tabs.find((t) => t.id === id);
+  }
+
+  #get(id: string): Tab {
+    const tab = this.tab(id);
+    if (!tab) throw new Error(`no tab ${id}`);
+    return tab;
+  }
+
+  #lastNumber = 0;
+
+  #newTab(
+    doc: Document,
+    provenance: Provenance,
+    extra: { input?: Uint8Array | null; candidates?: Candidate[]; tampered?: boolean } = {},
+  ): Tab {
+    const number = Math.max(this.#lastNumber, ...this.tabs.map((t) => t.number)) + 1;
+    this.#lastNumber = number;
+    const tab: Tab = {
+      id: `tab-${number}`,
+      number,
+      title: tabTitle(number, doc),
+      doc,
+      input: extra.input ?? null,
+      candidates: extra.candidates ?? [],
+      candidateIndex: 0,
+      provenance,
+      collapsed: new SvelteSet(),
+      selected: null,
+      liveEdit: false,
+      editText: doc.main.text,
+      editDiagnostics: [],
+      stale: false,
+      tampered: extra.tampered ?? false,
+      sdMarks: new SvelteSet(),
+      report: null,
+      editBase: null,
+    };
+    this.tabs.push(tab);
+    this.activeId = tab.id;
+    return this.#get(tab.id);
   }
 
   /** Detects, opens the top candidate in a new active tab, or routes keys
    *  to the key panel. */
-  async openInput(_bytes: Uint8Array, _provenance: Provenance): Promise<OpenResult> {
-    notImplemented('Workspace.openInput');
+  async openInput(bytes: Uint8Array, provenance: Provenance): Promise<OpenResult> {
+    const { engine, keys, settings } = this.deps;
+    const candidates = await engine.detect(bytes);
+    const top = candidates[0];
+    if (!top) return { type: 'nothing' };
+    if (isKey(top.kind)) {
+      const cards = await keys.importBytes(bytes, provenance);
+      return { type: 'keys', cardIds: cards.map((c) => c.id) };
+    }
+    const doc = await engine.open(bytes, top, settings.viewOptions());
+    const tab = this.#newTab(doc, provenance, { input: bytes, candidates });
+    return { type: 'tab', tabId: tab.id };
   }
 
-  async openText(_text: string, _provenance: Provenance): Promise<OpenResult> {
-    notImplemented('Workspace.openText');
+  async openText(text: string, provenance: Provenance): Promise<OpenResult> {
+    return this.openInput(utf8(text), provenance);
   }
 
   async openFromClipboard(): Promise<OpenResult> {
-    notImplemented('Workspace.openFromClipboard');
+    const text = await this.deps.platform.readClipboard();
+    if (text.trim() === '') return { type: 'nothing' };
+    return this.openInput(utf8(text), { type: 'clipboard' });
   }
 
   async openFromFile(): Promise<OpenResult> {
-    notImplemented('Workspace.openFromFile');
+    const file = await this.deps.platform.openFile();
+    if (!file) return { type: 'nothing' };
+    return this.openInput(file.bytes, { type: 'file', name: file.name });
   }
 
   /** "Detected as…": re-open the tab's input as another candidate. */
-  async chooseCandidate(_tabId: string, _index: number): Promise<void> {
-    notImplemented('Workspace.chooseCandidate');
+  async chooseCandidate(tabId: string, index: number): Promise<void> {
+    const tab = this.#get(tabId);
+    const candidate = tab.candidates[index];
+    if (!candidate || !tab.input) return;
+    const doc = await this.deps.engine.open(
+      tab.input,
+      $state.snapshot(candidate),
+      this.deps.settings.viewOptions(),
+    );
+    tab.doc = doc;
+    tab.candidateIndex = index;
+    tab.title = tabTitle(tab.number, doc);
+    tab.collapsed.clear();
+    tab.sdMarks.clear();
+    tab.selected = null;
+    tab.liveEdit = false;
+    tab.editText = doc.main.text;
+    tab.editDiagnostics = [];
+    tab.editBase = null;
+    tab.stale = false;
+    tab.tampered = false;
+    tab.report = null;
   }
 
-  activate(_id: string): void {
-    notImplemented('Workspace.activate');
+  activate(id: string): void {
+    if (this.tab(id)) this.activeId = id;
   }
 
-  close(_id: string): void {
-    notImplemented('Workspace.close');
+  close(id: string): void {
+    const at = this.tabs.findIndex((t) => t.id === id);
+    if (at < 0) return;
+    this.tabs.splice(at, 1);
+    if (this.split?.includes(id)) this.split = null;
+    if (this.activeId === id) {
+      this.activeId = (this.tabs[at] ?? this.tabs[at - 1])?.id ?? null;
+    }
   }
 
-  splitWith(_left: string, _right: string): void {
-    notImplemented('Workspace.splitWith');
+  splitWith(left: string, right: string): void {
+    if (left === right || !this.tab(left) || !this.tab(right)) return;
+    this.split = [left, right];
+    if (this.activeId !== left && this.activeId !== right) this.activeId = left;
   }
 
   unsplit(): void {
-    notImplemented('Workspace.unsplit');
+    this.split = null;
   }
 
   /** Root first, ending with this tab. */
-  breadcrumb(_tabId: string): Crumb[] {
-    notImplemented('Workspace.breadcrumb');
+  breadcrumb(tabId: string): Crumb[] {
+    const crumbs: Crumb[] = [];
+    const seen = new Set<string>();
+    let tab = this.tab(tabId);
+    while (tab && !seen.has(tab.id)) {
+      seen.add(tab.id);
+      const p = tab.provenance;
+      crumbs.unshift({
+        tabId: tab.id,
+        title: tab.title,
+        action: p.type === 'derived' ? p.action : null,
+      });
+      tab = p.type === 'derived' ? this.tab(p.parent) : undefined;
+    }
+    return crumbs;
   }
 
-  toggleCollapsed(_tabId: string, _id: NodeId): void {
-    notImplemented('Workspace.toggleCollapsed');
+  toggleCollapsed(tabId: string, id: NodeId): void {
+    const tab = this.#get(tabId);
+    this.setCollapsed(tabId, id, !tab.collapsed.has(id));
   }
 
-  setCollapsed(_tabId: string, _id: NodeId, _collapsed: boolean): void {
-    notImplemented('Workspace.setCollapsed');
+  setCollapsed(tabId: string, id: NodeId, collapsed: boolean): void {
+    const set = this.#get(tabId).collapsed;
+    if (collapsed) set.add(id);
+    else set.delete(id);
   }
 
-  select(_tabId: string, _id: NodeId | null): void {
-    notImplemented('Workspace.select');
+  select(tabId: string, id: NodeId | null): void {
+    this.#get(tabId).selected = id;
   }
 
-  toggleSdMark(_tabId: string, _id: NodeId): void {
-    notImplemented('Workspace.toggleSdMark');
+  /** Selects a node and unfolds its ancestors so it is visible. */
+  reveal(tabId: string, id: NodeId): void {
+    const tab = this.#get(tabId);
+    for (const a of ancestorIds(id)) tab.collapsed.delete(a);
+    tab.selected = id;
+  }
+
+  toggleSdMark(tabId: string, id: NodeId): void {
+    const marks = this.#get(tabId).sdMarks;
+    if (marks.has(id)) marks.delete(id);
+    else marks.add(id);
   }
 
   /** Re-render with the current settings (view toggles). Keeps view state. */
-  async rerender(_tabId: string): Promise<void> {
-    notImplemented('Workspace.rerender');
+  async rerender(tabId: string): Promise<void> {
+    const tab = this.#get(tabId);
+    const doc = await this.deps.engine.render({
+      doc: docRef(tab.doc),
+      layers: $state.snapshot(tab.doc.layers),
+      view: this.deps.settings.viewOptions(),
+    });
+    tab.doc = doc;
+    if (!tab.liveEdit) tab.editText = doc.main.text;
   }
 
-  setLiveEdit(_tabId: string, _on: boolean): void {
-    notImplemented('Workspace.setLiveEdit');
+  setLiveEdit(tabId: string, on: boolean): void {
+    const tab = this.#get(tabId);
+    tab.liveEdit = on;
+    tab.editDiagnostics = [];
+    tab.editText = tab.doc.main.text;
+    if (on) tab.editBase ??= tab.doc.bytes;
   }
 
   /** Live edit: parse `text`; on success replace the document (view state
    *  kept) and set `stale` from the result; on failure keep the document and
    *  store the diagnostics. */
-  async applyEdit(_tabId: string, _text: string): Promise<EditResult> {
-    notImplemented('Workspace.applyEdit');
+  async applyEdit(tabId: string, text: string): Promise<EditResult> {
+    const tab = this.#get(tabId);
+    tab.editText = text;
+    const result = await this.deps.engine.parseEdit({
+      kind: $state.snapshot(tab.doc.kind),
+      base: tab.editBase ?? tab.doc.bytes,
+      text,
+      view: this.deps.settings.viewOptions(),
+    });
+    if (tab.editText !== text) return result; // a newer edit is under way
+    if (result.ok && result.document) {
+      tab.doc = result.document;
+      tab.stale = result.signature_stale;
+      tab.tampered = tab.tampered && tab.stale;
+      tab.editDiagnostics = [];
+      tab.report = null;
+    } else {
+      tab.editDiagnostics = result.diagnostics.filter((d) => d.severity === 'error');
+      if (tab.editDiagnostics.length === 0) tab.editDiagnostics = result.diagnostics;
+    }
+    return result;
   }
 
   /** "Keep original signature": keep the stale bytes, label the tab tampered. */
-  keepOriginalSignature(_tabId: string): void {
-    notImplemented('Workspace.keepOriginalSignature');
+  keepOriginalSignature(tabId: string): void {
+    this.#get(tabId).tampered = true;
   }
 
-  availability(_tabId: string): ActionAvailability {
-    notImplemented('Workspace.availability');
+  availability(tabId: string): ActionAvailability {
+    const tab = this.#get(tabId);
+    return actionAvailability({
+      doc: tab.doc,
+      keys: this.deps.keys.cards,
+      sdMarks: [...tab.sdMarks],
+    });
+  }
+
+  #randomness(): Bytes {
+    return toB64u(this.deps.platform.randomBytes(32));
   }
 
   /** Runs a credential-producing action; opens and activates a derived tab. */
-  async runAction(_tabId: string, _req: ActionRequest): Promise<Tab> {
-    notImplemented('Workspace.runAction');
+  async runAction(tabId: string, req: ActionRequest): Promise<Tab> {
+    const tab = this.#get(tabId);
+    const { engine, keys, settings } = this.deps;
+    const doc = docRef(tab.doc);
+    const view = settings.viewOptions();
+    let out: Document;
+    let input: Uint8Array | null = null;
+    switch (req.action) {
+      case 'issue':
+      case 'redact': {
+        const request = {
+          claims: doc,
+          issuer: keys.ref(req.issuerKeyId),
+          alg: req.alg ?? null,
+          header: req.header ? $state.snapshot(req.header) : defaultHeaderOptions(),
+          sd: { ...defaultSdOptions(), marks: [...tab.sdMarks] },
+          cnf: req.holderKeyId ? { type: 'key' as const, key: keys.ref(req.holderKeyId) } : null,
+          jose_serialization: req.jose ?? 'compact',
+          cose_tags: null,
+          randomness: this.#randomness(),
+          view,
+        };
+        out = await (req.action === 'issue' ? engine.issue(request) : engine.redact(request));
+        break;
+      }
+      case 'disclose':
+        out = await engine.disclose({ doc, keep: [...req.keep], view });
+        break;
+      case 'present':
+        out = await engine.present({
+          doc,
+          keep: [...req.keep],
+          holder: keys.ref(req.holderKeyId),
+          alg: null,
+          aud: req.aud || null,
+          nonce: req.nonce ? { type: 'text', value: req.nonce } : null,
+          iat: settings.now(),
+          randomness: this.#randomness(),
+          view,
+        });
+        break;
+      case 'resign':
+        out = await engine.resign({
+          doc,
+          key: keys.ref(req.keyId),
+          alg: req.alg ?? null,
+          randomness: this.#randomness(),
+          view,
+        });
+        break;
+      case 'tamper':
+        out = await engine.tamper({ doc, op: $state.snapshot(req.op), view });
+        break;
+      case 'reencode': {
+        const res = await engine.reencode({
+          doc,
+          layers: $state.snapshot(req.layers ?? tab.doc.layers),
+          cose_tags: req.coseTags ?? null,
+          cbor: req.cbor ?? 'preserve',
+          deep: req.deep ?? false,
+          jose: req.jose ?? null,
+          view,
+        });
+        out = res.document;
+        input = fromB64u(res.output);
+        break;
+      }
+      case 'edit_disclosures':
+        out = await engine.editDisclosures({
+          doc,
+          ops: $state.snapshot(req.ops),
+          randomness: this.#randomness(),
+          view,
+        });
+        break;
+    }
+    return this.#newTab(
+      out,
+      { type: 'derived', parent: tabId, action: req.action },
+      { input, tampered: out.signature_stale },
+    );
   }
 
   /** Validates with the panel keys and settings; stores `tab.report`. */
-  async validate(_tabId: string): Promise<ValidationReport> {
-    notImplemented('Workspace.validate');
+  async validate(tabId: string): Promise<ValidationReport> {
+    const tab = this.#get(tabId);
+    const { engine, keys, settings } = this.deps;
+    const report = await engine.validate({
+      doc: docRef(tab.doc),
+      keys: keys.refs(),
+      now: settings.now(),
+      skew: settings.skew,
+      expected_aud: settings.expectedAud || null,
+      expected_nonce: settings.expectedNonce
+        ? { type: 'text', value: settings.expectedNonce }
+        : null,
+      max_kb_age: null,
+    });
+    tab.report = report;
+    return report;
   }
+}
+
+/** `Tab 3 · SD-JWT`. */
+export function tabTitle(number: number, doc: Document): string {
+  return `Tab ${number} · ${kindLabel(doc.kind)}`;
+}
+
+function docRef(doc: Document): DocRef {
+  return { kind: $state.snapshot(doc.kind), bytes: doc.bytes };
 }
 
 export type { ActionId };
