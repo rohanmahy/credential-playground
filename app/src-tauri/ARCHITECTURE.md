@@ -1,6 +1,6 @@
 # app/src-tauri architecture
 
-The macOS desktop shell. The contract (commands, wire shapes, policies) is
+The desktop shell (macOS and Linux). The contract (commands, wire shapes, policies) is
 in `TEST-PLAN.md`; this file records how it is built and why.
 
 ## Shape
@@ -41,7 +41,7 @@ in `TEST-PLAN.md`; this file records how it is built and why.
 | `tauri` 2 (no extra features) | the shell |
 | `tauri-plugin-dialog` | native open/save panels, called from Rust only |
 | `tauri-plugin-clipboard-manager` | the system clipboard, from Rust only |
-| `reqwest` (`default-features = false`, `rustls`, `http2`, `system-proxy`) | `fetch_url`; rustls with the platform verifier (macOS trust store), no cookie store, no native-tls |
+| `reqwest` (`default-features = false`, `rustls`, `http2`, `system-proxy`) | `fetch_url`; rustls with the platform verifier (macOS trust store; the system CA bundle on Linux), no cookie store, no native-tls |
 | `serde` | wire DTOs (`PlatformError`, `FetchResponse`, `OpenedFile`) |
 | `tokenator-core` | the engine |
 

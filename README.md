@@ -16,7 +16,8 @@ cargo fmt --all --check
 cargo clippy --workspace --all-targets --all-features -- -D warnings
 cargo test --workspace --all-features   # unit tests, vectors, native parity
 cargo test --workspace                  # default features (tokenator-edn without `hash`)
-# On Linux without the WebKitGTK dev packages, add --exclude tokenator-desktop.
+# On Linux without the WebKitGTK dev packages (scripts/linux-deps.sh), add
+# --exclude tokenator-desktop.
 cargo build --target wasm32-unknown-unknown -p tokenator-core -p tokenator-wasm
 RUSTDOCFLAGS="-D warnings" cargo doc --workspace --no-deps --all-features
 
@@ -35,6 +36,16 @@ pnpm parity:regen                 # rewrite testdata/parity goldens after a deli
 node scripts/check-dist.mjs       # dist/ keeps its CSP and only relative URLs (Pages)
 scripts/package-macos-app.sh v0.1.0   # the unsigned .app, zipped (needs cargo-tauri)
 
+# The desktop app on Linux (Ubuntu 24.04; app/src-tauri/TEST-PLAN.md)
+scripts/linux-deps.sh --e2e       # WebKitGTK 4.1, libsoup 3, …; --e2e adds WebKitWebDriver, Xvfb
+cargo install --locked tauri-cli@2.12.4 tauri-driver@2.1.0
+cd app && cargo tauri build       # target/release/tokenator; --bundles deb for a .deb
+pnpm build:desktop-e2e            # the binaries the desktop e2e suite uses
+xvfb-run pnpm test:e2e:desktop    # WebdriverIO → tauri-driver → the real app
+scripts/desktop-e2e.sh            # all of the above (after linux-deps.sh)
+scripts/desktop-e2e-docker.sh     # the same in a Linux container, e.g. on macOS
+                                  # (--clean removes its image and cache volumes)
+
 # Fuzzing (nightly + cargo-fuzz; see fuzz/README.md)
 fuzz/seed-corpora.sh && fuzz/smoke.sh 60
 ```
@@ -44,7 +55,8 @@ See `crates/tokenator-wasm/TEST-PLAN.md` for the parity corpus and the
 WASM stack and size budgets.
 
 Releases: pushing a `v*` tag builds the unsigned universal macOS `.app` and
-attaches it to the GitHub release (`.github/workflows/release.yml`).
+the Linux `.deb` (x86_64), and attaches them to the GitHub release
+(`.github/workflows/release.yml`).
 Pushing to `main` deploys the web app to
 <https://rohanmahy.github.io/credential-playground/>.
 
@@ -72,6 +84,6 @@ Phase 4
 - [x] `app/`: Svelte UI (tabs, key panel, synced panes, chits)
 - [x] WASM ↔ native parity suite
 - [x] Playwright e2e (web)
-- [ ] Desktop e2e: Linux via tauri-driver (in progress); macOS manual ([checklist](Mac-smoketest-checklist.md))
+- [x] Desktop e2e: Linux via tauri-driver (`app/e2e-desktop`); macOS manual ([checklist](Mac-smoketest-checklist.md))
 - [x] Fuzz targets
 - [x] CI (fmt, clippy, tests, Pages deploy, `.app` release)

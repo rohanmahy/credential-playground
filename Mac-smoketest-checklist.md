@@ -3,7 +3,10 @@
 A manual click-through of the packaged desktop app. Automated WebDriver
 tests can't drive WKWebView on macOS, so this covers what CI can't: the
 real `.app`, native dialogs, the system clipboard, and real network fetches.
-Linux CI runs the automated equivalent through `tauri-driver`.
+Linux CI runs the automated equivalent through `tauri-driver`
+(`app/e2e-desktop`, also `scripts/desktop-e2e-docker.sh` on a Mac). Sections
+marked _Also automated on Linux_ have WebDriver counterparts there, as noted;
+keep doing them by hand here, since WKWebView and macOS differ.
 
 Takes about 15 minutes. Run it before tagging a release.
 
@@ -20,6 +23,8 @@ Fixtures are in `testdata/`. To get one onto the clipboard, run
 
 ## 1. Launch and About
 
+_Also automated on Linux:_ the window contents and About (`launch.e2e.ts`). Not appearance.
+
 - [ ] The window opens with the input box, the **Keys** panel, and an empty
       tab area. No error dialogs appear.
 - [ ] **About** shows the §9 security notes, the SD-CWT revision
@@ -28,6 +33,9 @@ Fixtures are in `testdata/`. To get one onto the clipboard, run
       The app follows it without a restart.
 
 ## 2. Input paths (native clipboard and file dialog)
+
+_Also automated on Linux:_ the same fixtures through the input box, plus the
+Bearer layer (`paste-validate.e2e.ts`). Not **From clipboard** or **Open file…**.
 
 - [ ] `pbcopy < testdata/tokens/rfc7515-a3-jws-es256.txt`, then click
       **From clipboard**. A tab opens with the detected type **JWT/JWS** and
@@ -43,6 +51,9 @@ Fixtures are in `testdata/`. To get one onto the clipboard, run
 
 ## 3. Synced panes (CBOR)
 
+_Also automated on Linux:_ fold and selection sync, and the raw pane toggle
+(`tree-sync.e2e.ts`). Not hover text or time hints.
+
 With the CWT tab open:
 
 - [ ] The main pane shows EDN, with registry annotations (e.g. `/ iss /`).
@@ -56,6 +67,10 @@ With the CWT tab open:
       is kept.
 
 ## 4. Keys (native dialogs and clipboard)
+
+_Also automated on Linux:_ create with the seed, kid, Convert, the private
+export gate, a public JWK copied to the clipboard and imported back, and
+Derive public key (`keys.e2e.ts`). Not **Save…** or **From file…**.
 
 - [ ] **Create key** → ES256, **Well-known test seed**, role **Issuer** →
       **Create**. A card appears with kid `(none)`, the provenance
@@ -77,6 +92,10 @@ With the CWT tab open:
 
 ## 5. JOSE flow: validate, issue, present
 
+_Also automated on Linux:_ mark SD → Issue with `cnf` → Present with audience
+and nonce → key binding PASS (`issue-present.e2e.ts`), and the RFC 9901
+signature with its key (`paste-validate.e2e.ts`).
+
 - [ ] Paste `testdata/tokens/rfc9901-s5.1-sd-jwt.txt` and click **Open**.
       The Disclosures table shows 10 rows, all **matched**.
 - [ ] Import `testdata/keys/rfc9901-a5-ec-p256-public.jwk.json`, then
@@ -95,6 +114,9 @@ With the CWT tab open:
 
 ## 6. COSE flow: redact, present, re-encode
 
+_Also automated on Linux:_ Redact → Present → SD-KBT → key binding PASS
+(`issue-present.e2e.ts`). Not the `58(…)` edit or **Re-encode**.
+
 - [ ] Paste `testdata/tokens/sd-cwt-08-fig4-claims.edn`, turn on **Live
       edit**, and wrap one claim key in `58(…)`. **Redact** is enabled.
 - [ ] Create an ES256 issuer key if needed, then **Redact** / **Issue** an
@@ -106,6 +128,9 @@ With the CWT tab open:
       **Re-encode** → **As received** reproduces the original bytes.
 
 ## 7. Live edit and tamper
+
+_Also automated on Linux:_ edit → stale → **Keep original signature** → FAIL
+→ **Re-sign** → PASS (`live-edit.e2e.ts`). Not **Split view** or **Tamper**.
 
 - [ ] On a signed tab, turn on **Live edit** and change one claim value. The
       status shows "modified – signature stale", with **Re-sign** and
@@ -138,6 +163,9 @@ With the CWT tab open:
       **About** change.
 
 ## 10. Never persist
+
+_Also automated on Linux:_ restart with no keys or tabs, and no user data in
+`~/.local/share/io.github.rohanmahy.tokenator/` (`never-persist.e2e.ts`).
 
 - [ ] Quit the app (⌘Q) and reopen it. No keys or tabs come back.
 - [ ] Only the registry cache exists on disk:

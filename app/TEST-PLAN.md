@@ -131,8 +131,10 @@ and COSE, with created keys); key create/convert/export, import, derive,
 kid; tree sync between the panes; no network traffic outside the app's
 origin except user-confirmed fetches; and the CSP in the browser. They
 are no longer gated by `TOKENATOR_E2E`. Details and counts are in
-`crates/tokenator-wasm/TEST-PLAN.md` §5. **tauri-driver specs come
-later**, once `app/src-tauri` exists; they will reuse these flows.
+`crates/tokenator-wasm/TEST-PLAN.md` §5. `e2e-desktop/` runs the same
+flows against the Linux desktop binary (native engine, WebKitGTK) through
+tauri-driver and WebdriverIO; see `src-tauri/TEST-PLAN.md`, "Desktop
+end-to-end".
 
 ## CSP
 
