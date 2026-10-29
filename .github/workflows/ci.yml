@@ -1,0 +1,151 @@
+# fmt, clippy, tests, wasm32 and doc builds, the app checks (unit tests,
+# WASM parity, Playwright), and fuzz smoke runs. Every step is a plain
+# command that also runs locally (README.md, "Building and testing").
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  CARGO_TERM_COLOR: always
+  CARGO_INCREMENTAL: 0
+  RUST_BACKTRACE: 1
+
+jobs:
+  fmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install stable --profile minimal --component rustfmt && rustup default stable
+      - run: cargo fmt --all --check
+      - run: cargo fmt --manifest-path fuzz/Cargo.toml --check
+
+  # Linux: the whole workspace except tokenator-desktop, which needs the
+  # WebKitGTK dev packages (#36); the macOS job covers it.
+  rust-linux:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo clippy --locked --workspace --exclude tokenator-desktop --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --exclude tokenator-desktop --all-features
+      # Default features too: tokenator-edn's feature-off tests are cfg-gated
+      # against the `hash` tests (crates/tokenator-edn/TEST-PLAN.md).
+      - run: cargo test --locked --workspace --exclude tokenator-desktop
+
+  rust-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install stable --profile minimal --component clippy && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - run: cargo clippy --locked --workspace --all-targets --all-features -- -D warnings
+      - run: cargo test --locked --workspace --all-features
+      - run: cargo test --locked --workspace
+
+  wasm-and-docs:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+      - name: wasm32 build of the library crates
+        run: >-
+          cargo build --locked --target wasm32-unknown-unknown
+          -p tokenator-cbor -p tokenator-json -p tokenator-crypto -p tokenator-registry
+          -p tokenator-edn -p tokenator-keys -p tokenator-detect -p tokenator-jose
+          -p tokenator-cose -p tokenator-core -p tokenator-wasm
+      - name: rustdoc
+        run: cargo doc --locked --workspace --exclude tokenator-desktop --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  app:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install stable --profile minimal --target wasm32-unknown-unknown && rustup default stable
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          # build:wasm (wasm-release profile) and the parity tool.
+          shared-key: app
+      - uses: taiki-e/install-action@86f7a0ffb25f40114606501a311ebcfaf882ea32 # v2.88.0
+        with:
+          tool: wasm-pack@0.15.0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
+        with:
+          package_json_file: app/package.json
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: app/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      # svelte-check loads vite.config.ts, which needs the wasm package.
+      - run: pnpm build:wasm
+      - run: pnpm typecheck
+      - run: pnpm lint
+      - run: pnpm test
+      - run: pnpm check:types
+      - run: pnpm build
+      - run: pnpm test:wasm
+      - name: Playwright browsers
+        id: playwright
+        run: echo "version=$(pnpm exec playwright --version | cut -d' ' -f2)" >> "$GITHUB_OUTPUT"
+      - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        id: playwright-cache
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ steps.playwright.outputs.version }}
+      - if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: pnpm exec playwright install --with-deps chromium
+      - if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: pnpm exec playwright install-deps chromium
+      - run: pnpm test:e2e --project chromium
+        env:
+          TOKENATOR_E2E: 1
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: playwright-traces
+          path: app/test-results
+          retention-days: 7
+
+  # Each cargo-fuzz target for about 60 s from the testdata/ seeds (fuzz/README.md).
+  fuzz-smoke:
+    runs-on: ubuntu-latest
+    env:
+      FUZZ_TOOLCHAIN: nightly-2026-02-01
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - run: rustup toolchain install "$FUZZ_TOOLCHAIN" --profile minimal
+      - uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2.9.3
+        with:
+          workspaces: fuzz
+          cache-bin: true
+      - run: cargo install --locked cargo-fuzz@0.13.2
+      - run: cargo "+$FUZZ_TOOLCHAIN" fuzz build
+      - run: fuzz/seed-corpora.sh
+      - run: fuzz/smoke.sh 60
+      - if: failure()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: fuzz-artifacts
+          path: |
+            fuzz/artifacts
+            fuzz/logs
+          retention-days: 14
