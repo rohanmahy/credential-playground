@@ -59,7 +59,8 @@ impl<'r> Notes<'r> {
                 spec: spec_links(entry),
             },
             key_comment: reg.display_name(family, ctx, key)?.to_owned(),
-            value_comment: value.and_then(|v| reg.value_name(family, ctx, key, v).map(str::to_owned)),
+            value_comment: value
+                .and_then(|v| reg.value_name(family, ctx, key, v).map(str::to_owned)),
         })
     }
 }

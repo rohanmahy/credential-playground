@@ -55,7 +55,10 @@ impl JsonWalk<'_> {
         let (main, raw) = match node.span() {
             Some(s) => {
                 self.index.push((s.start, s.end, id.clone()));
-                (Some(self.text.range(s.start..s.end)), (self.raw)(s.start, s.end))
+                (
+                    Some(self.text.range(s.start..s.end)),
+                    (self.raw)(s.start, s.end),
+                )
             }
             None => (None, None),
         };
@@ -74,7 +77,13 @@ impl JsonWalk<'_> {
     }
 
     /// The node for `node` and its subtree.
-    pub(crate) fn tree(&mut self, node: &JNode<'_>, id: NodeId, label: String, role: JRole) -> Node {
+    pub(crate) fn tree(
+        &mut self,
+        node: &JNode<'_>,
+        id: NodeId,
+        label: String,
+        role: JRole,
+    ) -> Node {
         let kind = match node.value() {
             JValue::Null => NodeKind::Null,
             JValue::Bool(_) => NodeKind::Bool,
@@ -106,7 +115,12 @@ impl JsonWalk<'_> {
                     let mut knode = Node {
                         main: m.key_span().map(|s| self.text.range(s.start..s.end)),
                         raw: m.key_span().and_then(|s| (self.raw)(s.start, s.end)),
-                        ..self.base(&JNode::new(JValue::Null), kid.clone(), NodeKind::Text, name.to_owned())
+                        ..self.base(
+                            &JNode::new(JValue::Null),
+                            kid.clone(),
+                            NodeKind::Text,
+                            name.to_owned(),
+                        )
                     };
                     if let Some(s) = m.key_span() {
                         self.index.push((s.start, s.end, kid));
@@ -118,7 +132,12 @@ impl JsonWalk<'_> {
                             JValue::String(s) => Some(Label::Text(s.to_string())),
                             _ => None,
                         };
-                        if let Some(note) = self.notes.lookup(Family::Jose, ctx, &Label::Text(name.to_owned()), value.as_ref()) {
+                        if let Some(note) = self.notes.lookup(
+                            Family::Jose,
+                            ctx,
+                            &Label::Text(name.to_owned()),
+                            value.as_ref(),
+                        ) {
                             v.annotation = Some(note.annotation);
                         }
                     }

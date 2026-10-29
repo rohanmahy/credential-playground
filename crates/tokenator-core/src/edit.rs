@@ -49,7 +49,12 @@ pub(crate) fn parse_edit(registry: &Registry, req: &EditRequest) -> EditResult {
                 Ok(mut doc) => {
                     doc.signature_stale = stale;
                     let mut diagnostics = diagnostics;
-                    diagnostics.extend(doc.diagnostics.iter().filter(|d| d.severity == Severity::Error).cloned());
+                    diagnostics.extend(
+                        doc.diagnostics
+                            .iter()
+                            .filter(|d| d.severity == Severity::Error)
+                            .cloned(),
+                    );
                     EditResult {
                         ok: true,
                         bytes: Some(Bytes(bytes)),
@@ -85,14 +90,23 @@ fn edit(registry: &Registry, req: &EditRequest) -> Edited {
             Err(e) => Err(vec![error_at(text, e.offset, "json.syntax", e.to_string())]),
         },
         Kind::EdnClaims => edn(text).map(|(_, warnings)| (text.as_bytes().to_vec(), warnings)),
-        Kind::CborClaims | Kind::CoseKey | Kind::CoseKeySet | Kind::CoseSign1 | Kind::Cwt | Kind::SdCwt | Kind::SdKbt => {
-            edn(text).and_then(|(item, warnings)| match tokenator_cbor::encode(&item, tokenator_cbor::EncodeMode::Preserve) {
+        Kind::CborClaims
+        | Kind::CoseKey
+        | Kind::CoseKeySet
+        | Kind::CoseSign1
+        | Kind::Cwt
+        | Kind::SdCwt
+        | Kind::SdKbt => edn(text).and_then(|(item, warnings)| {
+            match tokenator_cbor::encode(&item, tokenator_cbor::EncodeMode::Preserve) {
                 Ok(bytes) => Ok((bytes, warnings)),
                 Err(e) => Err(vec![error("cbor.encode", format!("{e:?}"))]),
-            })
-        }
+            }
+        }),
         k if k.family() == Some(Family::Jose) => jose(registry, req),
-        k => Err(vec![error("edit.unsupported_kind", format!("a {} cannot be edited here", k.label()))]),
+        k => Err(vec![error(
+            "edit.unsupported_kind",
+            format!("a {} cannot be edited here", k.label()),
+        )]),
     }
 }
 
@@ -103,7 +117,12 @@ fn edn(text: &str) -> Result<(tokenator_cbor::Item<'static>, Vec<Diagnostic>), V
             Ok((parsed.items.remove(0), warnings))
         }
         Ok(_) => Err(vec![error("edn.syntax", "expected exactly one item")]),
-        Err(e) => Err(vec![error_at(text, e.pos.offset, "edn.syntax", format!("{:?}", e.kind))]),
+        Err(e) => Err(vec![error_at(
+            text,
+            e.pos.offset,
+            "edn.syntax",
+            format!("{:?}", e.kind),
+        )]),
     }
 }
 
@@ -128,9 +147,12 @@ fn jose(registry: &Registry, req: &EditRequest) -> Edited {
     let base = view::jose::build(base_text, &req.kind, Notes::new(registry, false), &req.view)
         .map_err(|e| vec![error("jose.base", e.message)])?;
     let text = req.text.as_str();
-    let edited = tokenator_json::parse_with_options(text.as_bytes(), &tokenator_json::ParseOptions { max_depth: 1024 })
-        .map_err(|e| vec![error_at(text, e.offset, "json.syntax", e.to_string())])?
-        .node;
+    let edited = tokenator_json::parse_with_options(
+        text.as_bytes(),
+        &tokenator_json::ParseOptions { max_depth: 1024 },
+    )
+    .map_err(|e| vec![error_at(text, e.offset, "json.syntax", e.to_string())])?
+    .node;
     let mut changed = false;
     let mut new_parts: Vec<(PartLoc, String)> = Vec::with_capacity(base.parts.len());
     for part in &base.parts {
@@ -139,10 +161,16 @@ fn jose(registry: &Registry, req: &EditRequest) -> Edited {
                 changed = true;
                 continue;
             }
-            return Err(vec![error("jose.part_missing", format!("{} is missing", part.id))]);
+            return Err(vec![error(
+                "jose.part_missing",
+                format!("{} is missing", part.id),
+            )]);
         };
         let Some(span) = node.span() else {
-            return Err(vec![error("jose.part_missing", format!("{} has no text", part.id))]);
+            return Err(vec![error(
+                "jose.part_missing",
+                format!("{} has no text", part.id),
+            )]);
         };
         let slice = text.get(span.start..span.end).unwrap_or("");
         let old = base.text.get(part.value.0..part.value.1).unwrap_or("");
@@ -157,14 +185,25 @@ fn jose(registry: &Registry, req: &EditRequest) -> Edited {
             } else {
                 match node.value() {
                     JValue::String(s) => s.to_string(),
-                    _ => return Err(vec![error_at(text, span.start, "jose.not_a_string", format!("{} must be a base64url string", part.id))]),
+                    _ => {
+                        return Err(vec![error_at(
+                            text,
+                            span.start,
+                            "jose.not_a_string",
+                            format!("{} must be a base64url string", part.id),
+                        )]);
+                    }
                 }
             }
         };
         new_parts.push((part.clone(), new));
     }
     // Disclosures added in the text.
-    let base_count = base.parts.iter().filter(|p| matches!(p.which, PartWhich::Disclosure(_))).count();
+    let base_count = base
+        .parts
+        .iter()
+        .filter(|p| matches!(p.which, PartWhich::Disclosure(_)))
+        .count();
     let mut added = Vec::new();
     if let Some(JValue::Array(items)) = edited.get("disclosures").map(JNode::value) {
         for item in items.iter().skip(base_count) {
@@ -181,14 +220,20 @@ fn jose(registry: &Registry, req: &EditRequest) -> Edited {
         return Ok((req.base.0.clone(), Vec::new()));
     }
     let compact = !base_text.trim_start().starts_with('{');
-    let get = |w: PartWhich| new_parts.iter().find(|(p, _)| p.which == w).map(|(_, t)| t.clone());
+    let get = |w: PartWhich| {
+        new_parts
+            .iter()
+            .find(|(p, _)| p.which == w)
+            .map(|(_, t)| t.clone())
+    };
     let disclosures: Vec<String> = new_parts
         .iter()
         .filter(|(p, _)| matches!(p.which, PartWhich::Disclosure(_)))
         .map(|(_, t)| t.clone())
         .chain(added.iter().cloned())
         .collect();
-    let sd = matches!(req.kind, Kind::SdJwt { .. } | Kind::SdJwtJson { .. }) || !disclosures.is_empty();
+    let sd =
+        matches!(req.kind, Kind::SdJwt { .. } | Kind::SdJwtJson { .. }) || !disclosures.is_empty();
     if compact {
         let mut out = format!(
             "{}.{}.{}",
@@ -224,28 +269,48 @@ fn jose(registry: &Registry, req: &EditRequest) -> Edited {
         if p.text == *t {
             continue;
         }
-        let inside_header = header0.as_ref().is_some_and(|((hs, he), _)| s >= *hs && e <= *he && p.which != PartWhich::Unprotected(0));
+        let inside_header = header0.as_ref().is_some_and(|((hs, he), _)| {
+            s >= *hs && e <= *he && p.which != PartWhich::Unprotected(0)
+        });
         if inside_header || (count_changed && matches!(p.which, PartWhich::Disclosure(_))) {
             continue;
         }
-        if matches!(p.which, PartWhich::KbProtected | PartWhich::KbPayload | PartWhich::KbSignature) {
+        if matches!(
+            p.which,
+            PartWhich::KbProtected | PartWhich::KbPayload | PartWhich::KbSignature
+        ) {
             continue;
         }
         edits.push((s, e, t.clone()));
     }
-    let kb_changed = new_parts
-        .iter()
-        .any(|(p, t)| matches!(p.which, PartWhich::KbProtected | PartWhich::KbPayload | PartWhich::KbSignature) && p.text != *t);
+    let kb_changed = new_parts.iter().any(|(p, t)| {
+        matches!(
+            p.which,
+            PartWhich::KbProtected | PartWhich::KbPayload | PartWhich::KbSignature
+        ) && p.text != *t
+    });
     let envelope = tokenator_json::parse(base_text.as_bytes()).ok();
-    let header_node = envelope
-        .as_ref()
-        .and_then(|r| r.get("header").or_else(|| r.get("signatures").and_then(|s| s.index(0)).and_then(|s| s.get("header"))));
+    let header_node = envelope.as_ref().and_then(|r| {
+        r.get("header").or_else(|| {
+            r.get("signatures")
+                .and_then(|s| s.index(0))
+                .and_then(|s| s.get("header"))
+        })
+    });
     if header0.is_none() {
-        if count_changed && let Some(span) = header_node.and_then(|h| h.get("disclosures")).and_then(JNode::span) {
+        if count_changed
+            && let Some(span) = header_node
+                .and_then(|h| h.get("disclosures"))
+                .and_then(JNode::span)
+        {
             let list: Vec<String> = disclosures.iter().map(|d| json_string(d)).collect();
             edits.push((span.start, span.end, format!("[{}]", list.join(", "))));
         }
-        if kb_changed && let Some(span) = header_node.and_then(|h| h.get("kb_jwt")).and_then(JNode::span) {
+        if kb_changed
+            && let Some(span) = header_node
+                .and_then(|h| h.get("kb_jwt"))
+                .and_then(JNode::span)
+        {
             let kb = format!(
                 "{}.{}.{}",
                 get(PartWhich::KbProtected).unwrap_or_default(),

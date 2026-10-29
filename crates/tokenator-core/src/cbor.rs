@@ -111,7 +111,10 @@ mod tests {
     #[test]
     fn sequences_must_reencode() {
         assert_eq!(exact_sequence(&[0x01, 0x02]).map(|v| v.len()), Some(2));
-        assert!(exact_sequence(&[0x18, 0x01]).is_some(), "non-preferred is still exact");
+        assert!(
+            exact_sequence(&[0x18, 0x01]).is_some(),
+            "non-preferred is still exact"
+        );
         assert!(exact_sequence(&[0x18]).is_none());
         assert!(exact_sequence(&[]).is_none());
     }

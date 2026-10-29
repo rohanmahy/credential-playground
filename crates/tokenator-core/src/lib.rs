@@ -41,11 +41,11 @@ mod engine;
 mod keyring;
 mod manipulate;
 mod reg;
+#[cfg(feature = "ts")]
+pub mod ts;
 mod util;
 mod validate;
 mod view;
-#[cfg(feature = "ts")]
-pub mod ts;
 
 pub use dto::actions::{
     AlgValue, CborSerialization, CnfChoice, DecodeEmbeddedRequest, DecoyRequest, DigestOrder,

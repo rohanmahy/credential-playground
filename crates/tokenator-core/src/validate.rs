@@ -29,7 +29,13 @@ use crate::util::{err, hex, u32_of};
 use crate::view::jose::{part_ref_id, with_parsed};
 use crate::view::{Built, innermost, json_id_at, json_warning, kcwt_id, nodes};
 
-fn check(id: &str, category: Category, status: Status, message: impl Into<String>, node_ids: Vec<NodeId>) -> CheckItem {
+fn check(
+    id: &str,
+    category: Category,
+    status: Status,
+    message: impl Into<String>,
+    node_ids: Vec<NodeId>,
+) -> CheckItem {
     CheckItem {
         id: id.to_owned(),
         category,
@@ -41,7 +47,12 @@ fn check(id: &str, category: Category, status: Status, message: impl Into<String
     }
 }
 
-fn lint_item(id: &str, status: Status, message: impl Into<String>, node_ids: Vec<NodeId>) -> CheckItem {
+fn lint_item(
+    id: &str,
+    status: Status,
+    message: impl Into<String>,
+    node_ids: Vec<NodeId>,
+) -> CheckItem {
     check(id, Category::Lint, status, message, node_ids)
 }
 
@@ -65,7 +76,13 @@ struct Selected {
 /// SPEC §6 key selection over the panel keys: kid match, thumbprint match,
 /// then every key that fits the alg. Keys tried and none verifies is a
 /// failure; nothing to try is a skip.
-fn select(keys: &[Key], refs: &[KeyRef], alg: Alg, kid: Option<&[u8]>, verify: &dyn Fn(&Key) -> bool) -> Selected {
+fn select(
+    keys: &[Key],
+    refs: &[KeyRef],
+    alg: Alg,
+    kid: Option<&[u8]>,
+    verify: &dyn Fn(&Key) -> bool,
+) -> Selected {
     let fitting: Vec<usize> = (0..keys.len())
         .filter(|&i| keys.get(i).is_some_and(|k| fits(k, alg)))
         .collect();
@@ -78,7 +95,11 @@ fn select(keys: &[Key], refs: &[KeyRef], alg: Alg, kid: Option<&[u8]>, verify: &
         Some(kid) => fitting
             .iter()
             .copied()
-            .filter(|&i| keys.get(i).and_then(|k| k.kid.as_ref()).is_some_and(|k| k.as_bytes() == kid))
+            .filter(|&i| {
+                keys.get(i)
+                    .and_then(|k| k.kid.as_ref())
+                    .is_some_and(|k| k.as_bytes() == kid)
+            })
             .collect(),
         None => Vec::new(),
     };
@@ -123,17 +144,36 @@ fn select(keys: &[Key], refs: &[KeyRef], alg: Alg, kid: Option<&[u8]>, verify: &
     Selected {
         status: Status::Fail,
         selection,
-        index: if tried.len() == 1 { tried.first().copied() } else { None },
-        message: format!("{} signature does not verify with {} key(s) tried", alg_to_jose(alg), tried.len()),
+        index: if tried.len() == 1 {
+            tried.first().copied()
+        } else {
+            None
+        },
+        message: format!(
+            "{} signature does not verify with {} key(s) tried",
+            alg_to_jose(alg),
+            tried.len()
+        ),
     }
 }
 
-fn signature_item(id: &str, category: Category, sel: &Selected, alg: Option<Alg>, refs: &[KeyRef], untrusted: bool, node_ids: Vec<NodeId>) -> CheckItem {
+fn signature_item(
+    id: &str,
+    category: Category,
+    sel: &Selected,
+    alg: Option<Alg>,
+    refs: &[KeyRef],
+    untrusted: bool,
+    node_ids: Vec<NodeId>,
+) -> CheckItem {
     CheckItem {
         detail: Some(CheckDetail::Signature {
             alg: alg.map(|a| alg_to_jose(a).to_owned()),
             key_index: sel.index.map(u32_of),
-            key_label: sel.index.and_then(|i| refs.get(i)).and_then(|r| r.label.clone()),
+            key_label: sel
+                .index
+                .and_then(|i| refs.get(i))
+                .and_then(|r| r.label.clone()),
             selection: sel.selection,
             untrusted,
         }),
@@ -141,7 +181,12 @@ fn signature_item(id: &str, category: Category, sel: &Selected, alg: Option<Alg>
     }
 }
 
-fn plain_signature_item(status: Status, message: impl Into<String>, alg: Option<String>, node_ids: Vec<NodeId>) -> CheckItem {
+fn plain_signature_item(
+    status: Status,
+    message: impl Into<String>,
+    alg: Option<String>,
+    node_ids: Vec<NodeId>,
+) -> CheckItem {
     CheckItem {
         detail: Some(CheckDetail::Signature {
             alg,
@@ -184,7 +229,14 @@ fn issuer_hint(iss: &str) -> Option<FetchHint> {
     })
 }
 
-fn time_item(claim: &str, status: Status, value: i64, req: &ValidateRequest, node: NodeId, message: String) -> CheckItem {
+fn time_item(
+    claim: &str,
+    status: Status,
+    value: i64,
+    req: &ValidateRequest,
+    node: NodeId,
+    message: String,
+) -> CheckItem {
     CheckItem {
         detail: Some(CheckDetail::Time {
             claim: claim.to_owned(),
@@ -192,7 +244,13 @@ fn time_item(claim: &str, status: Status, value: i64, req: &ValidateRequest, nod
             now: req.now,
             skew: req.skew,
         }),
-        ..check(&format!("time.{claim}"), Category::Time, status, message, vec![node])
+        ..check(
+            &format!("time.{claim}"),
+            Category::Time,
+            status,
+            message,
+            vec![node],
+        )
     }
 }
 
@@ -207,32 +265,62 @@ fn floor(f: f64) -> i64 {
 
 /// SD items from the rendered document (both families).
 fn sd_items(built: &Built, sd_alg: (Status, String, NodeId), out: &mut Vec<CheckItem>) {
-    out.push(check("sd.sd_alg", Category::Sd, sd_alg.0, sd_alg.1, vec![sd_alg.2]));
-    let all_matched = built.disclosures.iter().all(|d| d.status == DisclosureStatus::Matched);
+    out.push(check(
+        "sd.sd_alg",
+        Category::Sd,
+        sd_alg.0,
+        sd_alg.1,
+        vec![sd_alg.2],
+    ));
+    let all_matched = built
+        .disclosures
+        .iter()
+        .all(|d| d.status == DisclosureStatus::Matched);
     out.push(check(
         "sd.match",
         Category::Sd,
-        if all_matched { Status::Pass } else { Status::Fail },
         if all_matched {
-            format!("{} disclosure(s), each matching exactly one digest", built.disclosures.len())
+            Status::Pass
+        } else {
+            Status::Fail
+        },
+        if all_matched {
+            format!(
+                "{} disclosure(s), each matching exactly one digest",
+                built.disclosures.len()
+            )
         } else {
             "some disclosures do not match exactly one digest".to_owned()
         },
-        built.disclosures.iter().map(|d| d.node_id.clone()).collect(),
+        built
+            .disclosures
+            .iter()
+            .map(|d| d.node_id.clone())
+            .collect(),
     ));
     for d in &built.disclosures {
         let (id, what) = match d.status {
             DisclosureStatus::Matched => continue,
             DisclosureStatus::Unmatched => ("sd.unmatched", "matches no digest"),
-            DisclosureStatus::Duplicate => ("sd.duplicate_disclosure", "repeats an earlier disclosure"),
+            DisclosureStatus::Duplicate => {
+                ("sd.duplicate_disclosure", "repeats an earlier disclosure")
+            }
             DisclosureStatus::Malformed => ("sd.malformed", "is malformed"),
             DisclosureStatus::ForbiddenName => ("sd.forbidden_name", "has a forbidden claim name"),
             DisclosureStatus::KindMismatch => ("sd.kind_mismatch", "is in the wrong kind of slot"),
-            DisclosureStatus::NameCollision => ("sd.name_collision", "collides with an existing claim"),
+            DisclosureStatus::NameCollision => {
+                ("sd.name_collision", "collides with an existing claim")
+            }
         };
         let mut ids = vec![d.node_id.clone()];
         ids.extend(d.slot.clone());
-        out.push(check(id, Category::Sd, Status::Fail, format!("disclosure {} {what}", d.index), ids));
+        out.push(check(
+            id,
+            Category::Sd,
+            Status::Fail,
+            format!("disclosure {} {what}", d.index),
+            ids,
+        ));
     }
     // Duplicate digests: the same digest in more than one slot.
     let mut slots: BTreeMap<String, Vec<NodeId>> = BTreeMap::new();
@@ -241,10 +329,17 @@ fn sd_items(built: &Built, sd_alg: (Status, String, NodeId), out: &mut Vec<Check
             slots.entry(digest.clone()).or_default().push(n.id.clone());
         }
     }
-    let mut dups: Vec<(String, Vec<NodeId>)> = slots.into_iter().filter(|(_, v)| v.len() > 1).collect();
+    let mut dups: Vec<(String, Vec<NodeId>)> =
+        slots.into_iter().filter(|(_, v)| v.len() > 1).collect();
     dups.sort_by(|a, b| a.1.first().cmp(&b.1.first()));
     for (digest, ids) in dups {
-        out.push(check("sd.duplicate_digest", Category::Sd, Status::Fail, format!("digest {digest} appears {} times", ids.len()), ids));
+        out.push(check(
+            "sd.duplicate_digest",
+            Category::Sd,
+            Status::Fail,
+            format!("digest {digest} appears {} times", ids.len()),
+            ids,
+        ));
     }
     for s in &built.undisclosed {
         out.push(check(
@@ -296,7 +391,12 @@ struct Report {
 }
 
 #[allow(clippy::too_many_lines)]
-fn validate_jose(req: &ValidateRequest, keys: &[Key], built: &Built, text: &str) -> Result<Report, EngineError> {
+fn validate_jose(
+    req: &ValidateRequest,
+    keys: &[Key],
+    built: &Built,
+    text: &str,
+) -> Result<Report, EngineError> {
     let nonce = match &req.expected_nonce {
         None => None,
         Some(Nonce::Text { value }) => Some(value.clone()),
@@ -314,22 +414,51 @@ fn validate_jose(req: &ValidateRequest, keys: &[Key], built: &Built, text: &str)
         let mut skipped_kid = None;
         for (i, sig) in jws.signatures.iter().enumerate() {
             let sig_node = part_ref_id(tj::PartRef::Signature(i), general);
-            let ids = vec![sig_node, part_ref_id(tj::PartRef::ProtectedHeader(i), general)];
+            let ids = vec![
+                sig_node,
+                part_ref_id(tj::PartRef::ProtectedHeader(i), general),
+            ];
             let item = match header_alg(sig) {
-                tj::AlgFact::None => plain_signature_item(Status::Fail, "alg is none: the token is unsecured", Some("none".to_owned()), ids),
-                tj::AlgFact::Missing | tj::AlgFact::NotAString => plain_signature_item(Status::Fail, "no usable alg in the header", None, ids),
-                tj::AlgFact::Unsupported(name) => plain_signature_item(Status::Skip, format!("{name} is not supported"), Some(name), ids),
+                tj::AlgFact::None => plain_signature_item(
+                    Status::Fail,
+                    "alg is none: the token is unsecured",
+                    Some("none".to_owned()),
+                    ids,
+                ),
+                tj::AlgFact::Missing | tj::AlgFact::NotAString => {
+                    plain_signature_item(Status::Fail, "no usable alg in the header", None, ids)
+                }
+                tj::AlgFact::Unsupported(name) => plain_signature_item(
+                    Status::Skip,
+                    format!("{name} is not supported"),
+                    Some(name),
+                    ids,
+                ),
                 tj::AlgFact::Known(alg) => {
                     let kid = header_kid(sig);
                     let verify = |k: &Key| tj::verify_signature(jws, i, k).is_ok();
-                    let sel = select(keys, &req.keys, alg, kid.as_deref().map(str::as_bytes), &verify);
+                    let sel = select(
+                        keys,
+                        &req.keys,
+                        alg,
+                        kid.as_deref().map(str::as_bytes),
+                        &verify,
+                    );
                     if sel.status == Status::Skip {
                         skipped_kid = skipped_kid.or(kid);
                     }
                     if i == 0 && sel.status == Status::Pass {
                         r.verifier = sel.index;
                     }
-                    signature_item("signature", Category::Signature, &sel, Some(alg), &req.keys, false, ids)
+                    signature_item(
+                        "signature",
+                        Category::Signature,
+                        &sel,
+                        Some(alg),
+                        &req.keys,
+                        false,
+                        ids,
+                    )
                 }
             };
             let skip = item.status == Status::Skip;
@@ -362,20 +491,32 @@ fn validate_jose(req: &ValidateRequest, keys: &[Key], built: &Built, text: &str)
                 };
                 let node = nid("payload/~e").child(name);
                 let value = jose_numeric(&claims, name).unwrap_or_default();
-                r.items.push(time_item(name, status, value, req, node, format!("{name} {what}")));
+                r.items.push(time_item(
+                    name,
+                    status,
+                    value,
+                    req,
+                    node,
+                    format!("{name} {what}"),
+                ));
             }
         }
         if let Some(sd) = token.sd_jwt() {
-            let alg = jws.claims().map(|c| tj::sd_alg(&c)).unwrap_or(tj::SdAlg::Default);
+            let alg = jws
+                .claims()
+                .map(|c| tj::sd_alg(&c))
+                .unwrap_or(tj::SdAlg::Default);
             let st = match &alg {
                 tj::SdAlg::Default => (Status::Pass, "_sd_alg absent: sha-256".to_owned()),
                 tj::SdAlg::Named(h) => (Status::Pass, format!("_sd_alg {}", h.name())),
-                tj::SdAlg::Unsupported(s) => (Status::Fail, format!("_sd_alg {s} is not supported")),
+                tj::SdAlg::Unsupported(s) => {
+                    (Status::Fail, format!("_sd_alg {s} is not supported"))
+                }
                 tj::SdAlg::NotAString => (Status::Fail, "_sd_alg is not a string".to_owned()),
             };
             sd_items(built, (st.0, st.1, nid("payload/~e/_sd_alg")), &mut r.items);
             match &sd.kb_jwt {
-                None => r.items.push(missing_kb(req, true)),
+                None => r.items.push(missing_kb(req)),
                 Some(_) => {
                     let expect = tj::KbExpectations {
                         aud: req.expected_aud.as_deref(),
@@ -387,8 +528,13 @@ fn validate_jose(req: &ValidateRequest, keys: &[Key], built: &Built, text: &str)
                     if let Some(mut kb) = tj::check_kb_jwt(sd, keys, &expect) {
                         // `max_kb_age` without skew, as tokenator-cose
                         // checks the SD-KBT (tokenator-jose adds the skew).
-                        let iat = sd.kb_jwt.as_ref().and_then(|k| k.claims().ok()).and_then(|c| jose_numeric(&c, "iat"));
-                        if let (Some(max), Some(iat), tj::TimeStatus::Valid) = (req.max_kb_age, iat, kb.iat)
+                        let iat = sd
+                            .kb_jwt
+                            .as_ref()
+                            .and_then(|k| k.claims().ok())
+                            .and_then(|c| jose_numeric(&c, "iat"));
+                        if let (Some(max), Some(iat), tj::TimeStatus::Valid) =
+                            (req.max_kb_age, iat, kb.iat)
                             && i128::from(req.now) > i128::from(iat) + i128::from(max)
                         {
                             kb.iat = tj::TimeStatus::TooOld;
@@ -398,27 +544,41 @@ fn validate_jose(req: &ValidateRequest, keys: &[Key], built: &Built, text: &str)
                 }
             }
         } else if req.expected_aud.is_some() || req.expected_nonce.is_some() {
-            r.items.push(missing_kb(req, false));
+            r.items.push(missing_kb(req));
         }
         Ok(r)
     })
     .map_err(|e| EngineError::new(ErrorCode::Parse, format!("not a JOSE token: {e}")))?
 }
 
-fn missing_kb(req: &ValidateRequest, sd: bool) -> CheckItem {
+/// The `kb` item for a token without key binding: a failure when key
+/// binding was expected, else a skip.
+fn missing_kb(req: &ValidateRequest) -> CheckItem {
     if req.expected_aud.is_some() || req.expected_nonce.is_some() {
-        check("kb", Category::KeyBinding, Status::Fail, "key binding was expected but there is none", vec![NodeId::root()])
-    } else if sd {
-        check("kb", Category::KeyBinding, Status::Skip, "no key binding", vec![NodeId::root()])
+        check(
+            "kb",
+            Category::KeyBinding,
+            Status::Fail,
+            "key binding was expected but there is none",
+            vec![NodeId::root()],
+        )
     } else {
-        check("kb", Category::KeyBinding, Status::Skip, "no key binding", vec![NodeId::root()])
+        check(
+            "kb",
+            Category::KeyBinding,
+            Status::Skip,
+            "no key binding",
+            vec![NodeId::root()],
+        )
     }
 }
 
 fn value_status(v: &tj::ValueCheck) -> (Status, String) {
     match v {
         tj::ValueCheck::Match => (Status::Pass, "as expected".to_owned()),
-        tj::ValueCheck::Mismatch { expected, found } => (Status::Fail, format!("{found:?}, expected {expected:?}")),
+        tj::ValueCheck::Mismatch { expected, found } => {
+            (Status::Fail, format!("{found:?}, expected {expected:?}"))
+        }
         tj::ValueCheck::Unchecked(v) => (Status::Info, format!("{v:?} (not checked)")),
         tj::ValueCheck::Missing => (Status::Fail, "missing".to_owned()),
         tj::ValueCheck::NotAString => (Status::Fail, "not a string".to_owned()),
@@ -428,12 +588,22 @@ fn value_status(v: &tj::ValueCheck) -> (Status, String) {
 fn kb_jose_items(kb: &tj::KbReport, refs: &[KeyRef], out: &mut Vec<CheckItem>) {
     let (selection, index, untrusted) = match &kb.holder_key {
         tj::HolderKey::CnfJwk => (KeySelection::EmbeddedCnf, None, true),
-        tj::HolderKey::CnfKid { candidate, .. } => (KeySelection::PanelKid, Some(*candidate), false),
+        tj::HolderKey::CnfKid { candidate, .. } => {
+            (KeySelection::PanelKid, Some(*candidate), false)
+        }
         _ => (KeySelection::None, None, false),
     };
     let (status, message, alg) = match &kb.signature {
-        Ok(alg) => (Status::Pass, format!("KB-JWT signature verified ({})", alg_to_jose(*alg)), Some(*alg)),
-        Err(tj::VerifyError::NoKey) => (Status::Skip, format!("no holder key ({:?})", kb.holder_key), None),
+        Ok(alg) => (
+            Status::Pass,
+            format!("KB-JWT signature verified ({})", alg_to_jose(*alg)),
+            Some(*alg),
+        ),
+        Err(tj::VerifyError::NoKey) => (
+            Status::Skip,
+            format!("no holder key ({:?})", kb.holder_key),
+            None,
+        ),
         Err(e) => (Status::Fail, format!("KB-JWT signature: {e:?}"), None),
     };
     let sel = Selected {
@@ -442,14 +612,28 @@ fn kb_jose_items(kb: &tj::KbReport, refs: &[KeyRef], out: &mut Vec<CheckItem>) {
         index,
         message,
     };
-    out.push(signature_item("kb.signature", Category::KeyBinding, &sel, alg, refs, untrusted, vec![nid("kb/signature")]));
+    out.push(signature_item(
+        "kb.signature",
+        Category::KeyBinding,
+        &sel,
+        alg,
+        refs,
+        untrusted,
+        vec![nid("kb/signature")],
+    ));
     for (id, v, node) in [
         ("kb.sd_hash", &kb.sd_hash, "kb/payload/~e/sd_hash"),
         ("kb.aud", &kb.aud, "kb/payload/~e/aud"),
         ("kb.nonce", &kb.nonce, "kb/payload/~e/nonce"),
     ] {
         let (status, what) = value_status(v);
-        out.push(check(id, Category::KeyBinding, status, format!("{}: {what}", &id[3..]), vec![nid(node)]));
+        out.push(check(
+            id,
+            Category::KeyBinding,
+            status,
+            format!("{}: {what}", &id[3..]),
+            vec![nid(node)],
+        ));
     }
     let (status, what) = match kb.iat {
         tj::TimeStatus::Valid => (Status::Pass, "fresh"),
@@ -458,14 +642,35 @@ fn kb_jose_items(kb: &tj::KbReport, refs: &[KeyRef], out: &mut Vec<CheckItem>) {
         tj::TimeStatus::TooOld => (Status::Fail, "too old"),
         _ => (Status::Fail, "not usable"),
     };
-    out.push(check("kb.iat", Category::KeyBinding, status, format!("iat {what}"), vec![nid("kb/payload/~e/iat")]));
+    out.push(check(
+        "kb.iat",
+        Category::KeyBinding,
+        status,
+        format!("iat {what}"),
+        vec![nid("kb/payload/~e/iat")],
+    ));
 }
 
 // ---------------------------------------------------------------- COSE
 
-fn cose_time_items(claims: &Item<'_>, prefix: &NodeId, req: &ValidateRequest, out: &mut Vec<CheckItem>) {
-    let t = check_times(claims, &TimeOptions { now: req.now, skew: req.skew });
-    for (name, label, st) in [("exp", "4", t.exp), ("nbf", "5", t.nbf), ("iat", "6", t.iat)] {
+fn cose_time_items(
+    claims: &Item<'_>,
+    prefix: &NodeId,
+    req: &ValidateRequest,
+    out: &mut Vec<CheckItem>,
+) {
+    let t = check_times(
+        claims,
+        &TimeOptions {
+            now: req.now,
+            skew: req.skew,
+        },
+    );
+    for (name, label, st) in [
+        ("exp", "4", t.exp),
+        ("nbf", "5", t.nbf),
+        ("iat", "6", t.iat),
+    ] {
         let Some(st) = st else { continue };
         let (status, what, value) = match st {
             CoseTime::Ok(d) => (Status::Pass, "valid", Some(d)),
@@ -476,7 +681,14 @@ fn cose_time_items(claims: &Item<'_>, prefix: &NodeId, req: &ValidateRequest, ou
         };
         let value = value.map_or(0, |d: NumericDate| floor(d.as_f64()));
         let node = prefix.child("payload").decoded(0).child(label);
-        out.push(time_item(name, status, value, req, node, format!("{name} {what}")));
+        out.push(time_item(
+            name,
+            status,
+            value,
+            req,
+            node,
+            format!("{name} {what}"),
+        ));
     }
 }
 
@@ -486,7 +698,11 @@ fn cose_signature(msg: &Sign1<'_>, prefix: &NodeId, keys: &[Key], refs: &[KeyRef
         None => plain_signature_item(Status::Fail, "no alg in the header", None, ids),
         Some(DeclaredAlg::Known(alg)) => {
             let kid = msg.kid().map(<[u8]>::to_vec);
-            let verify = |k: &Key| CborBackend.verify(msg, k, &VerifyOptions::default()).is_ok();
+            let verify = |k: &Key| {
+                CborBackend
+                    .verify(msg, k, &VerifyOptions::default())
+                    .is_ok()
+            };
             let sel = select(keys, refs, alg, kid.as_deref(), &verify);
             if sel.status == Status::Pass {
                 r.verifier = sel.index;
@@ -496,10 +712,28 @@ fn cose_signature(msg: &Sign1<'_>, prefix: &NodeId, keys: &[Key], refs: &[KeyRef
             {
                 r.fetchable.push(h);
             }
-            signature_item("signature", Category::Signature, &sel, Some(alg), refs, false, ids)
+            signature_item(
+                "signature",
+                Category::Signature,
+                &sel,
+                Some(alg),
+                refs,
+                false,
+                ids,
+            )
         }
-        Some(DeclaredAlg::UnknownCose(l)) => plain_signature_item(Status::Skip, format!("alg {l} is not supported"), Some(l.to_string()), ids),
-        Some(DeclaredAlg::UnknownJose(s)) => plain_signature_item(Status::Skip, format!("alg {s} is not supported"), Some(s), ids),
+        Some(DeclaredAlg::UnknownCose(l)) => plain_signature_item(
+            Status::Skip,
+            format!("alg {l} is not supported"),
+            Some(l.to_string()),
+            ids,
+        ),
+        Some(DeclaredAlg::UnknownJose(s)) => plain_signature_item(
+            Status::Skip,
+            format!("alg {s} is not supported"),
+            Some(s),
+            ids,
+        ),
     };
     r.items.push(item);
 }
@@ -515,8 +749,14 @@ fn cose_sd_alg(alg: CoseSdAlg, prefix: &NodeId) -> (Status, String, NodeId) {
 }
 
 #[allow(clippy::too_many_lines)]
-fn validate_cose(req: &ValidateRequest, keys: &[Key], built: &Built, bytes: &[u8]) -> Result<Report, EngineError> {
-    let parse_err = |e: CoseError| EngineError::new(ErrorCode::Parse, format!("not a COSE_Sign1: {e:?}"));
+fn validate_cose(
+    req: &ValidateRequest,
+    keys: &[Key],
+    built: &Built,
+    bytes: &[u8],
+) -> Result<Report, EngineError> {
+    let parse_err =
+        |e: CoseError| EngineError::new(ErrorCode::Parse, format!("not a COSE_Sign1: {e:?}"));
     let msg = CborBackend.parse(bytes).map_err(parse_err)?;
     let mut r = Report {
         items: Vec::new(),
@@ -546,7 +786,12 @@ fn validate_cose(req: &ValidateRequest, keys: &[Key], built: &Built, bytes: &[u8
                 }
                 sd_items(built, cose_sd_alg(inner.sd_alg, &prefix), &mut r.items);
             }
-            None => r.items.push(plain_signature_item(Status::Fail, "kcwt is not a COSE_Sign1", None, vec![prefix])),
+            None => r.items.push(plain_signature_item(
+                Status::Fail,
+                "kcwt is not a COSE_Sign1",
+                None,
+                vec![prefix],
+            )),
         }
         kb_cose_items(&kbt, keys, req, &mut r.items);
         return Ok(r);
@@ -561,19 +806,25 @@ fn validate_cose(req: &ValidateRequest, keys: &[Key], built: &Built, bytes: &[u8
     if built.kind == Kind::SdCwt {
         let sd = tokenator_cose::sd::SdCwt::from_sign1(msg);
         sd_items(built, cose_sd_alg(sd.sd_alg, &root), &mut r.items);
-        r.items.push(missing_kb(req, true));
+        r.items.push(missing_kb(req));
     } else if req.expected_aud.is_some() || req.expected_nonce.is_some() {
-        r.items.push(missing_kb(req, false));
+        r.items.push(missing_kb(req));
     }
     Ok(r)
 }
 
-fn kb_cose_items(kbt: &tokenator_cose::kbt::KbtReport<'_>, keys: &[Key], req: &ValidateRequest, out: &mut Vec<CheckItem>) {
+fn kb_cose_items(
+    kbt: &tokenator_cose::kbt::KbtReport<'_>,
+    keys: &[Key],
+    req: &ValidateRequest,
+    out: &mut Vec<CheckItem>,
+) {
     let (selection, index, untrusted) = match &kbt.cnf {
         Some(Ok(Cnf::CoseKey(_))) => (KeySelection::EmbeddedCnf, None, true),
         Some(Ok(Cnf::Kid(kid))) => (
             KeySelection::PanelKid,
-            keys.iter().position(|k| k.kid.as_ref().is_some_and(|i| i.as_bytes() == &kid[..])),
+            keys.iter()
+                .position(|k| k.kid.as_ref().is_some_and(|i| i.as_bytes() == &kid[..])),
             false,
         ),
         Some(Ok(Cnf::Thumbprint(tp))) => (
@@ -584,7 +835,11 @@ fn kb_cose_items(kbt: &tokenator_cose::kbt::KbtReport<'_>, keys: &[Key], req: &V
         _ => (KeySelection::None, None, false),
     };
     let (status, message, alg) = match &kbt.kbt_signature {
-        Ok(alg) => (Status::Pass, format!("SD-KBT signature verified ({})", alg_to_jose(*alg)), Some(*alg)),
+        Ok(alg) => (
+            Status::Pass,
+            format!("SD-KBT signature verified ({})", alg_to_jose(*alg)),
+            Some(*alg),
+        ),
         Err(CoseError::NoKey) => (Status::Skip, "no holder key".to_owned(), None),
         Err(e) => (Status::Fail, format!("SD-KBT signature: {e:?}"), None),
     };
@@ -594,29 +849,89 @@ fn kb_cose_items(kbt: &tokenator_cose::kbt::KbtReport<'_>, keys: &[Key], req: &V
         index,
         message,
     };
-    out.push(signature_item("kb.signature", Category::KeyBinding, &sel, alg, &req.keys, untrusted, vec![nid("signature")]));
+    out.push(signature_item(
+        "kb.signature",
+        Category::KeyBinding,
+        &sel,
+        alg,
+        &req.keys,
+        untrusted,
+        vec![nid("signature")],
+    ));
     let has = |f: &dyn Fn(&KbtFinding) -> bool| kbt.findings.iter().any(f);
     let claims = kbt.kbt.payload_item();
-    let present = |label: i64| claims.and_then(|c| crate::cbor::map_get(c, label)).is_some();
+    let present = |label: i64| {
+        claims
+            .and_then(|c| crate::cbor::map_get(c, label))
+            .is_some()
+    };
     // aud
     if has(&|f| matches!(f, KbtFinding::AudMissing)) {
-        out.push(check("kb.aud", Category::KeyBinding, Status::Fail, "aud missing", vec![nid("payload")]));
+        out.push(check(
+            "kb.aud",
+            Category::KeyBinding,
+            Status::Fail,
+            "aud missing",
+            vec![nid("payload")],
+        ));
     } else if has(&|f| matches!(f, KbtFinding::AudMismatch)) {
-        out.push(check("kb.aud", Category::KeyBinding, Status::Fail, "aud is not the expected value", vec![nid("payload/~e/3")]));
+        out.push(check(
+            "kb.aud",
+            Category::KeyBinding,
+            Status::Fail,
+            "aud is not the expected value",
+            vec![nid("payload/~e/3")],
+        ));
     } else if req.expected_aud.is_some() {
-        out.push(check("kb.aud", Category::KeyBinding, Status::Pass, "aud as expected", vec![nid("payload/~e/3")]));
+        out.push(check(
+            "kb.aud",
+            Category::KeyBinding,
+            Status::Pass,
+            "aud as expected",
+            vec![nid("payload/~e/3")],
+        ));
     } else if present(3) {
-        out.push(check("kb.aud", Category::KeyBinding, Status::Info, "aud not checked", vec![nid("payload/~e/3")]));
+        out.push(check(
+            "kb.aud",
+            Category::KeyBinding,
+            Status::Info,
+            "aud not checked",
+            vec![nid("payload/~e/3")],
+        ));
     }
     // cnonce
     if has(&|f| matches!(f, KbtFinding::CnonceMissing)) {
-        out.push(check("kb.nonce", Category::KeyBinding, Status::Fail, "cnonce missing", vec![nid("payload")]));
+        out.push(check(
+            "kb.nonce",
+            Category::KeyBinding,
+            Status::Fail,
+            "cnonce missing",
+            vec![nid("payload")],
+        ));
     } else if has(&|f| matches!(f, KbtFinding::CnonceMismatch)) {
-        out.push(check("kb.nonce", Category::KeyBinding, Status::Fail, "cnonce is not the expected value", vec![nid("payload/~e/39")]));
+        out.push(check(
+            "kb.nonce",
+            Category::KeyBinding,
+            Status::Fail,
+            "cnonce is not the expected value",
+            vec![nid("payload/~e/39")],
+        ));
     } else if req.expected_nonce.is_some() {
-        out.push(check("kb.nonce", Category::KeyBinding, Status::Pass, "cnonce as expected", vec![nid("payload/~e/39")]));
+        out.push(check(
+            "kb.nonce",
+            Category::KeyBinding,
+            Status::Pass,
+            "cnonce as expected",
+            vec![nid("payload/~e/39")],
+        ));
     } else if present(39) {
-        out.push(check("kb.nonce", Category::KeyBinding, Status::Info, "cnonce not checked", vec![nid("payload/~e/39")]));
+        out.push(check(
+            "kb.nonce",
+            Category::KeyBinding,
+            Status::Info,
+            "cnonce not checked",
+            vec![nid("payload/~e/39")],
+        ));
     }
     // iat freshness
     let stale = kbt.findings.iter().find_map(|f| match f {
@@ -626,8 +941,20 @@ fn kb_cose_items(kbt: &tokenator_cose::kbt::KbtReport<'_>, keys: &[Key], req: &V
         _ => None,
     });
     match stale {
-        Some(why) => out.push(check("kb.iat", Category::KeyBinding, Status::Fail, why, vec![nid("payload/~e/6")])),
-        None if present(6) => out.push(check("kb.iat", Category::KeyBinding, Status::Pass, "iat fresh", vec![nid("payload/~e/6")])),
+        Some(why) => out.push(check(
+            "kb.iat",
+            Category::KeyBinding,
+            Status::Fail,
+            why,
+            vec![nid("payload/~e/6")],
+        )),
+        None if present(6) => out.push(check(
+            "kb.iat",
+            Category::KeyBinding,
+            Status::Pass,
+            "iat fresh",
+            vec![nid("payload/~e/6")],
+        )),
         None => {}
     }
     for f in &kbt.findings {
@@ -642,7 +969,13 @@ fn kb_cose_items(kbt: &tokenator_cose::kbt::KbtReport<'_>, keys: &[Key], req: &V
             KbtFinding::EmptySdClaims => "empty sd_claims",
             _ => continue,
         };
-        out.push(check("kb.rules", Category::KeyBinding, Status::Fail, format!("{why} ({f:?})"), vec![NodeId::root()]));
+        out.push(check(
+            "kb.rules",
+            Category::KeyBinding,
+            Status::Fail,
+            format!("{why} ({f:?})"),
+            vec![NodeId::root()],
+        ));
     }
 }
 
@@ -659,7 +992,14 @@ fn encoding_finding(kind: CborFinding) -> (&'static str, &'static str) {
     }
 }
 
-fn encoding_item(kind: CborFinding, status: Status, start: usize, end: usize, preferred: &[u8], node: Option<NodeId>) -> CheckItem {
+fn encoding_item(
+    kind: CborFinding,
+    status: Status,
+    start: usize,
+    end: usize,
+    preferred: &[u8],
+    node: Option<NodeId>,
+) -> CheckItem {
     let (id, finding) = encoding_finding(kind);
     CheckItem {
         raw: Some(ByteRange {
@@ -670,19 +1010,48 @@ fn encoding_item(kind: CborFinding, status: Status, start: usize, end: usize, pr
             finding: finding.to_owned(),
             preferred_hex: hex(preferred),
         }),
-        ..lint_item(id, status, format!("{finding}: preferred {}", hex(preferred)), node.into_iter().collect())
+        ..lint_item(
+            id,
+            status,
+            format!("{finding}: preferred {}", hex(preferred)),
+            node.into_iter().collect(),
+        )
     }
 }
 
-fn json_lint(root: &JNode<'_>, warnings: &[tokenator_json::Warning], base: &NodeId, out: &mut Vec<CheckItem>) {
+fn json_lint(
+    root: &JNode<'_>,
+    warnings: &[tokenator_json::Warning],
+    base: &NodeId,
+    out: &mut Vec<CheckItem>,
+) {
     for w in warnings {
         let (code, message) = json_warning(w.kind);
-        let id = if code == "json.invalid_utf8" { "lint.json_utf8" } else { "lint.json_number" };
-        out.push(lint_item(id, Status::Warn, message, vec![json_id_at(root, w.offset, base.clone())]));
+        let id = if code == "json.invalid_utf8" {
+            "lint.json_utf8"
+        } else {
+            "lint.json_number"
+        };
+        out.push(lint_item(
+            id,
+            Status::Warn,
+            message,
+            vec![json_id_at(root, w.offset, base.clone())],
+        ));
     }
     for d in tj::duplicate_members(root) {
-        let ids: Vec<NodeId> = d.spans.iter().skip(1).map(|s| json_id_at(root, s.start, base.clone())).collect();
-        out.push(lint_item("lint.duplicate_key", Status::Warn, format!("duplicate member {:?}", d.name), ids));
+        let ids: Vec<NodeId> = d
+            .spans
+            .iter()
+            .skip(1)
+            .map(|s| json_id_at(root, s.start, base.clone()))
+            .collect();
+        out.push(lint_item(
+            "lint.duplicate_key",
+            Status::Warn,
+            format!("duplicate member {:?}", d.name),
+            ids,
+        ));
     }
 }
 
@@ -694,7 +1063,10 @@ fn json_part_lint(part: &tj::B64Part<'_>, base: NodeId, out: &mut Vec<CheckItem>
 }
 
 fn mismatch_text(m: &[tokenator_crypto::KeyMismatch]) -> String {
-    m.iter().map(|x| format!("{x:?}")).collect::<Vec<_>>().join("; ")
+    m.iter()
+        .map(|x| format!("{x:?}"))
+        .collect::<Vec<_>>()
+        .join("; ")
 }
 
 #[allow(clippy::too_many_lines)]
@@ -708,21 +1080,53 @@ fn lint_jose(text: &str, keys: &[Key]) -> Result<Vec<CheckItem>, EngineError> {
             let hid = part_ref_id(tj::PartRef::ProtectedHeader(i), general).decoded(0);
             let header = sig.protected.as_ref().and_then(|p| p.json().ok());
             if let Some(p) = &sig.protected {
-                json_part_lint(p, part_ref_id(tj::PartRef::ProtectedHeader(i), general).decoded(0), &mut out);
+                json_part_lint(
+                    p,
+                    part_ref_id(tj::PartRef::ProtectedHeader(i), general).decoded(0),
+                    &mut out,
+                );
             }
             if let Some(h) = &header {
                 let facts = tj::header_facts(h);
                 if facts.alg == tj::AlgFact::None {
-                    out.push(lint_item("lint.alg_none", Status::Warn, "alg none: the token is unsecured", vec![hid.child("alg")]));
+                    out.push(lint_item(
+                        "lint.alg_none",
+                        Status::Warn,
+                        "alg none: the token is unsecured",
+                        vec![hid.child("alg")],
+                    ));
                 }
                 match &facts.crit {
                     tj::CritFact::Absent => {}
-                    tj::CritFact::Malformed => out.push(lint_item("lint.crit", Status::Warn, "crit is not an array of strings", vec![hid.child("crit")])),
-                    tj::CritFact::Empty => out.push(lint_item("lint.crit", Status::Warn, "crit is empty", vec![hid.child("crit")])),
-                    tj::CritFact::Entries { not_understood, registered, missing } => {
-                        for (what, names) in [("not understood", not_understood), ("registered", registered), ("missing from the header", missing)] {
+                    tj::CritFact::Malformed => out.push(lint_item(
+                        "lint.crit",
+                        Status::Warn,
+                        "crit is not an array of strings",
+                        vec![hid.child("crit")],
+                    )),
+                    tj::CritFact::Empty => out.push(lint_item(
+                        "lint.crit",
+                        Status::Warn,
+                        "crit is empty",
+                        vec![hid.child("crit")],
+                    )),
+                    tj::CritFact::Entries {
+                        not_understood,
+                        registered,
+                        missing,
+                    } => {
+                        for (what, names) in [
+                            ("not understood", not_understood),
+                            ("registered", registered),
+                            ("missing from the header", missing),
+                        ] {
                             if !names.is_empty() {
-                                out.push(lint_item("lint.crit", Status::Warn, format!("crit {what}: {}", names.join(", ")), vec![hid.child("crit")]));
+                                out.push(lint_item(
+                                    "lint.crit",
+                                    Status::Warn,
+                                    format!("crit {what}: {}", names.join(", ")),
+                                    vec![hid.child("crit")],
+                                ));
                             }
                         }
                     }
@@ -731,12 +1135,26 @@ fn lint_jose(text: &str, keys: &[Key]) -> Result<Vec<CheckItem>, EngineError> {
                     for k in keys {
                         let m = tj::key_findings(alg, k);
                         if !m.is_empty() {
-                            out.push(lint_item("lint.alg_key", Status::Warn, format!("key does not fit {}: {}", alg_to_jose(alg), mismatch_text(&m)), vec![hid.child("alg")]));
+                            out.push(lint_item(
+                                "lint.alg_key",
+                                Status::Warn,
+                                format!(
+                                    "key does not fit {}: {}",
+                                    alg_to_jose(alg),
+                                    mismatch_text(&m)
+                                ),
+                                vec![hid.child("alg")],
+                            ));
                         }
                     }
                 }
             } else if sig.protected.is_none() {
-                out.push(lint_item("lint.header", Status::Warn, "no protected header", vec![NodeId::root()]));
+                out.push(lint_item(
+                    "lint.header",
+                    Status::Warn,
+                    "no protected header",
+                    vec![NodeId::root()],
+                ));
             }
             if let Some(u) = &sig.unprotected {
                 let uid = part_ref_id(tj::PartRef::UnprotectedHeader(i), general);
@@ -750,18 +1168,36 @@ fn lint_jose(text: &str, keys: &[Key]) -> Result<Vec<CheckItem>, EngineError> {
                     .collect();
                 for m in u.members().unwrap_or_default() {
                     if protected_names.contains(m.key().as_ref()) {
-                        out.push(lint_item("lint.header", Status::Warn, format!("{} is in both headers", m.key()), vec![uid.child(m.key())]));
+                        out.push(lint_item(
+                            "lint.header",
+                            Status::Warn,
+                            format!("{} is in both headers", m.key()),
+                            vec![uid.child(m.key())],
+                        ));
                     }
                 }
                 if u.get("alg").is_some() && !protected_names.contains("alg") {
-                    out.push(lint_item("lint.header", Status::Warn, "alg is not integrity protected", vec![uid.child("alg")]));
+                    out.push(lint_item(
+                        "lint.header",
+                        Status::Warn,
+                        "alg is not integrity protected",
+                        vec![uid.child("alg")],
+                    ));
                 }
             }
         }
-        json_part_lint(&jws.payload, NodeId::root().child("payload").decoded(0), &mut out);
+        json_part_lint(
+            &jws.payload,
+            NodeId::root().child("payload").decoded(0),
+            &mut out,
+        );
         if let Some(sd) = token.sd_jwt() {
             for (i, d) in sd.disclosures.iter().enumerate() {
-                json_part_lint(d.part(), NodeId::root().child("disclosures").index(i).decoded(0), &mut out);
+                json_part_lint(
+                    d.part(),
+                    NodeId::root().child("disclosures").index(i).decoded(0),
+                    &mut out,
+                );
             }
             if let Some(kb) = &sd.kb_jwt {
                 let kh = nid("kb/protected/~e");
@@ -770,22 +1206,48 @@ fn lint_jose(text: &str, keys: &[Key]) -> Result<Vec<CheckItem>, EngineError> {
                     json_part_lint(p, kh.clone(), &mut out);
                 }
                 json_part_lint(&kb.payload, nid("kb/payload/~e"), &mut out);
-                let facts = kb_header.and_then(|p| p.json().ok()).map(|h| tj::header_facts(&h));
+                let facts = kb_header
+                    .and_then(|p| p.json().ok())
+                    .map(|h| tj::header_facts(&h));
                 if let Some(f) = &facts {
                     match &f.typ {
                         tj::StrFact::Value(t) if t == "kb+jwt" => {}
-                        tj::StrFact::Absent => out.push(lint_item("lint.typ", Status::Warn, "KB-JWT without typ kb+jwt", vec![nid("kb/protected/~e")])),
-                        _ => out.push(lint_item("lint.typ", Status::Warn, "KB-JWT typ is not kb+jwt", vec![kh.child("typ")])),
+                        tj::StrFact::Absent => out.push(lint_item(
+                            "lint.typ",
+                            Status::Warn,
+                            "KB-JWT without typ kb+jwt",
+                            vec![nid("kb/protected/~e")],
+                        )),
+                        _ => out.push(lint_item(
+                            "lint.typ",
+                            Status::Warn,
+                            "KB-JWT typ is not kb+jwt",
+                            vec![kh.child("typ")],
+                        )),
                     }
                     if f.alg == tj::AlgFact::None {
-                        out.push(lint_item("lint.alg_none", Status::Warn, "KB-JWT alg none", vec![kh.child("alg")]));
+                        out.push(lint_item(
+                            "lint.alg_none",
+                            Status::Warn,
+                            "KB-JWT alg none",
+                            vec![kh.child("alg")],
+                        ));
                     }
                     if let (tj::AlgFact::Known(kb_alg), Ok(claims)) = (&f.alg, jws.claims())
                         && let tj::CnfFact::Jwk(jwk) = tj::cnf(&claims)
                         && let Ok(m) = tj::jwk_findings(*kb_alg, &jwk)
                         && !m.is_empty()
                     {
-                        out.push(lint_item("lint.alg_key", Status::Warn, format!("cnf key does not fit {}: {}", alg_to_jose(*kb_alg), mismatch_text(&m)), vec![nid("payload/~e/cnf/jwk")]));
+                        out.push(lint_item(
+                            "lint.alg_key",
+                            Status::Warn,
+                            format!(
+                                "cnf key does not fit {}: {}",
+                                alg_to_jose(*kb_alg),
+                                mismatch_text(&m)
+                            ),
+                            vec![nid("payload/~e/cnf/jwk")],
+                        ));
                     }
                 }
             }
@@ -799,7 +1261,10 @@ fn cose_lint_id(kind: &CoseLint) -> &'static str {
     match kind {
         CoseLint::DuplicateMapKey => "lint.duplicate_key",
         CoseLint::AlgKeyMismatch { .. } => "lint.alg_key",
-        CoseLint::CritNotProtected | CoseLint::CritMalformed | CoseLint::CritMissingLabel(_) | CoseLint::CritNotUnderstood(_) => "lint.crit",
+        CoseLint::CritNotProtected
+        | CoseLint::CritMalformed
+        | CoseLint::CritMissingLabel(_)
+        | CoseLint::CritNotUnderstood(_) => "lint.crit",
         CoseLint::TypMissing | CoseLint::TypUnexpected(_) => "lint.typ",
         CoseLint::SaltLength(_) => "lint.salt",
         _ => "lint.header",
@@ -807,8 +1272,9 @@ fn cose_lint_id(kind: &CoseLint) -> &'static str {
 }
 
 fn lint_cose(bytes: &[u8], built: &Built, keys: &[Key]) -> Result<Vec<CheckItem>, EngineError> {
-    let findings = tokenator_cose::lint::lint(&CborBackend, bytes, &LintOptions { signer: None })
-        .map_err(|e| EngineError::new(ErrorCode::Parse, format!("not a COSE_Sign1: {e:?}")))?;
+    let findings =
+        tokenator_cose::lint::lint(&CborBackend, bytes, &LintOptions { signer: None })
+            .map_err(|e| EngineError::new(ErrorCode::Parse, format!("not a COSE_Sign1: {e:?}")))?;
     let mut out = Vec::new();
     for f in findings {
         let status = match f.severity {
@@ -817,12 +1283,20 @@ fn lint_cose(bytes: &[u8], built: &Built, keys: &[Key]) -> Result<Vec<CheckItem>
         };
         let node = f.span.and_then(|s| innermost(&built.index, s.start, s.end));
         match &f.kind {
-            CoseLint::Encoding { kind, preferred_bytes } => {
+            CoseLint::Encoding {
+                kind,
+                preferred_bytes,
+            } => {
                 let (s, e) = f.span.map_or((0, 0), |s| (s.start, s.end));
                 out.push(encoding_item(*kind, status, s, e, preferred_bytes, node));
             }
             other => {
-                let mut item = lint_item(cose_lint_id(other), status, format!("{other:?}"), node.into_iter().collect());
+                let mut item = lint_item(
+                    cose_lint_id(other),
+                    status,
+                    format!("{other:?}"),
+                    node.into_iter().collect(),
+                );
                 item.raw = f.span.map(|s| ByteRange {
                     start: u32_of(s.start),
                     end: u32_of(s.end),
@@ -835,7 +1309,10 @@ fn lint_cose(bytes: &[u8], built: &Built, keys: &[Key]) -> Result<Vec<CheckItem>
     let msg = CborBackend.parse(bytes).ok();
     let (alg, alg_node) = match (&built.kind, &msg) {
         (Kind::SdKbt, Some(_)) => {
-            let inner = crate::view::find(&built.tree, &kcwt_id().child("protected").decoded(0).child("1"));
+            let inner = crate::view::find(
+                &built.tree,
+                &kcwt_id().child("protected").decoded(0).child("1"),
+            );
             let alg = inner.and_then(|_| inner_alg(bytes, built));
             (alg, kcwt_id().child("protected").decoded(0).child("1"))
         }
@@ -852,7 +1329,16 @@ fn lint_cose(bytes: &[u8], built: &Built, keys: &[Key]) -> Result<Vec<CheckItem>
         for k in keys {
             let m = tokenator_crypto::check_key(alg, &tokenator_keys::params(k));
             if !m.is_empty() {
-                out.push(lint_item("lint.alg_key", Status::Warn, format!("key does not fit {}: {}", alg_to_jose(alg), mismatch_text(&m)), vec![alg_node.clone()]));
+                out.push(lint_item(
+                    "lint.alg_key",
+                    Status::Warn,
+                    format!(
+                        "key does not fit {}: {}",
+                        alg_to_jose(alg),
+                        mismatch_text(&m)
+                    ),
+                    vec![alg_node.clone()],
+                ));
             }
         }
     }
@@ -879,12 +1365,24 @@ fn lint_cbor_claims(built: &Built) -> Result<Vec<CheckItem>, EngineError> {
     let mut out = Vec::new();
     for f in tokenator_cbor::preferred_plus_findings(&item) {
         let node = innermost(&built.index, f.span.start, f.span.end);
-        out.push(encoding_item(f.kind, Status::Info, f.span.start, f.span.end, &f.preferred_bytes, node));
+        out.push(encoding_item(
+            f.kind,
+            Status::Info,
+            f.span.start,
+            f.span.end,
+            &f.preferred_bytes,
+            node,
+        ));
     }
     for d in tokenator_cbor::duplicate_keys(&item) {
         let node = crate::view::exact(&built.index, d.duplicate_key.start, d.duplicate_key.end)
             .map(|k| k.parent().unwrap_or(k));
-        let mut it = lint_item("lint.duplicate_key", Status::Warn, "duplicate map key", node.into_iter().collect());
+        let mut it = lint_item(
+            "lint.duplicate_key",
+            Status::Warn,
+            "duplicate map key",
+            node.into_iter().collect(),
+        );
         it.raw = Some(ByteRange {
             start: u32_of(d.duplicate_key.start),
             end: u32_of(d.duplicate_key.end),
@@ -894,18 +1392,25 @@ fn lint_cbor_claims(built: &Built) -> Result<Vec<CheckItem>, EngineError> {
     Ok(out)
 }
 
-fn lint_items(kind: &Kind, bytes: &[u8], built: &Built, keys: &[Key]) -> Result<Vec<CheckItem>, EngineError> {
+fn lint_items(
+    kind: &Kind,
+    bytes: &[u8],
+    built: &Built,
+    keys: &[Key],
+) -> Result<Vec<CheckItem>, EngineError> {
     match kind {
         Kind::JsonClaims => {
             let mut out = Vec::new();
-            if let Ok(parsed) = tokenator_json::parse_with_options(bytes, &ParseOptions::default()) {
+            if let Ok(parsed) = tokenator_json::parse_with_options(bytes, &ParseOptions::default())
+            {
                 json_lint(&parsed.node, &parsed.warnings, &NodeId::root(), &mut out);
             }
             Ok(out)
         }
         Kind::CborClaims | Kind::EdnClaims => lint_cbor_claims(built),
         k if k.family() == Some(Family::Jose) => {
-            let text = std::str::from_utf8(bytes).map_err(|_| EngineError::new(ErrorCode::Parse, "not UTF-8"))?;
+            let text = std::str::from_utf8(bytes)
+                .map_err(|_| EngineError::new(ErrorCode::Parse, "not UTF-8"))?;
             lint_jose(text, keys)
         }
         _ => lint_cose(bytes, built, keys),
@@ -945,20 +1450,32 @@ pub(crate) fn lint(registry: &Registry, req: &LintRequest) -> Result<Vec<CheckIt
     Ok(items)
 }
 
-pub(crate) fn validate(registry: &Registry, req: &ValidateRequest) -> Result<ValidationReport, EngineError> {
+pub(crate) fn validate(
+    registry: &Registry,
+    req: &ValidateRequest,
+) -> Result<ValidationReport, EngineError> {
     let kind = &req.doc.kind;
     if kind.is_key() || kind.is_claims() {
-        return err(ErrorCode::UnsupportedKind, format!("a {} cannot be validated", kind.label()));
+        return err(
+            ErrorCode::UnsupportedKind,
+            format!("a {} cannot be validated", kind.label()),
+        );
     }
     let keys = resolve_all(&req.keys)?;
     let b = built(registry, kind, &req.doc.bytes)?;
     let mut r = if kind.family() == Some(Family::Jose) {
-        let text = std::str::from_utf8(&req.doc.bytes).map_err(|_| EngineError::new(ErrorCode::Parse, "not UTF-8"))?;
+        let text = std::str::from_utf8(&req.doc.bytes)
+            .map_err(|_| EngineError::new(ErrorCode::Parse, "not UTF-8"))?;
         validate_jose(req, &keys, &b, text)?
     } else {
         validate_cose(req, &keys, &b, &req.doc.bytes)?
     };
-    let verifier: Vec<Key> = r.verifier.and_then(|i| keys.get(i)).cloned().into_iter().collect();
+    let verifier: Vec<Key> = r
+        .verifier
+        .and_then(|i| keys.get(i))
+        .cloned()
+        .into_iter()
+        .collect();
     let mut lint = lint_items(&b.kind, &req.doc.bytes, &b, &verifier)?;
     r.items.append(&mut lint);
     existing(&b.tree, &mut r.items);

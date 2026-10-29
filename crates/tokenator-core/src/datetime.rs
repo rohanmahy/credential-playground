@@ -91,7 +91,11 @@ fn parse_epoch(text: &str) -> Result<Instant, EngineError> {
     };
     let (int, frac) = digits.split_once('.').unwrap_or((digits, ""));
     let all_digits = |s: &str| s.bytes().all(|b| b.is_ascii_digit());
-    if int.is_empty() || !all_digits(int) || !all_digits(frac) || (digits.contains('.') && frac.is_empty()) {
+    if int.is_empty()
+        || !all_digits(int)
+        || !all_digits(frac)
+        || (digits.contains('.') && frac.is_empty())
+    {
         return Err(bad());
     }
     let whole: i64 = int.parse().map_err(|_| bad())?;
@@ -104,7 +108,10 @@ fn parse_epoch(text: &str) -> Result<Instant, EngineError> {
         (false, n) => (whole, n),
         (true, 0) => (whole.checked_neg().ok_or_else(bad)?, 0),
         (true, n) => (
-            whole.checked_neg().and_then(|w| w.checked_sub(1)).ok_or_else(bad)?,
+            whole
+                .checked_neg()
+                .and_then(|w| w.checked_sub(1))
+                .ok_or_else(bad)?,
             1_000_000_000 - n,
         ),
     };

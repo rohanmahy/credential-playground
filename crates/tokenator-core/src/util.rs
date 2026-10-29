@@ -1,5 +1,6 @@
 //! Small shared helpers: errors, hex, text ranges, randomness.
 
+use std::fmt::Write as _;
 use std::ops::Range;
 
 use rand_chacha::ChaCha20Rng;
@@ -16,11 +17,10 @@ pub(crate) fn err<T>(code: ErrorCode, message: impl Into<String>) -> Result<T, E
 
 /// Lowercase hex.
 pub(crate) fn hex(bytes: &[u8]) -> String {
-    const DIGITS: &[u8; 16] = b"0123456789abcdef";
     let mut out = String::with_capacity(bytes.len() * 2);
     for b in bytes {
-        out.push(char::from(DIGITS[usize::from(b >> 4)]));
-        out.push(char::from(DIGITS[usize::from(b & 0x0f)]));
+        // Writing to a String cannot fail.
+        let _ = write!(out, "{b:02x}");
     }
     out
 }
@@ -31,10 +31,14 @@ pub(crate) fn unhex(text: &str) -> Option<Vec<u8>> {
         .bytes()
         .filter(|b| !b.is_ascii_whitespace() && *b != b':')
         .collect();
-    if digits.len() % 2 != 0 {
+    if !digits.len().is_multiple_of(2) {
         return None;
     }
-    let value = |b: u8| char::from(b).to_digit(16).and_then(|v| u8::try_from(v).ok());
+    let value = |b: u8| {
+        char::from(b)
+            .to_digit(16)
+            .and_then(|v| u8::try_from(v).ok())
+    };
     digits
         .chunks(2)
         .map(|pair| match pair {

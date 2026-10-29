@@ -26,7 +26,11 @@ use crate::util::{TextIndex, err, hex, line_count, u32_of};
 use cbor::{CborView, MainText, Role};
 
 /// Sets SD marks by node id, and `DigestList` on nodes `list` accepts.
-pub(crate) fn apply_marks(tree: &mut Node, marks: &[(NodeId, SdMark)], list: impl Fn(&Node) -> bool) {
+pub(crate) fn apply_marks(
+    tree: &mut Node,
+    marks: &[(NodeId, SdMark)],
+    list: impl Fn(&Node) -> bool,
+) {
     let mut by_id: BTreeMap<&NodeId, &SdMark> = BTreeMap::new();
     for (id, mark) in marks {
         by_id.entry(id).or_insert(mark);
@@ -43,7 +47,11 @@ pub(crate) fn apply_marks(tree: &mut Node, marks: &[(NodeId, SdMark)], list: imp
 }
 
 /// The deepest node whose byte span contains `start..end` (pre-order index).
-pub(crate) fn innermost(index: &[(usize, usize, NodeId)], start: usize, end: usize) -> Option<NodeId> {
+pub(crate) fn innermost(
+    index: &[(usize, usize, NodeId)],
+    start: usize,
+    end: usize,
+) -> Option<NodeId> {
     index
         .iter()
         .rev()
@@ -89,7 +97,10 @@ pub(crate) fn json_id_at(root: &JNode<'_>, offset: usize, base: NodeId) -> NodeI
             JValue::Array(items) => items
                 .iter()
                 .enumerate()
-                .find(|(_, c)| c.span().is_some_and(|s| s.start <= offset && offset < s.end))
+                .find(|(_, c)| {
+                    c.span()
+                        .is_some_and(|s| s.start <= offset && offset < s.end)
+                })
                 .map(|(i, c)| (id.index(i), c)),
             JValue::Object(members) => {
                 let mut seen = std::collections::BTreeSet::new();
@@ -101,8 +112,13 @@ pub(crate) fn json_id_at(root: &JNode<'_>, offset: usize, base: NodeId) -> NodeI
                     } else {
                         id.push_raw(&format!("~i{i}"))
                     };
-                    let in_key = m.key_span().is_some_and(|s| s.start <= offset && offset < s.end);
-                    let in_value = m.value().span().is_some_and(|s| s.start <= offset && offset < s.end);
+                    let in_key = m
+                        .key_span()
+                        .is_some_and(|s| s.start <= offset && offset < s.end);
+                    let in_value = m
+                        .value()
+                        .span()
+                        .is_some_and(|s| s.start <= offset && offset < s.end);
                     if in_key {
                         return eid;
                     }
@@ -227,10 +243,19 @@ pub(crate) fn cose_kind(k: TokenKind) -> Kind {
 }
 
 /// Renders `bytes` as `kind`.
-pub(crate) fn build(registry: &Registry, kind: &Kind, bytes: &[u8], view: &ViewOptions) -> Result<Built, EngineError> {
+pub(crate) fn build(
+    registry: &Registry,
+    kind: &Kind,
+    bytes: &[u8],
+    view: &ViewOptions,
+) -> Result<Built, EngineError> {
     let notes = Notes::new(registry, view.annotations);
     match kind {
-        Kind::Jwt | Kind::JwsCompact | Kind::SdJwt { .. } | Kind::JwsJson { .. } | Kind::SdJwtJson { .. } => {
+        Kind::Jwt
+        | Kind::JwsCompact
+        | Kind::SdJwt { .. }
+        | Kind::JwsJson { .. }
+        | Kind::SdJwtJson { .. } => {
             let v = jose::build(utf8(bytes)?, kind, notes, view)?;
             Ok(Built {
                 kind: v.kind,
@@ -240,7 +265,9 @@ pub(crate) fn build(registry: &Registry, kind: &Kind, bytes: &[u8], view: &ViewO
                     line_count: line_count(&v.text),
                     text: v.text,
                 },
-                raw: RawView::Segments { segments: v.segments },
+                raw: RawView::Segments {
+                    segments: v.segments,
+                },
                 disclosures: v.disclosures,
                 undisclosed: v.undisclosed,
                 diagnostics: v.diagnostics,
@@ -255,9 +282,8 @@ pub(crate) fn build(registry: &Registry, kind: &Kind, bytes: &[u8], view: &ViewO
         }
         Kind::EdnClaims => {
             let text = utf8(bytes)?;
-            let parsed = tokenator_edn::parse_with(text, &ParseOptions::default()).map_err(|e| {
-                EngineError::new(ErrorCode::Parse, format!("EDN: {e:?}"))
-            })?;
+            let parsed = tokenator_edn::parse_with(text, &ParseOptions::default())
+                .map_err(|e| EngineError::new(ErrorCode::Parse, format!("EDN: {e:?}")))?;
             let Some(first) = parsed.items.first() else {
                 return err(ErrorCode::Parse, "no EDN item");
             };
@@ -270,12 +296,18 @@ pub(crate) fn build(registry: &Registry, kind: &Kind, bytes: &[u8], view: &ViewO
             };
             let v = cbor::build(&item, &cbor, &Role::Claims, notes, view, &main);
             let mut built = from_cbor(Kind::EdnClaims, v, cbor.clone());
-            built.diagnostics.extend(edn_warnings(text, &parsed.warnings));
+            built
+                .diagnostics
+                .extend(edn_warnings(text, &parsed.warnings));
             Ok(built)
         }
         Kind::CoseKey | Kind::CoseKeySet => {
             let item = decode(bytes)?;
-            let role = if *kind == Kind::CoseKey { Role::Key } else { Role::KeySet };
+            let role = if *kind == Kind::CoseKey {
+                Role::Key
+            } else {
+                Role::KeySet
+            };
             let v = cbor::build(&item, bytes, &role, notes, view, &MainText::Print);
             Ok(from_cbor(kind.clone(), v, bytes.to_vec()))
         }
@@ -289,8 +321,11 @@ pub(crate) fn build(registry: &Registry, kind: &Kind, bytes: &[u8], view: &ViewO
 
 fn json_claims(bytes: &[u8], notes: Notes<'_>, view: &ViewOptions) -> Result<Built, EngineError> {
     let text = String::from_utf8_lossy(bytes).into_owned();
-    let parsed = tokenator_json::parse_with_options(text.as_bytes(), &tokenator_json::ParseOptions::default())
-        .map_err(|e| EngineError::new(ErrorCode::Parse, format!("JSON: {e}")))?;
+    let parsed = tokenator_json::parse_with_options(
+        text.as_bytes(),
+        &tokenator_json::ParseOptions::default(),
+    )
+    .map_err(|e| EngineError::new(ErrorCode::Parse, format!("JSON: {e}")))?;
     let index = TextIndex::new(&text);
     let none = |_: usize, _: usize| -> Option<RawRange> { None };
     let mut walk = json::JsonWalk {
@@ -300,7 +335,12 @@ fn json_claims(bytes: &[u8], notes: Notes<'_>, view: &ViewOptions) -> Result<Bui
         raw: &none,
         index: Vec::new(),
     };
-    let tree = walk.tree(&parsed.node, NodeId::root(), String::new(), json::JRole::Claims);
+    let tree = walk.tree(
+        &parsed.node,
+        NodeId::root(),
+        String::new(),
+        json::JRole::Claims,
+    );
     let diagnostics = parsed
         .warnings
         .iter()
@@ -333,7 +373,12 @@ fn json_claims(bytes: &[u8], notes: Notes<'_>, view: &ViewOptions) -> Result<Bui
     })
 }
 
-fn cose(kind: &Kind, bytes: &[u8], notes: Notes<'_>, view: &ViewOptions) -> Result<Built, EngineError> {
+fn cose(
+    kind: &Kind,
+    bytes: &[u8],
+    notes: Notes<'_>,
+    view: &ViewOptions,
+) -> Result<Built, EngineError> {
     let item = decode(bytes)?;
     let sign1 = CborBackend
         .parse(bytes)
@@ -367,7 +412,9 @@ fn cose(kind: &Kind, bytes: &[u8], notes: Notes<'_>, view: &ViewOptions) -> Resu
         } else {
             sd_view(&sd, 0, &NodeId::root(), &built.index)
         };
-        apply_marks(&mut built.tree, &marks, |n| n.label == "simple(59)" && n.kind == NodeKind::Array);
+        apply_marks(&mut built.tree, &marks, |n| {
+            n.label == "simple(59)" && n.kind == NodeKind::Array
+        });
         built.disclosures = infos;
         built.undisclosed = undisclosed;
     }
@@ -397,7 +444,12 @@ fn kcwt_sd(bytes: &[u8], index: &[(usize, usize, NodeId)]) -> SdParts {
 
 /// Disclosure infos, undisclosed slots, and marks of an SD-CWT whose
 /// bytes start at `base`, with node ids under `prefix`.
-fn sd_view(sd: &SdCwt<'_>, base: usize, prefix: &NodeId, index: &[(usize, usize, NodeId)]) -> SdParts {
+fn sd_view(
+    sd: &SdCwt<'_>,
+    base: usize,
+    prefix: &NodeId,
+    index: &[(usize, usize, NodeId)],
+) -> SdParts {
     let report = match_disclosures(sd);
     let slot_node = |slot: &tokenator_cose::sd::Slot| -> Option<NodeId> {
         let id = exact(index, base + slot.span.start, base + slot.span.end)?;
@@ -431,10 +483,15 @@ fn sd_view(sd: &SdCwt<'_>, base: usize, prefix: &NodeId, index: &[(usize, usize,
             DisclosureStatus::Unmatched
         };
         let (salt, claim, value, decoy) = match &d.content {
-            DisclosureContent::Claim { salt, value, key } => {
-                (hex(salt), Some(crate::cbor::compact_edn(key)), exact_edn(value), false)
+            DisclosureContent::Claim { salt, value, key } => (
+                hex(salt),
+                Some(crate::cbor::compact_edn(key)),
+                exact_edn(value),
+                false,
+            ),
+            DisclosureContent::Element { salt, value } => {
+                (hex(salt), None, exact_edn(value), false)
             }
-            DisclosureContent::Element { salt, value } => (hex(salt), None, exact_edn(value), false),
             DisclosureContent::Decoy { salt } => (hex(salt), None, String::new(), true),
             DisclosureContent::Malformed(_) => (String::new(), None, String::new(), false),
         };
@@ -519,7 +576,11 @@ pub(crate) fn unreadable(kind: &Kind, bytes: &[u8], error: &EngineError) -> Docu
     let jose = kind.family() == Some(crate::dto::detect::Family::Jose);
     let tree = Node {
         id: NodeId::root(),
-        kind: if jose { NodeKind::Document } else { NodeKind::Bytes },
+        kind: if jose {
+            NodeKind::Document
+        } else {
+            NodeKind::Bytes
+        },
         label: String::new(),
         annotation: None,
         main: None,
@@ -547,7 +608,9 @@ pub(crate) fn unreadable(kind: &Kind, bytes: &[u8], error: &EngineError) -> Docu
             line_count: 1,
         },
         raw: if jose {
-            RawView::Segments { segments: Vec::new() }
+            RawView::Segments {
+                segments: Vec::new(),
+            }
         } else {
             RawView::Hex {
                 bytes: Bytes(bytes.to_vec()),

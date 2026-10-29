@@ -73,7 +73,13 @@ impl Engine {
 
     /// Re-renders a document (new view options, after an action).
     pub fn render(&self, req: &RenderRequest) -> Result<Document, EngineError> {
-        view::document(&self.registry, &req.doc.kind, &req.doc.bytes, req.layers.clone(), &req.view)
+        view::document(
+            &self.registry,
+            &req.doc.kind,
+            &req.doc.bytes,
+            req.layers.clone(),
+            &req.view,
+        )
     }
 
     /// Live edit: parses the main pane text and rebuilds the bytes, keeping
@@ -182,11 +188,17 @@ impl Engine {
     /// The key as a COSE_Key document (EDN and hex views).
     pub fn key_to_cwk(&self, req: &KeyConvertRequest) -> Result<Document, EngineError> {
         let bytes = keyring::key_to_cwk_bytes(req)?;
-        view::document(&self.registry, &Kind::CoseKey, &bytes, Vec::new(), &crate::ViewOptions::default())
-            .map(|mut d| {
-                d.bytes = Bytes(bytes);
-                d
-            })
+        view::document(
+            &self.registry,
+            &Kind::CoseKey,
+            &bytes,
+            Vec::new(),
+            &crate::ViewOptions::default(),
+        )
+        .map(|mut d| {
+            d.bytes = Bytes(bytes);
+            d
+        })
     }
 
     /// Date/time conversions for the chit.

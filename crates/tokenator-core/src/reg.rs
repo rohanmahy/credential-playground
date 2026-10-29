@@ -104,7 +104,11 @@ pub(crate) fn lookup(registry: &Registry, q: &RegistryQuery) -> Vec<RegistryEntr
     found
         .into_iter()
         .filter(|e| q.name.as_ref().is_none_or(|n| &e.name == n))
-        .filter(|e| q.prefix.as_ref().is_none_or(|p| e.name.starts_with(p.as_str())))
+        .filter(|e| {
+            q.prefix
+                .as_ref()
+                .is_none_or(|p| e.name.starts_with(p.as_str()))
+        })
         .filter(|e| kind.is_none_or(|k| e.kind == k))
         .map(entry_dto)
         .collect()
@@ -119,7 +123,10 @@ fn rid(r: RegistryId) -> Rid {
     }
 }
 
-pub(crate) fn merge(registry: &Registry, req: &RegistryMergeRequest) -> Result<RegistryMergeResult, EngineError> {
+pub(crate) fn merge(
+    registry: &Registry,
+    req: &RegistryMergeRequest,
+) -> Result<RegistryMergeResult, EngineError> {
     let mut base = match &req.base_snapshot {
         Some(snapshot) => Registry::from_snapshot(snapshot).map_err(|e| registry_error(&e))?,
         None => registry.clone(),

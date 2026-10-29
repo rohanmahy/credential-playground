@@ -190,10 +190,12 @@ fn content_of(part: &tj::B64Part<'_>, view: &ViewOptions) -> Content {
         .and_then(|b| std::str::from_utf8(b).ok())
         .filter(|t| tokenator_json::parse(t.as_bytes()).is_ok());
     match json {
-        Some(t) if view.json_layout == JsonLayout::Pretty => match tokenator_json::parse(t.as_bytes()) {
-            Ok(node) => Content::Json(tokenator_json::print(&node, PrintStyle::Pretty)),
-            Err(_) => Content::Json(t.to_owned()),
-        },
+        Some(t) if view.json_layout == JsonLayout::Pretty => {
+            match tokenator_json::parse(t.as_bytes()) {
+                Ok(node) => Content::Json(tokenator_json::print(&node, PrintStyle::Pretty)),
+                Err(_) => Content::Json(t.to_owned()),
+            }
+        }
         Some(t) => Content::Json(t.to_owned()),
         None => Content::Str(part.text().to_owned()),
     }
@@ -210,13 +212,26 @@ struct Builder<'v> {
 }
 
 impl Builder<'_> {
-    fn b64(&mut self, which: PartWhich, part: &tj::B64Part<'_>, role: JRole, label: &'static str) -> Spec {
+    fn b64(
+        &mut self,
+        which: PartWhich,
+        part: &tj::B64Part<'_>,
+        role: JRole,
+        label: &'static str,
+    ) -> Spec {
         let content = if matches!(which, PartWhich::Signature(_) | PartWhich::KbSignature) {
             Content::Str(part.text().to_owned())
         } else {
             content_of(part, self.view)
         };
-        self.push(which, Some(span_pair(part.span())), content, role, label, part.text().to_owned())
+        self.push(
+            which,
+            Some(span_pair(part.span())),
+            content,
+            role,
+            label,
+            part.text().to_owned(),
+        )
     }
 
     fn push(
@@ -245,9 +260,19 @@ impl Builder<'_> {
         Spec::Part(self.parts.len() - 1)
     }
 
-    fn signature(&mut self, i: usize, sig: &tj::JwsSignature<'_>, members: &mut Vec<(&'static str, Spec)>) {
+    fn signature(
+        &mut self,
+        i: usize,
+        sig: &tj::JwsSignature<'_>,
+        members: &mut Vec<(&'static str, Spec)>,
+    ) {
         if let Some(p) = &sig.protected {
-            let s = self.b64(PartWhich::Protected(i), p, JRole::Header, "Protected header");
+            let s = self.b64(
+                PartWhich::Protected(i),
+                p,
+                JRole::Header,
+                "Protected header",
+            );
             members.push(("protected", s));
         }
         if let Some(h) = &sig.unprotected {
@@ -274,7 +299,12 @@ impl Builder<'_> {
             for (i, sig) in jws.signatures.iter().enumerate() {
                 let mut members = Vec::new();
                 self.signature(i, sig, &mut members);
-                let s = self.b64(PartWhich::Signature(i), &sig.signature, JRole::Plain, "Signature");
+                let s = self.b64(
+                    PartWhich::Signature(i),
+                    &sig.signature,
+                    JRole::Plain,
+                    "Signature",
+                );
                 members.push(("signature", s));
                 sigs.push(Spec::Obj(members));
             }
@@ -283,7 +313,12 @@ impl Builder<'_> {
             self.signature(0, sig, &mut root);
             let payload = self.b64(PartWhich::Payload, &jws.payload, JRole::Claims, "Payload");
             root.push(("payload", payload));
-            let s = self.b64(PartWhich::Signature(0), &sig.signature, JRole::Plain, "Signature");
+            let s = self.b64(
+                PartWhich::Signature(0),
+                &sig.signature,
+                JRole::Plain,
+                "Signature",
+            );
             root.push(("signature", s));
         }
         if let Some(sd) = token.sd_jwt() {
@@ -291,17 +326,43 @@ impl Builder<'_> {
                 .disclosures
                 .iter()
                 .enumerate()
-                .map(|(i, d)| self.b64(PartWhich::Disclosure(i), d.part(), JRole::Plain, "Disclosure"))
+                .map(|(i, d)| {
+                    self.b64(
+                        PartWhich::Disclosure(i),
+                        d.part(),
+                        JRole::Plain,
+                        "Disclosure",
+                    )
+                })
                 .collect();
             root.push(("disclosures", Spec::Arr(ds)));
             if let Some(kb) = &sd.kb_jwt {
                 let mut members = Vec::new();
                 if let Some(p) = kb.signatures.first().and_then(|s| s.protected.as_ref()) {
-                    members.push(("protected", self.b64(PartWhich::KbProtected, p, JRole::Header, "KB-JWT header")));
+                    members.push((
+                        "protected",
+                        self.b64(PartWhich::KbProtected, p, JRole::Header, "KB-JWT header"),
+                    ));
                 }
-                members.push(("payload", self.b64(PartWhich::KbPayload, &kb.payload, JRole::Plain, "KB-JWT payload")));
+                members.push((
+                    "payload",
+                    self.b64(
+                        PartWhich::KbPayload,
+                        &kb.payload,
+                        JRole::Plain,
+                        "KB-JWT payload",
+                    ),
+                ));
                 if let Some(s) = kb.signatures.first() {
-                    members.push(("signature", self.b64(PartWhich::KbSignature, &s.signature, JRole::Plain, "KB-JWT signature")));
+                    members.push((
+                        "signature",
+                        self.b64(
+                            PartWhich::KbSignature,
+                            &s.signature,
+                            JRole::Plain,
+                            "KB-JWT signature",
+                        ),
+                    ));
                 }
                 root.push(("kb", Spec::Obj(members)));
             }
@@ -392,8 +453,10 @@ pub(crate) fn build(
     notes: Notes<'_>,
     view: &ViewOptions,
 ) -> Result<JoseView, EngineError> {
-    with_parsed(text, |parsed, padded| build_parsed(text, parsed, padded, requested, notes, view))
-        .map_err(|e| EngineError::new(ErrorCode::Parse, format!("not a JOSE token: {e}")))?
+    with_parsed(text, |parsed, padded| {
+        build_parsed(text, parsed, padded, requested, notes, view)
+    })
+    .map_err(|e| EngineError::new(ErrorCode::Parse, format!("not a JOSE token: {e}")))?
 }
 
 #[allow(clippy::too_many_lines)]
@@ -432,9 +495,10 @@ fn build_parsed(
     };
     em.emit(&spec, 0);
     let main = em.out;
-    let parsed_view = tokenator_json::parse_with_options(main.as_bytes(), &ParseOptions { max_depth: 1024 })
-        .map_err(|e| EngineError::new(ErrorCode::Parse, format!("cannot show the token: {e}")))?
-        .node;
+    let parsed_view =
+        tokenator_json::parse_with_options(main.as_bytes(), &ParseOptions { max_depth: 1024 })
+            .map_err(|e| EngineError::new(ErrorCode::Parse, format!("cannot show the token: {e}")))?
+            .node;
 
     // Segments: every part with base64url text in the token, in display order.
     let mut segments = Vec::new();
@@ -444,11 +508,20 @@ fn build_parsed(
             continue;
         }
         let Some((s, e)) = p.loc.source else { continue };
-        let Some(seg_text) = text.get(s..e) else { continue };
-        seg_of[i] = Some(segments.len());
+        let Some(seg_text) = text.get(s..e) else {
+            continue;
+        };
+        if let Some(slot) = seg_of.get_mut(i) {
+            *slot = Some(segments.len());
+        }
         let separator = match p.loc.which {
-            PartWhich::Protected(_) | PartWhich::Payload | PartWhich::KbProtected | PartWhich::KbPayload => Some("."),
-            PartWhich::Signature(_) | PartWhich::Disclosure(_) if token.sd_jwt().is_some() => Some("~"),
+            PartWhich::Protected(_)
+            | PartWhich::Payload
+            | PartWhich::KbProtected
+            | PartWhich::KbPayload => Some("."),
+            PartWhich::Signature(_) | PartWhich::Disclosure(_) if token.sd_jwt().is_some() => {
+                Some("~")
+            }
             _ => None,
         };
         segments.push(crate::dto::document::Segment {
@@ -501,7 +574,16 @@ fn build_parsed(
         raw: &raw_of,
         index: Vec::new(),
     };
-    let mut tree = assemble(&spec, &parsed_view, NodeId::root(), String::new(), &parts, &seg_of, &mut walk, view);
+    let mut tree = assemble(
+        &spec,
+        &parsed_view,
+        NodeId::root(),
+        String::new(),
+        &parts,
+        &seg_of,
+        &mut walk,
+        view,
+    );
     tree.kind = NodeKind::Document;
     let mut idx = walk.index;
     union_raw(&mut tree);
@@ -579,16 +661,43 @@ fn assemble(
     };
     match spec {
         Spec::Obj(members) => {
-            let values: Vec<&JNode<'_>> = jnode.members().unwrap_or_default().iter().map(|m| m.value()).collect();
+            let values: Vec<&JNode<'_>> = jnode
+                .members()
+                .unwrap_or_default()
+                .iter()
+                .map(|m| m.value())
+                .collect();
             for ((name, sub), v) in members.iter().zip(values) {
-                let c = assemble(sub, v, n.id.child(name), (*name).to_owned(), parts, seg_of, walk, view);
+                let c = assemble(
+                    sub,
+                    v,
+                    n.id.child(name),
+                    (*name).to_owned(),
+                    parts,
+                    seg_of,
+                    walk,
+                    view,
+                );
                 n.children.push(c);
             }
         }
         Spec::Arr(items) => {
             n.kind = NodeKind::Array;
-            for (i, (sub, v)) in items.iter().zip(jnode.elements().unwrap_or_default()).enumerate() {
-                let c = assemble(sub, v, n.id.index(i), i.to_string(), parts, seg_of, walk, view);
+            for (i, (sub, v)) in items
+                .iter()
+                .zip(jnode.elements().unwrap_or_default())
+                .enumerate()
+            {
+                let c = assemble(
+                    sub,
+                    v,
+                    n.id.index(i),
+                    i.to_string(),
+                    parts,
+                    seg_of,
+                    walk,
+                    view,
+                );
                 n.children.push(c);
             }
         }
@@ -682,10 +791,18 @@ fn sd_view(sd: &tj::SdJwt<'_>, tree: &mut Node) -> (Vec<DisclosureInfo>, Vec<Slo
     };
     for f in &report.findings {
         match f {
-            tj::SdFinding::MalformedDisclosure { disclosure, .. } => set(*disclosure, DisclosureStatus::Malformed),
-            tj::SdFinding::ForbiddenName { disclosure, .. } => set(*disclosure, DisclosureStatus::ForbiddenName),
-            tj::SdFinding::KindMismatch { disclosure, .. } => set(*disclosure, DisclosureStatus::KindMismatch),
-            tj::SdFinding::NameCollision { disclosure, .. } => set(*disclosure, DisclosureStatus::NameCollision),
+            tj::SdFinding::MalformedDisclosure { disclosure, .. } => {
+                set(*disclosure, DisclosureStatus::Malformed)
+            }
+            tj::SdFinding::ForbiddenName { disclosure, .. } => {
+                set(*disclosure, DisclosureStatus::ForbiddenName)
+            }
+            tj::SdFinding::KindMismatch { disclosure, .. } => {
+                set(*disclosure, DisclosureStatus::KindMismatch)
+            }
+            tj::SdFinding::NameCollision { disclosure, .. } => {
+                set(*disclosure, DisclosureStatus::NameCollision)
+            }
             _ => {}
         }
     }
@@ -696,7 +813,9 @@ fn sd_view(sd: &tj::SdJwt<'_>, tree: &mut Node) -> (Vec<DisclosureInfo>, Vec<Slo
                     set(*d, DisclosureStatus::Duplicate);
                 }
             }
-            tj::SdFinding::UnmatchedDisclosure { disclosure } => set(*disclosure, DisclosureStatus::Unmatched),
+            tj::SdFinding::UnmatchedDisclosure { disclosure } => {
+                set(*disclosure, DisclosureStatus::Unmatched)
+            }
             _ => {}
         }
     }
@@ -729,11 +848,15 @@ fn sd_view(sd: &tj::SdJwt<'_>, tree: &mut Node) -> (Vec<DisclosureInfo>, Vec<Slo
             ),
             Err(_) => (String::new(), None, String::new()),
         };
-        let st = status.get(i).copied().flatten().unwrap_or(if slot.is_some() {
-            DisclosureStatus::Matched
-        } else {
-            DisclosureStatus::Unmatched
-        });
+        let st = status
+            .get(i)
+            .copied()
+            .flatten()
+            .unwrap_or(if slot.is_some() {
+                DisclosureStatus::Matched
+            } else {
+                DisclosureStatus::Unmatched
+            });
         let node_id = NodeId::root().child("disclosures").index(i);
         marks.push((node_id.clone(), SdMark::Disclosure { index: u32_of(i) }));
         infos.push(DisclosureInfo {
@@ -761,7 +884,9 @@ fn sd_view(sd: &tj::SdJwt<'_>, tree: &mut Node) -> (Vec<DisclosureInfo>, Vec<Slo
             array_element: s.kind == tj::SlotKind::ArrayElement,
         })
         .collect();
-    crate::view::apply_marks(tree, &marks, |n| n.label == "_sd" && n.kind == NodeKind::Array);
+    crate::view::apply_marks(tree, &marks, |n| {
+        n.label == "_sd" && n.kind == NodeKind::Array
+    });
     (infos, undisclosed)
 }
 

@@ -17,7 +17,9 @@ use tokenator_edn::{
 use tokenator_registry::{Context, Family, Label};
 
 use crate::annotate::Notes;
-use crate::cbor::{abs_span, bstr_contents, compact_edn, exact_sequence, int_of, label_of, map_get};
+use crate::cbor::{
+    abs_span, bstr_contents, compact_edn, exact_sequence, int_of, label_of, map_get,
+};
 use crate::datetime::cbor_hint;
 use crate::dto::common::{ByteRange, NodeId, RawRange};
 use crate::dto::document::{
@@ -164,7 +166,9 @@ const PARTS: [&str; 4] = ["protected", "unprotected", "payload", "signature"];
 impl Walker<'_> {
     fn register(&mut self, path: &Path, id: &NodeId) {
         self.ids.insert(path.clone(), id.clone());
-        self.primary.entry(id.clone()).or_insert_with(|| path.clone());
+        self.primary
+            .entry(id.clone())
+            .or_insert_with(|| path.clone());
     }
 
     fn node(
@@ -179,16 +183,24 @@ impl Walker<'_> {
         if let (Role::Sign1, Value::Tag(18 | 61, inner)) = (role, &item.value) {
             // Envelope tags fold into the token's node.
             self.register(&path, &id);
-            let mut n = self.node(inner, path.child(PathSegment::TagContent), id, label, base, role);
+            let mut n = self.node(
+                inner,
+                path.child(PathSegment::TagContent),
+                id,
+                label,
+                base,
+                role,
+            );
             n.raw = abs_span(item, base).map(|(s, e)| RawRange {
                 start: u32_of(s),
                 end: u32_of(e),
                 ..RawRange::default()
             });
-            if let (Some((s, e)), Some(last)) = (abs_span(item, base), self.index.iter().position(|(_, _, i)| *i == n.id)) {
-                if let Some(entry) = self.index.get_mut(last) {
-                    *entry = (s, e, n.id.clone());
-                }
+            // The array's index entry gets the span with the tags.
+            if let Some((s, e)) = abs_span(item, base)
+                && let Some(entry) = self.index.iter_mut().find(|(_, _, i)| *i == n.id)
+            {
+                *entry = (s, e, n.id.clone());
             }
             return n;
         }
@@ -215,14 +227,30 @@ impl Walker<'_> {
                         (true, 1) => (PARTS[1], Role::Header(Context::UnprotectedHeader)),
                         (true, 2) => (PARTS[2], Role::Embedded(Box::new(Role::Claims))),
                         (true, 3) => (PARTS[3], Role::Plain),
-                        _ => ("", if matches!(role, Role::KeySet) { Role::Key } else if matches!(role, Role::SdClaims) { Role::Embedded(Box::new(Role::Plain)) } else { Role::Plain }),
+                        _ => (
+                            "",
+                            if matches!(role, Role::KeySet) {
+                                Role::Key
+                            } else if matches!(role, Role::SdClaims) {
+                                Role::Embedded(Box::new(Role::Plain))
+                            } else {
+                                Role::Plain
+                            },
+                        ),
                     };
                     let (cid, label) = if name.is_empty() {
                         (n.id.index(i), i.to_string())
                     } else {
                         (n.id.child(name), name.to_owned())
                     };
-                    let mut c = self.node(child, path.child(PathSegment::Index(i)), cid, label, base, &child_role);
+                    let mut c = self.node(
+                        child,
+                        path.child(PathSegment::Index(i)),
+                        cid,
+                        label,
+                        base,
+                        &child_role,
+                    );
                     if !name.is_empty() {
                         c.kind = NodeKind::Part;
                     }
@@ -237,11 +265,14 @@ impl Walker<'_> {
                     let eid = n.id.push_raw(&seg);
                     let kpath = path.child(PathSegment::Key(i));
                     let vpath = path.child(PathSegment::Value(i));
-                    let knode = self.node(k, kpath.clone(), eid.key(), edn.clone(), base, &Role::Plain);
+                    let knode =
+                        self.node(k, kpath.clone(), eid.key(), edn.clone(), base, &Role::Plain);
                     let vrole = entry_role(role, k);
                     let mut vnode = self.node(v, vpath.clone(), eid, edn, base, &vrole);
                     if let (Some(ctx), Some(label)) = (&ctx, label_of(k))
-                        && let Some(note) = self.notes.lookup(Family::Cose, ctx, &label, label_of(v).as_ref())
+                        && let Some(note) =
+                            self.notes
+                                .lookup(Family::Cose, ctx, &label, label_of(v).as_ref())
                     {
                         vnode.annotation = Some(note.annotation);
                         self.comments.insert(kpath, note.key_comment);
@@ -249,7 +280,10 @@ impl Walker<'_> {
                             self.comments.insert(vpath, c);
                         }
                     }
-                    if matches!(role, Role::Claims) && matches!(int_of(k), Some(4..=6)) && vnode.time.is_none() {
+                    if matches!(role, Role::Claims)
+                        && matches!(int_of(k), Some(4..=6))
+                        && vnode.time.is_none()
+                    {
                         vnode.time = cbor_hint(v, self.view.now);
                     }
                     vnode.key = Some(Box::new(knode));
@@ -262,7 +296,14 @@ impl Walker<'_> {
                     (true, 24 | 63) => Role::Embedded(Box::new(Role::Plain)),
                     _ => Role::Plain,
                 };
-                let c = self.node(inner, path.child(PathSegment::TagContent), n.id.push_raw("~t"), "content".to_owned(), base, &inner_role);
+                let c = self.node(
+                    inner,
+                    path.child(PathSegment::TagContent),
+                    n.id.push_raw("~t"),
+                    "content".to_owned(),
+                    base,
+                    &inner_role,
+                );
                 if matches!(tag, 0 | 1) {
                     n.time = cbor_hint(item, self.view.now);
                 }
@@ -271,9 +312,17 @@ impl Walker<'_> {
             Value::Bytes(_) => self.bytes_children(item, &path, &mut n, base, role),
             _ => {}
         }
-        if item.width == Width::Indefinite && matches!(item.value, Value::Bytes(_) | Value::Text(_)) {
+        if item.width == Width::Indefinite && matches!(item.value, Value::Bytes(_) | Value::Text(_))
+        {
             for (i, chunk) in item.chunks.iter().enumerate() {
-                let c = self.node(chunk, path.child(PathSegment::Chunk(i)), n.id.push_raw(&format!("~c{i}")), format!("chunk {i}"), base, &Role::Plain);
+                let c = self.node(
+                    chunk,
+                    path.child(PathSegment::Chunk(i)),
+                    n.id.push_raw(&format!("~c{i}")),
+                    format!("chunk {i}"),
+                    base,
+                    &Role::Plain,
+                );
                 n.children.push(c);
             }
         }
@@ -282,7 +331,14 @@ impl Walker<'_> {
 
     /// Decoded views of a byte string: at defined locations, on request
     /// (`manual_decode`), or where the user wrote `<<…>>` (EDN claim sets).
-    fn bytes_children(&mut self, item: &Item<'_>, path: &Path, n: &mut Node, base: usize, role: &Role) {
+    fn bytes_children(
+        &mut self,
+        item: &Item<'_>,
+        path: &Path,
+        n: &mut Node,
+        base: usize,
+        role: &Role,
+    ) {
         let Some((start, end)) = bstr_contents(item, base) else {
             return;
         };
@@ -315,7 +371,14 @@ impl Walker<'_> {
         self.embedded.push(path.clone());
         for (j, child) in items.iter().enumerate() {
             let child_role = if j == 0 { inner.clone() } else { Role::Plain };
-            let c = self.node(child, path.child(PathSegment::Embedded(j)), n.id.decoded(j), "decoded".to_owned(), start, &child_role);
+            let c = self.node(
+                child,
+                path.child(PathSegment::Embedded(j)),
+                n.id.decoded(j),
+                "decoded".to_owned(),
+                start,
+                &child_role,
+            );
             n.children.push(c);
         }
     }

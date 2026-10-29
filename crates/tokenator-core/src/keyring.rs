@@ -11,8 +11,8 @@ use crate::dto::common::{Bytes, KidValue};
 use crate::dto::error::{EngineError, ErrorCode};
 use crate::dto::keys::{
     AssignKidRequest, KeyConvertRequest, KeyExport, KeyExportRequest, KeyFormat, KeyGenRequest,
-    KeyImportRequest, KeyInfo, KeyRef, KeySeed, KeySpec, KidSource, PemEncoding, Role,
-    Thumbprint, ThumbprintKind, ThumbprintRequest, Visibility,
+    KeyImportRequest, KeyInfo, KeyRef, KeySeed, KeySpec, KidSource, PemEncoding, Role, Thumbprint,
+    ThumbprintKind, ThumbprintRequest, Visibility,
 };
 use crate::util::{err, hash_alg, hex, rng, seed32, unused_rng};
 

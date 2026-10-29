@@ -200,7 +200,10 @@ pub(crate) fn detect(input: &[u8]) -> Vec<Candidate> {
 /// The document bytes and the outer layers for opening `input` as
 /// `candidate`: COSE tags stay in the bytes, and a text claim set keeps
 /// its surrounding whitespace.
-pub(crate) fn unwrap(input: &[u8], candidate: &Candidate) -> Result<(Vec<u8>, Vec<Layer>), EngineError> {
+pub(crate) fn unwrap(
+    input: &[u8],
+    candidate: &Candidate,
+) -> Result<(Vec<u8>, Vec<Layer>), EngineError> {
     let mut layers = candidate.layers.clone();
     while matches!(layers.last(), Some(Layer::CborTag { .. })) {
         layers.pop();
@@ -226,7 +229,10 @@ pub(crate) fn open(
     if candidate.kind.is_key() {
         return err(
             ErrorCode::UnsupportedKind,
-            format!("{} goes to the key panel (key_import)", candidate.kind.label()),
+            format!(
+                "{} goes to the key panel (key_import)",
+                candidate.kind.label()
+            ),
         );
     }
     let (bytes, layers) = unwrap(input, candidate)?;
