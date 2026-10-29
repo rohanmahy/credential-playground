@@ -329,3 +329,58 @@ fn jose(registry: &Registry, req: &EditRequest) -> Edited {
     }
     Ok((out.into_bytes(), Vec::new()))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::dto::document::ViewOptions;
+
+    const SD_JWT_JSON: &str =
+        include_str!("../../../testdata/tokens/rfc9901-s8.2-sd-jwt-kb-json-flattened.json");
+
+    fn request(text: String) -> EditRequest {
+        EditRequest {
+            kind: Kind::SdJwtJson {
+                general: false,
+                kb: true,
+            },
+            base: Bytes(SD_JWT_JSON.trim_end().as_bytes().to_vec()),
+            text,
+            view: ViewOptions::default(),
+        }
+    }
+
+    #[test]
+    fn kb_jwt_edits_in_json_are_spliced_into_kb_jwt() {
+        let registry = Registry::bundled().unwrap_or_else(|e| panic!("{e}"));
+        let base = view::jose::build(
+            SD_JWT_JSON.trim_end(),
+            &request(String::new()).kind,
+            Notes::new(&registry, true),
+            &ViewOptions::default(),
+        )
+        .unwrap_or_else(|e| panic!("{e}"));
+        assert!(base.text.contains("\"1234567890\""));
+        let edited = base.text.replace("\"1234567890\"", "\"0000000000\"");
+        let r = parse_edit(&registry, &request(edited));
+        assert!(r.ok, "{:?}", r.diagnostics);
+        assert!(r.signature_stale, "the KB-JWT payload is signed");
+        let bytes = r.bytes.unwrap_or_default();
+        let text = std::str::from_utf8(&bytes).unwrap_or_default();
+        let parsed = tokenator_jose::parse(text).unwrap_or_else(|e| panic!("{e}"));
+        let kb = parsed
+            .token
+            .sd_jwt()
+            .and_then(|sd| sd.kb_jwt.as_ref())
+            .map(|k| {
+                k.claims()
+                    .map(|c| tokenator_json::print(&c, tokenator_json::PrintStyle::Compact))
+            });
+        let Some(Ok(claims)) = kb else {
+            panic!("no KB-JWT payload")
+        };
+        assert!(claims.contains("\"0000000000\""), "{claims}");
+        // The issuer-signed parts are untouched.
+        assert!(text.contains("eyJhbGciOiAiRVMyNTYiLCAidHlwIjogImV4YW1wbGUrc2Qtand0In0"));
+    }
+}

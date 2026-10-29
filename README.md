@@ -22,7 +22,7 @@ Phase 3
 - [x] `tokenator-cose`: COSE_Sign1, CWT, SD-CWT, SD-KBT
 
 Phase 4
-- [ ] `tokenator-core`: Engine facade, document model, actions, lint, datetime
+- [x] `tokenator-core`: Engine facade, document model, actions, lint, datetime
 - [ ] `tokenator-wasm`: wasm-bindgen bindings
 - [ ] `app/src-tauri`: Tauri commands + Platform
 - [ ] `app/`: Svelte UI (tabs, key panel, synced panes, chits)
