@@ -2,8 +2,12 @@
 
 cargo-fuzz targets for the parsers and the Engine (SPEC §11: parsers must
 never panic). Not a member of the root workspace; needs a nightly toolchain
-and `cargo install cargo-fuzz`. CI pins the nightly (`FUZZ_TOOLCHAIN` in
-`.github/workflows/ci.yml`) and runs every target for 60 s.
+and `cargo install cargo-fuzz`. On pull requests CI runs every target for
+60 s on the pinned nightly (`FUZZ_TOOLCHAIN` in `.github/workflows/ci.yml`).
+`.github/workflows/fuzz-nightly.yml` runs every target for 15 min each night
+on the latest nightly, keeping each corpus in the Actions cache, and uploads
+any crash with its minimized input as the `fuzz-<target>` artifact. A
+failure in its Build step is nightly toolchain drift, not a finding.
 
 | Target | Input | Checks beyond "no panic" |
 |---|---|---|
@@ -22,7 +26,7 @@ and `cargo install cargo-fuzz`. CI pins the nightly (`FUZZ_TOOLCHAIN` in
 fuzz/seed-corpora.sh                 # seeds fuzz/corpus/<target>/ from testdata/ (gitignored)
 cargo +nightly fuzz run cbor_decode fuzz/corpus/cbor_decode
 fuzz/smoke.sh 60                     # every target for 60 s, in parallel; logs in fuzz/logs/
-cargo +nightly fuzz tmin <target> fuzz/artifacts/<target>/crash-…   # minimize a crash
+fuzz/minimize.sh [target…]           # minimize every crash/timeout/OOM in fuzz/artifacts/
 ```
 
 Minimized crashes live in `testdata/fuzz-regressions/<target>/` and are
