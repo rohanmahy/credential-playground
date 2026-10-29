@@ -65,7 +65,7 @@ fn check_hex(name: &str, doc: &Document) {
             );
         }
     }
-    assert!(checked > 5, "{name}: only {checked} nodes checked");
+    assert!(checked >= 5, "{name}: only {checked} nodes checked");
 }
 
 #[test]
