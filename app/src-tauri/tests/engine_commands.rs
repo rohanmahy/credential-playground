@@ -439,10 +439,10 @@ fn merged_snapshot() -> Vec<u8> {
     let engine = Engine::new().unwrap();
     // A registry with a changed record, so lookups tell the engines apart.
     let xml = String::from_utf8(read_testdata("iana/cwt.xml")).unwrap();
-    let xml = xml.replacen("<name>iss</name>", "<name>issuer-renamed</name>", 1);
+    let xml = xml.replacen("<claim>iss</claim>", "<claim>issuer-renamed</claim>", 1);
     assert!(
         xml.contains("issuer-renamed"),
-        "fixture: cwt.xml has no <name>iss</name>"
+        "fixture: cwt.xml has no <claim>iss</claim>"
     );
     let req = RegistryMergeRequest {
         base_snapshot: None,

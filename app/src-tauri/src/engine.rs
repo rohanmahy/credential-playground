@@ -30,13 +30,27 @@ pub struct EngineState {
 impl EngineState {
     /// State with the bundled registry snapshot (`Engine::new`).
     pub fn bundled() -> Result<EngineState, EngineError> {
-        unimplemented!("EngineState::bundled")
+        Ok(EngineState {
+            engine: RwLock::new(Arc::new(Engine::new()?)),
+        })
     }
 
     /// The current engine (cheap clone; the lock is not held during calls).
     pub fn current(&self) -> Arc<Engine> {
-        let _ = &self.engine;
-        unimplemented!("EngineState::current")
+        // A poisoned lock still holds a whole `Arc`: the writer only swaps it.
+        match self.engine.read() {
+            Ok(engine) => Arc::clone(&engine),
+            Err(poisoned) => Arc::clone(&poisoned.into_inner()),
+        }
+    }
+
+    /// Makes `engine` the current engine.
+    fn replace(&self, engine: Engine) {
+        let engine = Arc::new(engine);
+        match self.engine.write() {
+            Ok(mut current) => *current = engine,
+            Err(poisoned) => *poisoned.into_inner() = engine,
+        }
     }
 }
 
@@ -47,15 +61,18 @@ pub async fn engine_init(
     state: State<'_, EngineState>,
     snapshot: Option<Bytes>,
 ) -> Result<(), EngineError> {
-    let _ = (state, snapshot);
-    unimplemented!("engine_init")
+    let engine = match snapshot {
+        Some(snapshot) => Engine::with_registry_snapshot(&snapshot)?,
+        None => Engine::new()?,
+    };
+    state.replace(engine);
+    Ok(())
 }
 
 /// `Engine::info`.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn engine_info(state: State<'_, EngineState>) -> Result<EngineInfo, EngineError> {
-    let _ = state;
-    unimplemented!("engine_info")
+    Ok(state.current().info())
 }
 
 /// `Engine::detect`; `input` is the raw input as base64url.
@@ -64,8 +81,7 @@ pub async fn engine_detect(
     state: State<'_, EngineState>,
     input: Bytes,
 ) -> Result<Vec<Candidate>, EngineError> {
-    let _ = (state, input);
-    unimplemented!("engine_detect")
+    Ok(state.current().detect(&input))
 }
 
 /// `Engine::open`; `input` is the raw input as base64url.
@@ -76,8 +92,7 @@ pub async fn engine_open(
     candidate: Candidate,
     view: ViewOptions,
 ) -> Result<Document, EngineError> {
-    let _ = (state, input, candidate, view);
-    unimplemented!("engine_open")
+    state.current().open(&input, &candidate, &view)
 }
 
 /// `engine_x => x(Req) -> Res`: a command taking `req` that calls
@@ -87,8 +102,7 @@ macro_rules! req_command {
         #[$doc]
         #[tauri::command(rename_all = "snake_case")]
         pub async fn $name(state: State<'_, EngineState>, req: $req) -> Result<$res, EngineError> {
-            let _ = (state, req, stringify!($method));
-            unimplemented!(stringify!($name))
+            state.current().$method(&req)
         }
     )*};
 }
@@ -144,8 +158,7 @@ pub async fn engine_parse_edit(
     state: State<'_, EngineState>,
     req: EditRequest,
 ) -> Result<EditResult, EngineError> {
-    let _ = (state, req);
-    unimplemented!("engine_parse_edit")
+    Ok(state.current().parse_edit(&req))
 }
 
 /// `Engine::key_public`.
@@ -154,8 +167,7 @@ pub async fn engine_key_public(
     state: State<'_, EngineState>,
     key: KeyRef,
 ) -> Result<KeyInfo, EngineError> {
-    let _ = (state, key);
-    unimplemented!("engine_key_public")
+    state.current().key_public(&key)
 }
 
 /// `Engine::registry_lookup`.
@@ -164,6 +176,5 @@ pub async fn engine_registry_lookup(
     state: State<'_, EngineState>,
     query: RegistryQuery,
 ) -> Result<Vec<RegistryEntry>, EngineError> {
-    let _ = (state, query);
-    unimplemented!("engine_registry_lookup")
+    Ok(state.current().registry_lookup(&query))
 }

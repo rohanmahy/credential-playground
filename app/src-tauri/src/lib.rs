@@ -118,13 +118,41 @@ pub fn register<R: Runtime>(builder: Builder<R>) -> Builder<R> {
 
 /// Adds the commands' state to the app.
 pub fn manage<R: Runtime, M: Manager<R>>(manager: &M, engine: EngineState, services: Services) {
-    let _ = (manager, engine, services);
-    unimplemented!("manage")
+    manager.manage(engine);
+    manager.manage(services.fetcher);
+    manager.manage(services.files);
+    manager.manage(services.clipboard);
+    manager.manage(services.cache);
 }
 
 /// Runs the desktop app: the dialog and clipboard plugins, the commands,
 /// and their state (registry cache in the app data dir, the default
 /// [`FetchPolicy`]).
 pub fn run() {
-    unimplemented!("run")
+    let builder = tauri::Builder::default()
+        .plugin(tauri_plugin_dialog::init())
+        .plugin(tauri_plugin_clipboard_manager::init())
+        .setup(|app| {
+            let data_dir = app.path().app_data_dir()?;
+            let handle = app.handle().clone();
+            manage(
+                app,
+                EngineState::bundled()?,
+                Services {
+                    fetcher: Fetcher::new(FetchPolicy::default())?,
+                    files: Files::new(
+                        Box::new(TauriFileDialog::new(handle.clone())),
+                        Files::DEFAULT_MAX_BYTES,
+                    ),
+                    clipboard: ClipboardState(Box::new(TauriClipboard::new(handle))),
+                    cache: RegistryCacheFile::in_dir(data_dir),
+                },
+            );
+            Ok(())
+        });
+    if let Err(e) = register(builder).run(tauri::generate_context!()) {
+        // No console to report to; exit non-zero so the failure is visible.
+        let _ = e;
+        std::process::exit(1);
+    }
 }
