@@ -13,7 +13,13 @@ test('create, convert, and export a key', async ({ page, context }) => {
 
   await card.getByRole('button', { name: 'Convert' }).click();
   await expect(page.getByRole('region', { name: 'JWK' })).toContainText('"kty":"EC"');
-  await expect(page.getByRole('region', { name: 'COSE_Key' })).toContainText('/ kty / 1: 2');
+  await expect(page.getByRole('region', { name: 'COSE_Key' })).toContainText(
+    '/ kty / 1: / EC2 / 2',
+  );
+  // Convert is a modal dialog: close it before using the card again.
+  const convert = page.getByRole('dialog', { name: 'Convert key' });
+  await convert.getByRole('button', { name: 'Close' }).click();
+  await expect(convert).toBeHidden();
 
   await card.getByRole('button', { name: 'Export' }).click();
   const dialog = page.getByRole('dialog', { name: 'Export key' });

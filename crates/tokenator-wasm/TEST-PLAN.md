@@ -76,13 +76,15 @@ the stack first, so it equals the stack size) and compares it with
 `STACK_SIZE` in `build.rs`.
 
 **Size.** Profile `wasm-release` (root `Cargo.toml`): `opt-level = "s"`,
-`lto = true`, `codegen-units = 1`, `panic = "abort"`, debuginfo
-stripped. `wasm-opt` is off: wasm-pack would download binaryen during the
+`lto = true`, `codegen-units = 1`, `panic = "abort"`, symbols stripped
+(`strip = "symbols"`; with only debuginfo stripped rustc keeps a 2 MB
+`name` section and the full binding is 4.55 MB). `wasm-opt` is off: wasm-pack would download binaryen during the
 build, and parity checks the artifact rustc and wasm-bindgen produce. A
 probe build of the full binding measured **2.90 MB raw, 0.89 MB gzip**
 (`opt-level = "z"`: 2.81 MB / 0.84 MB, slower; `3`: 4.01 MB / 1.17 MB).
 Budget, enforced by `binary.test.ts` (which prints the size): ≤ 3.5 MiB
-raw, ≤ 1.1 MiB gzip.
+raw, ≤ 1.1 MiB gzip. The implemented binding measures 2.48 MB raw,
+0.80 MB gzip.
 
 | Test | File | Count |
 |---|---|---|
@@ -201,14 +203,30 @@ directive at build time, `e2e/csp.spec.ts` in the browser.
 
 ## Status
 
-Native parity (5) passes; the unit suite (165) passes. Against the stubs,
-`cargo test -p tokenator-wasm` fails 6/6; `pnpm test:wasm` fails 969 of
-976 (the 7 passing check the corpus, the binary's stack size, imports,
-size, and surface, and two build properties that also hold for the stub);
-`pnpm test:e2e` fails 40 of 44 (the 4 passing need no engine: the served
-CSP, inline/eval blocking, refused connections, the key URL
-confirmation). Every failure is a stub: `unimplemented!()` traps in the
-bindings, or `NotImplemented` from `WasmEngine`.
+Implemented. `cargo test -p tokenator-wasm` (6), `pnpm test:wasm` (976),
+and `pnpm test:e2e` (44) pass. Peak stack use over the corpus is 460 KiB
+of 2 MiB (crates/tokenator-wasm/ARCHITECTURE.md, "Stack").
+
+Test corrections made while implementing (the specs had only run against
+stubs):
+
+- `engine.test.ts`: the merged-registry lookup gives `kind` with `name`
+  (`RegistryQuery`: an exact name needs a kind; `{ name }` alone matches
+  nothing).
+- `issue-present.spec.ts`: credentials that are presented are issued with
+  the holder key as `cnf`, and presentations get an audience and nonce
+  (key binding checks both, SPEC §6); the SD-CWT case redacts EDN that
+  actually has tag-58 marks (SPEC §5; the Figure 4 claims have none); the
+  SD-JWT case clicks Issue in the Actions toolbar (the bare name also
+  matched "Remove Issuer …").
+- `keys.spec.ts`: the COSE_Key text carries the registry value comment
+  (`/ kty / 1: / EC2 / 2`); the modal Convert dialog is closed before
+  Export.
+- `network.spec.ts`: one claim is marked SD before Issue, since Present
+  needs an SD-JWT, and the presentation gets an audience and nonce.
+- `tree-sync.spec.ts` (JOSE): the RFC 7515 A.3 payload keeps `"iss":"joe"`
+  on its first line, and a line's treeitem is the outermost node starting
+  there (app/TEST-PLAN.md), so the tests turn on *Re-indent decoded JSON*.
 
 ## Decisions (issues filed)
 

@@ -180,7 +180,10 @@ describe('registry snapshot', () => {
       snapshot = r.snapshot;
     }
     const merged = await load(fromB64u(snapshot ?? ''));
-    expect((await merged.registryLookup({ name: 'iss' })).length).toBeGreaterThan(0);
+    // RegistryQuery: an exact name needs `kind` (crates/tokenator-core dto/registry.rs).
+    expect(
+      (await merged.registryLookup({ kind: 'jwt_claim', name: 'iss' })).length,
+    ).toBeGreaterThan(0);
   });
 
   it('an unreadable snapshot rejects the first call with code registry', async () => {

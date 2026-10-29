@@ -37,13 +37,21 @@ test('paste, validate, issue, present, and key flows stay on the app origin', as
   await createKey(page, 'Ed25519', 'holder');
   await importKey(page, fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
   await paste(page, fixtureText('tokens/rfc9901-a1-input-claims.json'));
+  // Present needs an SD-JWT (SPEC §5), so one claim is marked first.
+  await page
+    .getByRole('tree', { name: 'Main pane' })
+    .locator('[data-node-id="given_name"]')
+    .click({ button: 'right' });
+  await page.getByRole('menuitemcheckbox', { name: /selectively disclosable/i }).click();
   await actions(page).getByRole('button', { name: 'Issue' }).click();
   await page.getByRole('dialog', { name: 'Issue' }).getByRole('button', { name: 'Issue' }).click();
   await actions(page).getByRole('button', { name: 'Present' }).click();
-  await page
-    .getByRole('dialog', { name: 'Present' })
-    .getByRole('button', { name: 'Present' })
-    .click();
+  // A KB-JWT needs an audience and a nonce.
+  const present = page.getByRole('dialog', { name: 'Present' });
+  await present.getByRole('textbox', { name: 'Audience' }).fill('https://verifier.example');
+  await present.getByRole('textbox', { name: 'Nonce' }).fill('n-0S6');
+  await present.getByRole('button', { name: 'Present' }).click();
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT+KB');
   await validate(page);
 
   const card = page.getByRole('complementary', { name: 'Keys' }).getByRole('article').first();

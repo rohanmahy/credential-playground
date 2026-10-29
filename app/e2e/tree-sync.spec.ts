@@ -109,16 +109,26 @@ test.describe('JOSE (segments ↔ JSON view)', () => {
   test.beforeEach(async ({ page }) => {
     await paste(page, fixtureText('tokens/rfc7515-a3-jws-es256.txt'));
     await expect(page.getByTestId('detected-type')).toHaveText('JWT');
+    // This payload keeps `"iss":"joe"` on the line where the payload starts,
+    // and a line's treeitem is the outermost node starting on it
+    // (app/TEST-PLAN.md, Main pane). Re-indented, every claim gets its own
+    // line (and treeitem), and folding the payload hides them all.
+    await page.getByRole('button', { name: 'Settings' }).click();
+    const settings = page.getByRole('dialog', { name: 'Settings' });
+    await settings.getByRole('checkbox', { name: 'Re-indent decoded JSON' }).check();
+    await page.keyboard.press('Escape');
+    await expect(settings).toBeHidden();
   });
 
   test('collapsing a part collapses its segment', async ({ page }) => {
     const { main, raw } = panes(page);
+    await expect(main).toContainText('"joe"');
     await main
       .locator('[data-node-id="payload"]')
       .getByRole('button', { name: 'Collapse' })
       .click();
     await expect(raw.locator('[data-node-id="payload"]')).toHaveAttribute('aria-expanded', 'false');
-    await expect(main).not.toContainText('"iss":"joe"');
+    await expect(main).not.toContainText('"joe"');
   });
 
   test('selecting a claim highlights its characters in the payload segment', async ({ page }) => {
