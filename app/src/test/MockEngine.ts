@@ -3,11 +3,12 @@
 import { vi } from 'vitest';
 import type { Engine } from '../lib/engine/Engine';
 import type {
-  ConvertClaims,
+  Candidate,
   ConvertClaimsRequest,
   ConvertClaimsResult,
-} from '../lib/engine/pending';
-import type { Candidate, Document, Kind } from '../lib/engine/types';
+  Document,
+  Kind,
+} from '../lib/engine/types';
 import * as fx from './fixtures';
 
 function docFor(kind: Kind): Document {
@@ -31,7 +32,7 @@ function docFor(kind: Kind): Document {
   }
 }
 
-export class MockEngine implements Engine, ConvertClaims {
+export class MockEngine implements Engine {
   info = vi.fn(async () => fx.info);
   detect = vi.fn(async (_input: Uint8Array): Promise<Candidate[]> => fx.jwtCandidates);
   open = vi.fn(async (_input: Uint8Array, candidate: Candidate) => ({
@@ -100,7 +101,6 @@ export class MockEngine implements Engine, ConvertClaims {
       iana_updated: null,
     },
   }));
-  /** Proposed core addition for #43 (engine/pending.ts). */
   convertClaims = vi.fn(async (req: ConvertClaimsRequest): Promise<ConvertClaimsResult> =>
     req.to === 'edn' ? fx.convertedToEdn : fx.convertedToJson,
   );

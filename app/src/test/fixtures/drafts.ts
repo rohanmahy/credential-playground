@@ -1,7 +1,12 @@
 // Draft fixtures (#43): the documents parse_edit returns for new drafts,
 // and results of the proposed convert_claims.
-import type { Candidate, Document, EditResult, Kind } from '../../lib/engine/types';
-import type { ConvertClaimsResult } from '../../lib/engine/pending';
+import type {
+  Candidate,
+  ConvertClaimsResult,
+  Document,
+  EditResult,
+  Kind,
+} from '../../lib/engine/types';
 import { textToB64u } from '../../lib/engine/bytes';
 import { buildJsonClaims } from './jose';
 import { cwt, ednClaims } from './documents';

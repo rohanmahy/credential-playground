@@ -13,7 +13,6 @@
 //   Error. The engine keeps answering after a panic.
 import type { TokenatorEngine } from 'tokenator-wasm';
 import { type Engine, EngineFailure } from './Engine';
-import type { ConvertClaims } from './pending';
 import type { EngineError, ErrorCode } from './types';
 
 export interface WasmEngineOptions {
@@ -48,7 +47,7 @@ function toFailure(x: unknown): EngineFailure {
   return internal(`tokenator-wasm: ${x instanceof Error ? x.message : String(x)}`);
 }
 
-export class WasmEngine implements Engine, ConvertClaims {
+export class WasmEngine implements Engine {
   /** `snapshot` goes to `Engine::with_registry_snapshot` (null: bundled). */
   static async load(
     snapshot: Uint8Array | null = null,
@@ -99,7 +98,7 @@ export class WasmEngine implements Engine, ConvertClaims {
     this.call((e) => e.open(input, JSON.stringify(candidate), JSON.stringify(view)));
   render: Engine['render'] = (req) => this.call((e) => e.render(JSON.stringify(req)));
   parseEdit: Engine['parseEdit'] = (req) => this.call((e) => e.parse_edit(JSON.stringify(req)));
-  convertClaims: ConvertClaims['convertClaims'] = (req) =>
+  convertClaims: Engine['convertClaims'] = (req) =>
     this.call((e) => e.convert_claims(JSON.stringify(req)));
   issue: Engine['issue'] = (req) => this.call((e) => e.issue(JSON.stringify(req)));
   redact: Engine['redact'] = (req) => this.call((e) => e.redact(JSON.stringify(req)));
