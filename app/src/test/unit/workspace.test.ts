@@ -80,7 +80,7 @@ describe('actions open derived tabs', () => {
     expect(req?.claims).toEqual({ kind: fx.jsonClaims.kind, bytes: fx.jsonClaims.bytes });
     expect(req?.issuer.bytes).toBe(fx.issuerInfo.key.bytes);
     expect(req?.issuer.label).toBe('Issuer P-256');
-    expect(req?.sd.marks).toEqual(['given_name']);
+    expect(req?.sd?.marks).toEqual(['given_name']);
     expect(req?.randomness).toBe(RANDOM_32);
     expect(child.provenance).toEqual({ type: 'derived', parent: parent.id, action: 'issue' });
     expect(app.workspace.activeId).toBe(child.id);
@@ -169,7 +169,7 @@ describe('validate', () => {
     expect(req?.now).toBe(fx.NOW);
     expect(req?.skew).toBe(120);
     expect(req?.expected_aud).toBe('https://verifier.example');
-    expect(req?.keys.map((k) => k.label)).toEqual(['Issuer P-256', 'Verifier P-256']);
+    expect(req?.keys?.map((k) => k.label)).toEqual(['Issuer P-256', 'Verifier P-256']);
     expect(report).toEqual(fx.jwtReport);
     expect(app.workspace.tab(tab.id)?.report).toEqual(fx.jwtReport);
   });

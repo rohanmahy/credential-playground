@@ -52,7 +52,7 @@ describe('Issue', () => {
     await waitFor(() => expect(app.engine.issue).toHaveBeenCalled());
     const req = app.engine.issue.mock.calls[0]?.[0];
     expect(req?.jose_serialization).toBe('json_flattened');
-    expect(req?.sd.marks).toEqual(['given_name']);
+    expect(req?.sd?.marks).toEqual(['given_name']);
     expect(req?.cnf).toEqual({
       type: 'key',
       key: expect.objectContaining({ bytes: fx.holderInfo.key.bytes }),

@@ -1,8 +1,12 @@
-// Defaults for DTO fields that are `#[serde(default)]` in Rust but required
-// (`T | null`) in the generated TypeScript.
-import type { HeaderOptions, SdOptions, ViewOptions } from './types';
+// Request DTO fields that are `#[serde(default)]` in Rust are optional in
+// the generated TypeScript, so requests omit what they don't set. Only the
+// view options are spelled out in full: Settings builds them from its
+// toggles, starting from the core defaults below. Never send `null` for a
+// non-`Option` field (serde rejects it); omit it instead.
+import type { ViewOptions } from './types';
 
-export function defaultViewOptions(): ViewOptions {
+/** `ViewOptions::default()` in tokenator-core. */
+export function defaultViewOptions(): Required<ViewOptions> {
   return {
     layout: 'indented',
     indent: 2,
@@ -15,26 +19,5 @@ export function defaultViewOptions(): ViewOptions {
     json_layout: 'original',
     now: null,
     local_offset_minutes: 0,
-  };
-}
-
-export function defaultHeaderOptions(): HeaderOptions {
-  return {
-    typ: { type: 'auto' },
-    kid: { type: 'from_key' },
-    x5c: [],
-    extra: null,
-    unprotected_extra: null,
-  };
-}
-
-export function defaultSdOptions(): SdOptions {
-  return {
-    marks: [],
-    decoys: [],
-    sd_alg: null,
-    fixed_salts: [],
-    digest_order: 'sorted',
-    force_sd: false,
   };
 }

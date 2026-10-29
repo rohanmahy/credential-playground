@@ -5,7 +5,6 @@
   import { getAppContext } from '../context';
   import { ACTION_LABELS, canIssueWith } from '../logic/actions';
   import { kindFamily } from '../logic/kinds';
-  import { defaultHeaderOptions } from '../engine/defaults';
   import { errorMessage } from '../ui';
   import Dialog from './Dialog.svelte';
 
@@ -43,7 +42,6 @@
     e.preventDefault();
     if (!issuerId) return;
     const header: HeaderOptions = {
-      ...defaultHeaderOptions(),
       typ: { type: typ },
       kid: { type: kid },
     };

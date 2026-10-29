@@ -173,5 +173,7 @@ registry cache), `@playwright/test`.
 `tokenator_core::ts::bindings()`), formats the result with Prettier, and
 writes `src/lib/engine/types/index.ts`. `pnpm check:types` fails when the
 committed file differs. Never edit the generated file; change the Rust DTOs.
-ts-rs types `#[serde(default)]` fields as required `T | null`, so callers
-build requests from `lib/engine/defaults.ts`.
+Request DTO fields that are `#[serde(default)]` in Rust are optional in
+TypeScript (`field?: T | null` for `Option`, `field?: T` otherwise; never
+send `null` for the latter). Requests omit what they don't set; only
+`ViewOptions` is built in full, from `defaultViewOptions()` and Settings.

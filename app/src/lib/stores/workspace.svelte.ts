@@ -23,7 +23,6 @@ import type { ActionAvailability, ActionId, Crumb, Provenance } from '../model';
 import type { Platform } from '../platform/Platform';
 import type { KeyStore } from './keys.svelte';
 import type { Settings } from './settings.svelte';
-import { defaultHeaderOptions, defaultSdOptions } from '../engine/defaults';
 import { fromB64u, toB64u, utf8 } from '../engine/bytes';
 import { actionAvailability } from '../logic/actions';
 import { isKey, kindLabel } from '../logic/kinds';
@@ -417,8 +416,8 @@ export class Workspace {
           claims: doc,
           issuer: keys.ref(req.issuerKeyId),
           alg: req.alg ?? null,
-          header: req.header ? $state.snapshot(req.header) : defaultHeaderOptions(),
-          sd: { ...defaultSdOptions(), marks: [...tab.sdMarks] },
+          ...(req.header ? { header: $state.snapshot(req.header) } : {}),
+          sd: { marks: [...tab.sdMarks] },
           cnf: req.holderKeyId ? { type: 'key' as const, key: keys.ref(req.holderKeyId) } : null,
           jose_serialization: req.jose ?? 'compact',
           cose_tags: req.coseTags ? [...req.coseTags] : null,

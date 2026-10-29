@@ -614,47 +614,47 @@ export type ViewOptions = {
   /**
    * EDN layout.
    */
-  layout: Layout;
+  layout?: Layout;
   /**
    * Indent width for indented layouts.
    */
-  indent: number;
+  indent?: number;
   /**
    * Show decoded views at the format-defined locations.
    */
-  decoded_views: boolean;
+  decoded_views?: boolean;
   /**
    * Byte string nodes whose decoded view is toggled off.
    */
-  hide_decoded: Array<NodeId>;
+  hide_decoded?: Array<NodeId>;
   /**
    * Byte string nodes the user chose to decode as CBOR.
    */
-  manual_decode: Array<NodeId>;
+  manual_decode?: Array<NodeId>;
   /**
    * Registry comments and hover annotations.
    */
-  annotations: boolean;
+  annotations?: boolean;
   /**
    * How byte strings that are not decoded are printed.
    */
-  byte_style: ByteStyle;
+  byte_style?: ByteStyle;
   /**
    * Print tag 1 as `DT'…'` where exact.
    */
-  dt_literals: boolean;
+  dt_literals?: boolean;
   /**
    * Layout of decoded JOSE JSON.
    */
-  json_layout: JsonLayout;
+  json_layout?: JsonLayout;
   /**
    * Clock for relative times in [`TimeHint`]s.
    */
-  now: number | null;
+  now?: number | null;
   /**
    * Local offset east of UTC, in minutes, for display.
    */
-  local_offset_minutes: number;
+  local_offset_minutes?: number;
 };
 
 export type Layout = 'indented' | 'compact';
@@ -811,11 +811,11 @@ export type RenderRequest = {
   /**
    * Outer layers to record in the result (from the original `open`).
    */
-  layers: Array<Layer>;
+  layers?: Array<Layer>;
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type EditRequest = {
@@ -834,7 +834,7 @@ export type EditRequest = {
   /**
    * View options for the returned document.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type EditResult = {
@@ -874,60 +874,60 @@ export type IssueRequest = {
    * JOSE alg name (`ES256`, `Ed25519`, `ML-DSA-44`); derived from the key
    * when absent.
    */
-  alg: string | null;
+  alg?: string | null;
   /**
    * Header options.
    */
-  header: HeaderOptions;
+  header?: HeaderOptions;
   /**
    * Selective disclosure options.
    */
-  sd: SdOptions;
+  sd?: SdOptions;
   /**
    * Holder confirmation (`cnf`).
    */
-  cnf: CnfChoice | null;
+  cnf?: CnfChoice | null;
   /**
    * JOSE output serialization.
    */
-  jose_serialization: JoseSerialization;
+  jose_serialization?: JoseSerialization;
   /**
    * COSE tags, outermost first (default `[18]`).
    */
-  cose_tags: Array<number> | null;
+  cose_tags?: Array<number> | null;
   /**
    * 32-byte seed for salts, decoys, and randomized signatures. Without
    * it, signing is deterministic and SD needs `sd.fixed_salts`.
    */
-  randomness: Bytes | null;
+  randomness?: Bytes | null;
   /**
    * View options for the result.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type HeaderOptions = {
   /**
    * `typ`.
    */
-  typ: TypChoice;
+  typ?: TypChoice;
   /**
    * `kid`.
    */
-  kid: KidChoice;
+  kid?: KidChoice;
   /**
    * JOSE `x5c` (base64 DER), in order.
    */
-  x5c: Array<string>;
+  x5c?: Array<string>;
   /**
    * More protected header members: a JSON object (JOSE) or EDN map
    * (COSE), appended in order.
    */
-  extra: string | null;
+  extra?: string | null;
   /**
    * COSE unprotected header extras (EDN map).
    */
-  unprotected_extra: string | null;
+  unprotected_extra?: string | null;
 };
 
 export type TypChoice =
@@ -958,27 +958,27 @@ export type SdOptions = {
    * claim and something inside it gives recursive disclosures). EDN uses
    * tags 58/62 instead.
    */
-  marks: Array<NodeId>;
+  marks?: Array<NodeId>;
   /**
    * Decoy digests (JOSE).
    */
-  decoys: Array<DecoyRequest>;
+  decoys?: Array<DecoyRequest>;
   /**
    * SD hash (`_sd_alg` / `sd_alg`).
    */
-  sd_alg: HashName | null;
+  sd_alg?: HashName | null;
   /**
    * Fixed salts in creation order: JOSE salt strings, COSE hex.
    */
-  fixed_salts: Array<string>;
+  fixed_salts?: Array<string>;
   /**
    * `_sd` order.
    */
-  digest_order: DigestOrder;
+  digest_order?: DigestOrder;
   /**
    * Issue SD form even if nothing is marked.
    */
-  force_sd: boolean;
+  force_sd?: boolean;
 };
 
 export type DecoyRequest = {
@@ -1024,7 +1024,7 @@ export type DiscloseRequest = {
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type PresentRequest = {
@@ -1043,15 +1043,15 @@ export type PresentRequest = {
   /**
    * KB alg (JOSE name); derived from the key when absent.
    */
-  alg: string | null;
+  alg?: string | null;
   /**
    * `aud`.
    */
-  aud: string | null;
+  aud?: string | null;
   /**
    * `nonce` (JOSE, text) / `cnonce` (COSE, bytes).
    */
-  nonce: Nonce | null;
+  nonce?: Nonce | null;
   /**
    * `iat`.
    */
@@ -1059,11 +1059,11 @@ export type PresentRequest = {
   /**
    * 32-byte seed for randomized signatures.
    */
-  randomness: Bytes | null;
+  randomness?: Bytes | null;
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type ValidateRequest = {
@@ -1074,7 +1074,7 @@ export type ValidateRequest = {
   /**
    * Candidate keys from the panel.
    */
-  keys: Array<KeyRef>;
+  keys?: Array<KeyRef>;
   /**
    * The clock (seconds since the epoch).
    */
@@ -1082,19 +1082,19 @@ export type ValidateRequest = {
   /**
    * Allowed skew in seconds.
    */
-  skew: number;
+  skew?: number;
   /**
    * Expected KB `aud`.
    */
-  expected_aud: string | null;
+  expected_aud?: string | null;
   /**
    * Expected KB `nonce` / `cnonce`.
    */
-  expected_nonce: Nonce | null;
+  expected_nonce?: Nonce | null;
   /**
    * Maximum KB `iat` age in seconds.
    */
-  max_kb_age: number | null;
+  max_kb_age?: number | null;
 };
 
 export type LintRequest = {
@@ -1105,7 +1105,7 @@ export type LintRequest = {
   /**
    * Keys to check against the header `alg` (the verifying key).
    */
-  keys: Array<KeyRef>;
+  keys?: Array<KeyRef>;
 };
 
 export type ResignRequest = {
@@ -1120,15 +1120,15 @@ export type ResignRequest = {
   /**
    * Sign with this alg (JOSE name) instead of the header alg.
    */
-  alg: string | null;
+  alg?: string | null;
   /**
    * 32-byte seed for randomized signatures; deterministic without.
    */
-  randomness: Bytes | null;
+  randomness?: Bytes | null;
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type TamperRequest = {
@@ -1143,7 +1143,7 @@ export type TamperRequest = {
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type TamperOp =
@@ -1243,28 +1243,28 @@ export type ReencodeRequest = {
    * Outer layers for the output, outermost first (no `cbor_tag` layers;
    * use `cose_tags`).
    */
-  layers: Array<Layer>;
+  layers?: Array<Layer>;
   /**
    * New COSE tags; `None` keeps them.
    */
-  cose_tags: Array<number> | null;
+  cose_tags?: Array<number> | null;
   /**
    * CBOR serialization.
    */
-  cbor: CborSerialization;
+  cbor?: CborSerialization;
   /**
    * Also re-serialize the protected header, payload, and disclosure
    * contents (may make the signature stale).
    */
-  deep: boolean;
+  deep?: boolean;
   /**
    * New JOSE serialization; `None` keeps it.
    */
-  jose: JoseSerialization | null;
+  jose?: JoseSerialization | null;
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type CborSerialization = 'preserve' | 'preferred_plus' | 'deterministic';
@@ -1292,11 +1292,11 @@ export type EditDisclosuresRequest = {
   /**
    * 32-byte seed for forged salts and random digests.
    */
-  randomness: Bytes | null;
+  randomness?: Bytes | null;
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type DisclosureOp =
@@ -1396,7 +1396,7 @@ export type DecodeEmbeddedRequest = {
   /**
    * View options.
    */
-  view: ViewOptions;
+  view?: ViewOptions;
 };
 
 export type ManualDecode = {
@@ -1423,19 +1423,19 @@ export type KeyRef = {
   /**
    * Format hint; detected when absent.
    */
-  format: KeyFormat | null;
+  format?: KeyFormat | null;
   /**
    * Which key of a set (0 for a single key).
    */
-  index: number;
+  index?: number;
   /**
    * Workspace role (never serialized into key formats).
    */
-  role: Role | null;
+  role?: Role | null;
   /**
    * The UI's name for the key card, echoed in validation reports.
    */
-  label: string | null;
+  label?: string | null;
 };
 
 export type KeyFormat =
@@ -1467,8 +1467,10 @@ export type Visibility = 'public' | 'private';
 
 export type KeyInfo = {
   /**
-   * A self-contained reference to this one key: a JWK (private when
-   * available), or a COSE_Key when the kid is bytes that are not UTF-8.
+   * A self-contained reference to this one key (private when
+   * available): a JWK, or a COSE_Key when the kid is binary (so it stays
+   * binary), or PKCS#8 PEM for an ML-DSA key known only by its expanded
+   * private key (neither JWK nor COSE_Key can hold that).
    */
   key: KeyRef;
   /**
@@ -1537,7 +1539,7 @@ export type KeyImportRequest = {
   /**
    * Format hint.
    */
-  format: KeyFormat | null;
+  format?: KeyFormat | null;
 };
 
 export type KeyExportRequest = {
@@ -1578,7 +1580,7 @@ export type KeyGenRequest = {
   /**
    * Role for the card.
    */
-  role: Role | null;
+  role?: Role | null;
   /**
    * Where the randomness comes from.
    */
@@ -1586,7 +1588,7 @@ export type KeyGenRequest = {
   /**
    * Set a kid right away.
    */
-  kid: KidSource | null;
+  kid?: KidSource | null;
 };
 
 export type KeySpec =
@@ -1664,7 +1666,7 @@ export type ThumbprintRequest = {
   /**
    * Hash.
    */
-  hash: HashName;
+  hash?: HashName;
 };
 
 export type ThumbprintKind = 'jwk' | 'cose';
@@ -1722,11 +1724,11 @@ export type DateTimeRequest = {
   /**
    * Clock for the relative string.
    */
-  now: number | null;
+  now?: number | null;
   /**
    * Local offset east of UTC in minutes (the platform knows the zone).
    */
-  local_offset_minutes: number;
+  local_offset_minutes?: number;
 };
 
 export type DateTimeInput =
@@ -1833,19 +1835,19 @@ export type RegistryQuery = {
   /**
    * Entry kind.
    */
-  kind: RegistryKind | null;
+  kind?: RegistryKind | null;
   /**
    * Exact label (needs `kind`).
    */
-  label: RegistryLabel | null;
+  label?: RegistryLabel | null;
   /**
    * Exact name (needs `kind`).
    */
-  name: string | null;
+  name?: string | null;
   /**
    * Name prefix (autocomplete).
    */
-  prefix: string | null;
+  prefix?: string | null;
 };
 
 export type RegistryKind =
@@ -1917,7 +1919,7 @@ export type RegistryMergeRequest = {
   /**
    * Snapshot to merge into; the engine's current registry when absent.
    */
-  base_snapshot: Bytes | null;
+  base_snapshot?: Bytes | null;
   /**
    * The fetched IANA XML.
    */

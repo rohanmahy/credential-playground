@@ -35,11 +35,11 @@ export class MockEngine implements Engine {
   }));
   render = vi.fn(async (req: Parameters<Engine['render']>[0]) => ({
     ...docFor(req.doc.kind),
-    layers: req.layers,
+    layers: req.layers ?? [],
   }));
   parseEdit = vi.fn(async (_req: Parameters<Engine['parseEdit']>[0]) => fx.editStale);
   issue = vi.fn(async (req: Parameters<Engine['issue']>[0]) =>
-    req.sd.marks.length > 0 ? fx.sdJwt : fx.jwt,
+    (req.sd?.marks?.length ?? 0) > 0 ? fx.sdJwt : fx.jwt,
   );
   redact = vi.fn(async (_req: Parameters<Engine['redact']>[0]) => fx.sdJwt);
   disclose = vi.fn(async (_req: Parameters<Engine['disclose']>[0]) => fx.sdJwt);
