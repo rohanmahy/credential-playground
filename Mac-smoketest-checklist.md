@@ -1,8 +1,9 @@
 # macOS desktop smoke test checklist
 
 A manual click-through of the packaged desktop app. Automated WebDriver
-tests can't drive WKWebView on macOS, so this covers what CI can't: the
-real `.app`, native dialogs, the system clipboard, and real network fetches.
+tests can't drive WKWebView on macOS yet (#40), so this covers what CI
+can't: the real `.app`, native dialogs, the system clipboard, and real
+network fetches.
 Linux CI runs the automated equivalent through `tauri-driver`
 (`app/e2e-desktop`, also `scripts/desktop-e2e-docker.sh` on a Mac). Sections
 marked _Also automated on Linux_ have WebDriver counterparts there, as noted;

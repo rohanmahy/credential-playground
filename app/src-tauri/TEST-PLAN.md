@@ -161,9 +161,9 @@ other app suites are unchanged.
 `app/e2e-desktop/` drives the real release binary, with the native
 `TauriEngine` in WebKitGTK, through WebdriverIO → `tauri-driver` →
 `WebKitWebDriver`, headless under Xvfb. WKWebView has no WebDriver, so
-macOS stays manual (`Mac-smoketest-checklist.md`); the flows are the
-Playwright web flows (app TEST-PLAN), selected by the same roles and
-accessible names (`helpers.ts` resolves them in the page).
+macOS stays manual (`Mac-smoketest-checklist.md`; automation is #40); the
+flows are the Playwright web flows (app TEST-PLAN), selected by the same
+roles and accessible names (`helpers.ts` resolves them in the page).
 
 Run it with `scripts/desktop-e2e-docker.sh` (any host with Docker,
 including macOS), `scripts/desktop-e2e.sh` (Linux with
@@ -208,7 +208,7 @@ allow exactly these.
   registries (real network), appearance changes, the context-menu
   Re-encode and Tamper variants, the date/time chit, keyboard navigation,
   and screen readers. They stay in `Mac-smoketest-checklist.md`, which is
-  also the only desktop check on macOS.
+  also the only desktop check on macOS until #40.
 - **The real dialog plugin** is exercised by hand (`pnpm tauri dev`); the
   tests replace it with the `FileDialog` trait. The clipboard plugin is
   covered on Linux by `keys.e2e.ts` (X11 under Xvfb).

@@ -84,6 +84,6 @@ Phase 4
 - [x] `app/`: Svelte UI (tabs, key panel, synced panes, chits)
 - [x] WASM ↔ native parity suite
 - [x] Playwright e2e (web)
-- [x] Desktop e2e: Linux via tauri-driver (`app/e2e-desktop`); macOS manual ([checklist](Mac-smoketest-checklist.md))
+- [x] Desktop e2e: Linux via tauri-driver (`app/e2e-desktop`); macOS manual ([checklist](Mac-smoketest-checklist.md), automation in #40)
 - [x] Fuzz targets
 - [x] CI (fmt, clippy, tests, Pages deploy, `.app` release)
