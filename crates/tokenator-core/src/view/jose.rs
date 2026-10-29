@@ -738,6 +738,11 @@ fn assemble(
 /// Container nodes get the union of their children's raw ranges.
 fn union_raw(n: &mut Node) -> Option<RawRange> {
     let mut acc: Option<RawRange> = None;
+    if n.kind == NodeKind::Decoded {
+        // Decoded nodes carry their own ranges; only part containers
+        // (the root, `kb`, `disclosures`, `signatures`) need unions.
+        return n.raw;
+    }
     for c in &mut n.children {
         if let Some(r) = union_raw(c) {
             acc = Some(match acc {

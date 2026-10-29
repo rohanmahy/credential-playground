@@ -10,7 +10,7 @@
 use std::borrow::Cow;
 use std::collections::{BTreeMap, BTreeSet};
 
-use tokenator_cbor::{Item, Value, Width};
+use tokenator_cbor::{Item, MAX_DEPTH, Value, Width};
 use tokenator_edn::{
     Annotator, EmbeddedCbor, EmbeddedWarning, HexOptions, Path, PathSegment, PrintOptions, SpanMap,
 };
@@ -75,6 +75,60 @@ impl Annotator for Comments<'_> {
     }
 }
 
+/// Decoded views nest at most this deep (an SD-KBT nests two levels).
+const MAX_EMBEDDED: usize = 16;
+
+/// One node to visit.
+struct Task<'i, 'a> {
+    item: &'i Item<'a>,
+    path: Path,
+    id: NodeId,
+    label: String,
+    /// The offset the item's spans are relative to.
+    base: usize,
+    role: Role,
+    /// The arena index of the parent.
+    parent: Option<usize>,
+    /// This is the key node of the parent.
+    is_key: bool,
+    /// For a map value: its key, the key's path, and its label.
+    key: Option<(&'i Item<'a>, Path, String)>,
+    annotation: Option<crate::dto::document::Annotation>,
+    time: Option<crate::dto::document::TimeHint>,
+    /// A COSE_Sign1 part.
+    part: bool,
+    /// The span with envelope tags folded into this node.
+    outer: Option<(usize, usize)>,
+}
+
+impl<'i, 'a> Task<'i, 'a> {
+    fn new(
+        item: &'i Item<'a>,
+        path: Path,
+        id: NodeId,
+        label: String,
+        base: usize,
+        role: Role,
+        parent: Option<usize>,
+    ) -> Self {
+        Task {
+            item,
+            path,
+            id,
+            label,
+            base,
+            role,
+            parent,
+            is_key: false,
+            key: None,
+            annotation: None,
+            time: None,
+            part: false,
+            outer: None,
+        }
+    }
+}
+
 struct Walker<'v> {
     notes: Notes<'v>,
     view: &'v ViewOptions,
@@ -90,6 +144,8 @@ struct Walker<'v> {
     embedded: Vec<Path>,
     diagnostics: Vec<Diagnostic>,
     index: Vec<(usize, usize, NodeId)>,
+    /// How many decoded views enclose the current walk.
+    embedded_depth: usize,
 }
 
 fn kind_of(item: &Item<'_>) -> NodeKind {
@@ -171,183 +227,220 @@ impl Walker<'_> {
             .or_insert_with(|| path.clone());
     }
 
-    fn node(
-        &mut self,
-        item: &Item<'_>,
-        path: Path,
-        id: NodeId,
-        label: String,
-        base: usize,
-        role: &Role,
-    ) -> Node {
-        if let (Role::Sign1, Value::Tag(18 | 61, inner)) = (role, &item.value) {
-            // Envelope tags fold into the token's node.
-            self.register(&path, &id);
-            let mut n = self.node(
-                inner,
-                path.child(PathSegment::TagContent),
-                id,
-                label,
-                base,
-                role,
-            );
-            n.raw = abs_span(item, base).map(|(s, e)| RawRange {
+    /// Walks the item of `root` and everything under it. CBOR nesting is
+    /// handled with an explicit task stack (so deep items cost heap, not
+    /// stack); only decoded views recurse, at most [`MAX_EMBEDDED`] deep.
+    fn walk(&mut self, root: Task<'_, '_>) -> Node {
+        let mut arena: Vec<Option<Node>> = Vec::new();
+        let mut links: Vec<(Option<usize>, bool)> = Vec::new();
+        let mut kids: Vec<Vec<Node>> = Vec::new();
+        let mut tasks = vec![root];
+        while let Some(t) = tasks.pop() {
+            let item = t.item;
+            if let (Role::Sign1, Value::Tag(18 | 61, inner)) = (&t.role, &item.value) {
+                // Envelope tags fold into the token's node.
+                self.register(&t.path, &t.id);
+                let outer = t.outer.or_else(|| abs_span(item, t.base));
+                tasks.push(Task {
+                    item: inner,
+                    path: t.path.child(PathSegment::TagContent),
+                    outer,
+                    ..t
+                });
+                continue;
+            }
+            self.register(&t.path, &t.id);
+            let span = t.outer.or_else(|| abs_span(item, t.base));
+            if let Some((s, e)) = span {
+                self.index.push((s, e, t.id.clone()));
+            }
+            let mut n = leaf(t.id.clone(), kind_of(item), t.label.clone());
+            if t.part {
+                n.kind = NodeKind::Part;
+            }
+            n.annotation = t.annotation.clone();
+            n.time = t.time.clone();
+            n.raw = span.map(|(s, e)| RawRange {
                 start: u32_of(s),
                 end: u32_of(e),
                 ..RawRange::default()
             });
-            // The array's index entry gets the span with the tags.
-            if let Some((s, e)) = abs_span(item, base)
-                && let Some(entry) = self.index.iter_mut().find(|(_, _, i)| *i == n.id)
-            {
-                *entry = (s, e, n.id.clone());
-            }
-            return n;
-        }
-        self.register(&path, &id);
-        let span = abs_span(item, base);
-        if let Some((s, e)) = span {
-            self.index.push((s, e, id.clone()));
-        }
-        let mut n = leaf(id, kind_of(item), label);
-        n.raw = span.map(|(s, e)| RawRange {
-            start: u32_of(s),
-            end: u32_of(e),
-            ..RawRange::default()
-        });
-        match &item.value {
-            Value::Array(items) => {
-                let sign1 = matches!(role, Role::Sign1) && items.len() >= 4;
-                for (i, child) in items.iter().enumerate() {
-                    let (name, child_role) = match (sign1, i) {
-                        (true, 0) => (
-                            PARTS[0],
-                            Role::Embedded(Box::new(Role::Header(Context::ProtectedHeader))),
-                        ),
-                        (true, 1) => (PARTS[1], Role::Header(Context::UnprotectedHeader)),
-                        (true, 2) => (PARTS[2], Role::Embedded(Box::new(Role::Claims))),
-                        (true, 3) => (PARTS[3], Role::Plain),
-                        _ => (
-                            "",
-                            if matches!(role, Role::KeySet) {
-                                Role::Key
-                            } else if matches!(role, Role::SdClaims) {
-                                Role::Embedded(Box::new(Role::Plain))
-                            } else {
-                                Role::Plain
-                            },
-                        ),
-                    };
-                    let (cid, label) = if name.is_empty() {
-                        (n.id.index(i), i.to_string())
-                    } else {
-                        (n.id.child(name), name.to_owned())
-                    };
-                    let mut c = self.node(
-                        child,
-                        path.child(PathSegment::Index(i)),
-                        cid,
-                        label,
-                        base,
-                        &child_role,
-                    );
-                    if !name.is_empty() {
-                        c.kind = NodeKind::Part;
+            let me = arena.len();
+            let mut children: Vec<Task<'_, '_>> = Vec::new();
+            match &item.value {
+                Value::Array(items) => {
+                    let sign1 = matches!(t.role, Role::Sign1) && items.len() >= 4;
+                    for (i, child) in items.iter().enumerate() {
+                        let (name, role) = match (sign1, i) {
+                            (true, 0) => (
+                                PARTS[0],
+                                Role::Embedded(Box::new(Role::Header(Context::ProtectedHeader))),
+                            ),
+                            (true, 1) => (PARTS[1], Role::Header(Context::UnprotectedHeader)),
+                            (true, 2) => (PARTS[2], Role::Embedded(Box::new(Role::Claims))),
+                            (true, 3) => (PARTS[3], Role::Plain),
+                            _ => (
+                                "",
+                                match t.role {
+                                    Role::KeySet => Role::Key,
+                                    Role::SdClaims => Role::Embedded(Box::new(Role::Plain)),
+                                    _ => Role::Plain,
+                                },
+                            ),
+                        };
+                        let (id, label) = if name.is_empty() {
+                            (t.id.index(i), i.to_string())
+                        } else {
+                            (t.id.child(name), name.to_owned())
+                        };
+                        children.push(Task {
+                            part: !name.is_empty(),
+                            ..Task::new(
+                                child,
+                                t.path.child(PathSegment::Index(i)),
+                                id,
+                                label,
+                                t.base,
+                                role,
+                                Some(me),
+                            )
+                        });
                     }
-                    n.children.push(c);
                 }
-            }
-            Value::Map(entries) => {
-                let ctx = registry_context(role, item);
-                let mut seen = BTreeSet::new();
-                for (i, (k, v)) in entries.iter().enumerate() {
-                    let (seg, edn) = key_segment(k, i, &mut seen);
-                    let eid = n.id.push_raw(&seg);
-                    let kpath = path.child(PathSegment::Key(i));
-                    let vpath = path.child(PathSegment::Value(i));
-                    let knode =
-                        self.node(k, kpath.clone(), eid.key(), edn.clone(), base, &Role::Plain);
-                    let vrole = entry_role(role, k);
-                    let mut vnode = self.node(v, vpath.clone(), eid, edn, base, &vrole);
-                    if let (Some(ctx), Some(label)) = (&ctx, label_of(k))
-                        && let Some(note) =
-                            self.notes
-                                .lookup(Family::Cose, ctx, &label, label_of(v).as_ref())
-                    {
-                        vnode.annotation = Some(note.annotation);
-                        self.comments.insert(kpath, note.key_comment);
-                        if let Some(c) = note.value_comment {
-                            self.comments.insert(vpath, c);
+                Value::Map(entries) => {
+                    let ctx = registry_context(&t.role, item);
+                    let mut seen = BTreeSet::new();
+                    for (i, (k, v)) in entries.iter().enumerate() {
+                        let (seg, edn) = key_segment(k, i, &mut seen);
+                        let kpath = t.path.child(PathSegment::Key(i));
+                        let vpath = t.path.child(PathSegment::Value(i));
+                        let mut task = Task::new(
+                            v,
+                            vpath.clone(),
+                            t.id.push_raw(&seg),
+                            edn.clone(),
+                            t.base,
+                            entry_role(&t.role, k),
+                            Some(me),
+                        );
+                        if let (Some(ctx), Some(label)) = (&ctx, label_of(k))
+                            && let Some(note) =
+                                self.notes
+                                    .lookup(Family::Cose, ctx, &label, label_of(v).as_ref())
+                        {
+                            task.annotation = Some(note.annotation);
+                            self.comments.insert(kpath.clone(), note.key_comment);
+                            if let Some(c) = note.value_comment {
+                                self.comments.insert(vpath, c);
+                            }
                         }
+                        if matches!(t.role, Role::Claims) && matches!(int_of(k), Some(4..=6)) {
+                            task.time = cbor_hint(v, self.view.now);
+                        }
+                        task.key = Some((k, kpath, edn));
+                        children.push(task);
                     }
-                    if matches!(role, Role::Claims)
-                        && matches!(int_of(k), Some(4..=6))
-                        && vnode.time.is_none()
-                    {
-                        vnode.time = cbor_hint(v, self.view.now);
+                }
+                Value::Tag(tag, inner) => {
+                    let tagged = self.edn_spans.is_none() && self.view.decoded_views;
+                    let role = match (tagged, tag) {
+                        (true, 24 | 63) => Role::Embedded(Box::new(Role::Plain)),
+                        _ => Role::Plain,
+                    };
+                    if matches!(tag, 0 | 1) {
+                        n.time = cbor_hint(item, self.view.now);
                     }
-                    vnode.key = Some(Box::new(knode));
-                    n.children.push(vnode);
+                    children.push(Task::new(
+                        inner,
+                        t.path.child(PathSegment::TagContent),
+                        t.id.push_raw("~t"),
+                        "content".to_owned(),
+                        t.base,
+                        role,
+                        Some(me),
+                    ));
+                }
+                Value::Bytes(_) => {
+                    n.children = self.decoded_views(item, &t.path, &t.id, t.base, &t.role);
+                }
+                _ => {}
+            }
+            if item.width == Width::Indefinite
+                && matches!(item.value, Value::Bytes(_) | Value::Text(_))
+            {
+                for (i, chunk) in item.chunks.iter().enumerate() {
+                    children.push(Task::new(
+                        chunk,
+                        t.path.child(PathSegment::Chunk(i)),
+                        t.id.push_raw(&format!("~c{i}")),
+                        format!("chunk {i}"),
+                        t.base,
+                        Role::Plain,
+                        Some(me),
+                    ));
                 }
             }
-            Value::Tag(tag, inner) => {
-                let tagged = self.edn_spans.is_none() && self.view.decoded_views;
-                let inner_role = match (tagged, tag) {
-                    (true, 24 | 63) => Role::Embedded(Box::new(Role::Plain)),
-                    _ => Role::Plain,
-                };
-                let c = self.node(
-                    inner,
-                    path.child(PathSegment::TagContent),
-                    n.id.push_raw("~t"),
-                    "content".to_owned(),
-                    base,
-                    &inner_role,
-                );
-                if matches!(tag, 0 | 1) {
-                    n.time = cbor_hint(item, self.view.now);
+            arena.push(Some(n));
+            links.push((t.parent, t.is_key));
+            kids.push(Vec::new());
+            // Children in order, then the key first (it is visited next).
+            tasks.extend(children.into_iter().rev());
+            if let Some((k, kpath, label)) = t.key {
+                tasks.push(Task {
+                    is_key: true,
+                    ..Task::new(k, kpath, t.id.key(), label, t.base, Role::Plain, Some(me))
+                });
+            }
+        }
+        // Assemble: every node comes after its parent, so in reverse order
+        // each node is complete when it is moved into its parent.
+        for i in (1..arena.len()).rev() {
+            let Some(mut n) = arena.get_mut(i).and_then(Option::take) else {
+                continue;
+            };
+            if let Some(mine) = kids.get_mut(i) {
+                n.children.extend(std::mem::take(mine).into_iter().rev());
+            }
+            let Some(&(Some(parent), is_key)) = links.get(i) else {
+                continue;
+            };
+            if is_key {
+                if let Some(Some(p)) = arena.get_mut(parent) {
+                    p.key = Some(Box::new(n));
                 }
-                n.children.push(c);
-            }
-            Value::Bytes(_) => self.bytes_children(item, &path, &mut n, base, role),
-            _ => {}
-        }
-        if item.width == Width::Indefinite && matches!(item.value, Value::Bytes(_) | Value::Text(_))
-        {
-            for (i, chunk) in item.chunks.iter().enumerate() {
-                let c = self.node(
-                    chunk,
-                    path.child(PathSegment::Chunk(i)),
-                    n.id.push_raw(&format!("~c{i}")),
-                    format!("chunk {i}"),
-                    base,
-                    &Role::Plain,
-                );
-                n.children.push(c);
+            } else if let Some(siblings) = kids.get_mut(parent) {
+                siblings.push(n);
             }
         }
-        n
+        let mut root = arena
+            .first_mut()
+            .and_then(Option::take)
+            .unwrap_or_else(|| leaf(NodeId::root(), NodeKind::Null, String::new()));
+        if let Some(mine) = kids.first_mut() {
+            root.children.extend(std::mem::take(mine).into_iter().rev());
+        }
+        root
     }
 
     /// Decoded views of a byte string: at defined locations, on request
     /// (`manual_decode`), or where the user wrote `<<…>>` (EDN claim sets).
-    fn bytes_children(
+    fn decoded_views(
         &mut self,
         item: &Item<'_>,
         path: &Path,
-        n: &mut Node,
+        id: &NodeId,
         base: usize,
         role: &Role,
-    ) {
+    ) -> Vec<Node> {
         let Some((start, end)) = bstr_contents(item, base) else {
-            return;
+            return Vec::new();
         };
         let Some(content) = self.bytes.get(start..end) else {
-            return;
+            return Vec::new();
         };
-        let manual = self.view.manual_decode.contains(&n.id);
+        let manual = self.view.manual_decode.contains(id);
         if manual {
-            self.manual_diagnostics(start, end, &n.id);
+            self.manual_diagnostics(start, end, id);
         }
         let expand = match self.edn_spans {
             Some(spans) => spans.get(&path.child(PathSegment::Embedded(0))).is_some(),
@@ -355,32 +448,37 @@ impl Walker<'_> {
                 manual
                     || (matches!(role, Role::Embedded(_))
                         && self.view.decoded_views
-                        && !self.view.hide_decoded.contains(&n.id))
+                        && !self.view.hide_decoded.contains(id))
             }
         };
-        if !expand {
-            return;
+        // The printer shows no embedded CBOR beyond MAX_DEPTH either.
+        if !expand || self.embedded_depth >= MAX_EMBEDDED || path.depth() >= MAX_DEPTH {
+            return Vec::new();
         }
         let Some(items) = exact_sequence(content) else {
-            return;
+            return Vec::new();
         };
         let inner = match role {
             Role::Embedded(inner) => inner.as_ref().clone(),
             _ => Role::Plain,
         };
         self.embedded.push(path.clone());
+        self.embedded_depth += 1;
+        let mut out = Vec::with_capacity(items.len());
         for (j, child) in items.iter().enumerate() {
-            let child_role = if j == 0 { inner.clone() } else { Role::Plain };
-            let c = self.node(
+            let role = if j == 0 { inner.clone() } else { Role::Plain };
+            out.push(self.walk(Task::new(
                 child,
                 path.child(PathSegment::Embedded(j)),
-                n.id.decoded(j),
+                id.decoded(j),
                 "decoded".to_owned(),
                 start,
-                &child_role,
-            );
-            n.children.push(c);
+                role,
+                None,
+            )));
         }
+        self.embedded_depth -= 1;
+        out
     }
 
     fn manual_diagnostics(&mut self, start: usize, end: usize, id: &NodeId) {
@@ -449,8 +547,17 @@ pub(crate) fn build(
         embedded: Vec::new(),
         diagnostics: Vec::new(),
         index: Vec::new(),
+        embedded_depth: 0,
     };
-    let mut tree = w.node(item, Path::root(), NodeId::root(), String::new(), 0, role);
+    let mut tree = w.walk(Task::new(
+        item,
+        Path::root(),
+        NodeId::root(),
+        String::new(),
+        0,
+        role.clone(),
+        None,
+    ));
     let tagged = edn_spans.is_none() && view.decoded_views;
     let embedded = EmbeddedCbor {
         paths: &w.embedded,
