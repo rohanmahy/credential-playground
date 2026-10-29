@@ -1,0 +1,65 @@
+{
+  "method": "issue",
+  "source": "seeded keys and randomness",
+  "args": [
+    {
+      "json": {
+        "alg": "EdDSA",
+        "claims": {
+          "bytes": "ezE6ICJodHRwczovL2lzc3Vlci5leGFtcGxlIiwgMjogImFsaWNlIiwgNDogMTkwMDAwMDAwMCwgNjogMTcwMDAwMDAwMH0",
+          "kind": {
+            "type": "edn_claims"
+          }
+        },
+        "cnf": null,
+        "cose_tags": [
+          61,
+          18
+        ],
+        "header": {
+          "extra": null,
+          "kid": {
+            "type": "none"
+          },
+          "typ": {
+            "type": "auto"
+          },
+          "unprotected_extra": null,
+          "x5c": []
+        },
+        "issuer": {
+          "bytes": "eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6ImdUbDNEcWg5RjE5V28xUm13MHgtek11TmlwRzA3amVpWGZZUFc0X0pzNVEiLCJkIjoiQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSSJ9",
+          "format": {
+            "type": "jwk"
+          },
+          "index": 0,
+          "label": null,
+          "role": null
+        },
+        "jose_serialization": "compact",
+        "randomness": null,
+        "sd": {
+          "decoys": [],
+          "digest_order": "sorted",
+          "fixed_salts": [],
+          "force_sd": false,
+          "marks": [],
+          "sd_alg": null
+        },
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

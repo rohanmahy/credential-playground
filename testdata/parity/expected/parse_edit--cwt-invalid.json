@@ -1,0 +1,1 @@
+{"ok":{"ok":false,"bytes":null,"document":null,"signature_stale":false,"diagnostics":[{"severity":"error","code":"edn.syntax","message":"TrailingInput","node_id":null,"main":{"start":507,"end":508,"line_start":21,"line_end":22},"raw":null}]}}

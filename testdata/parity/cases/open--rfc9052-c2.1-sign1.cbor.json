@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9052-c2.1-sign1.cbor",
+  "args": [
+    {
+      "bytes": "0oRDoQEmoQRCMTFUVGhpcyBpcyB0aGUgY29udGVudC5YQI6zPkyjHRxGWrBarDTMayPVj-9cCDEGxNJaka7wsBF-Kvmikaoy4Uq4NNxW7SoiNERUfgHxHTsJFuWkw0XKyzY"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "COSE_Sign1 tag 18",
+          "COSE_Sign1"
+        ],
+        "confidence": 85,
+        "kind": {
+          "type": "cose_sign1"
+        },
+        "layers": [
+          {
+            "tag": 18,
+            "type": "cbor_tag"
+          }
+        ],
+        "payload_range": {
+          "end": 98,
+          "start": 1
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

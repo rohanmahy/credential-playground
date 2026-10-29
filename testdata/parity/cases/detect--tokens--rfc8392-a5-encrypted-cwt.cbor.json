@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc8392-a5-encrypted-cwt.cbor",
+  "args": [
+    {
+      "bytes": "0INDoQEKogRMU3ltbWV0cmljMTI4BU2ZoNeEbnYsSf_opj4LWFi5GKEf2B5Di3-XPZ4uEZvLIkJLoPOKgPJ1YvQA7h0NbA_bVZwCQh_ThPwuviLXBxN4sOp0KP_xV0RNRffmr82hquX2SVgwxYYnCH_FtJdPMZqHB6Y13WQ7"
+    }
+  ]
+}

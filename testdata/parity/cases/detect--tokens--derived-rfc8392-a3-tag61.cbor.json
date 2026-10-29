@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/derived-rfc8392-a3-tag61.cbor",
+  "args": [
+    {
+      "bytes": "2D3ShEOhASahBFJBc3ltbWV0cmljRUNEU0EyNTZYUKcBdWNvYXA6Ly9hcy5leGFtcGxlLmNvbQJlZXJpa3cDeBhjb2FwOi8vbGlnaHQuZXhhbXBsZS5jb20EGlYSrrAFGlYQ2fAGGlYQ2fAHQgtxWEBUJ8H_KNI_utHynEx8alVeYB1vop-Rebw9dDi6yspazQjI1NT5YTFoDEKaAfhZUezudDpSubY2MsVyCRIOHJ4w"
+    }
+  ]
+}

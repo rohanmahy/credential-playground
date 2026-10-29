@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc9901-a1-processed-payload.json",
+  "args": [
+    {
+      "bytes": "ewogICJpc3MiOiAiaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS5jb20iLAogICJpYXQiOiAxNjgzMDAwMDAwLAogICJleHAiOiAxODgzMDAwMDAwLAogICJhZGRyZXNzIjogewogICAgInJlZ2lvbiI6ICLmuK_ljLoiLAogICAgImNvdW50cnkiOiAiSlAiCiAgfQp9Cg"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "method": "parse_edit",
+  "source": "opened fixture",
+  "args": [
+    {
+      "json": {
+        "base": "ZXlKaGJHY2lPaUpGVXpJMU5pSjkuZXlKcGMzTWlPaUpxYjJVaUxBMEtJQ0psZUhBaU9qRXpNREE0TVRrek9EQXNEUW9nSW1oMGRIQTZMeTlsZUdGdGNHeGxMbU52YlM5cGMxOXliMjkwSWpwMGNuVmxmUS5EdEVoVTNsamJFZzhMMzhWV0FmVUFxT3lLQU02LVh4LUY0R2F3eGFlcG1YRkNnZlRqRHh3NWRqeExhOElTbFNBcG1XUXhmS1RVSnFQUDMtS2c2TlUxUQ",
+        "kind": {
+          "type": "jwt"
+        },
+        "text": "{\n  \"protected\": {\"alg\":\"ES256\"},\n  \"payload\": {\"iss\":\"joe\",\r\n \"exp\":1300819380,\r\n \"http://example.com/is_root\":true},\n  \"signature\": \"DtEhU3ljbEg8L38VWAfUAqOyKAM6-Xx-F4GawxaepmXFCgfTjDxw5djxLa8ISlSApmWQxfKTUJqPP3-Kg6NU1Q\"\n}",
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

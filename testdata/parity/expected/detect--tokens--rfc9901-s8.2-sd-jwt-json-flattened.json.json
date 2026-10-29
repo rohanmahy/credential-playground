@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"sd_jwt_json","general":false,"kb":false},"confidence":93,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":1144},"breadcrumb":["SD-JWT JSON"]},{"kind":{"type":"json_claims"},"confidence":60,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":1144},"breadcrumb":["JSON claim set"]}]}

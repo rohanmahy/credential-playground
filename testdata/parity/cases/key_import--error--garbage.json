@@ -1,0 +1,12 @@
+{
+  "method": "key_import",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "bytes": "bm90IGEga2V5",
+        "format": null
+      }
+    }
+  ]
+}

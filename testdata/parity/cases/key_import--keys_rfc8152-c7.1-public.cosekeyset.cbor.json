@@ -1,0 +1,12 @@
+{
+  "method": "key_import",
+  "source": "keys/rfc8152-c7.1-public.cosekeyset.cbor",
+  "args": [
+    {
+      "json": {
+        "bytes": "hKUgASFYIGXtpaEld8K66ClDf-M4cBoQqqN14btbXeEI3kOcCFUdIlggHlLtdXARY_f55A3fnzQbPcm6hgr34Mp8p-nuzQCE0ZwBAgJYJG1lcmlhZG9jLmJyYW5keWJ1Y2tAYnVja2xhbmQuZXhhbXBsZaUgASFYILrFsRytj5n5xysFz0ueJtJE3BifdFIoJVohmobWoJ7_IlggIBOL-C3BttVivg-lSreASjpkttcsz-1rb7btKLv8EX4BAgJCMTGlIAMhWEIAcpkss6wI7PPlxj3t7A1RqMH3nvL4L5Tzxze_XeeYZnHqxiX-gle70DlGRMqqOq-PJ6RYX7vK0PJFdiAIXlyPQq0iWEIB3KaUe86IvFeQSFrJdCc0K8NfiH2G1loIk3fiR-YLqlXk6FAeKtpXJKxR1pCQCAM-vBCsmZudf1zCUZ8_4eodlHUBAgJYHmJpbGJvLmJhZ2dpbnNAaG9iYml0b24uZXhhbXBsZaUgASFYIJj1Ck_2wFhhyIYNE6Y46lbD9a11kLv78FThx7TZHWKAIlgg8BQAsImGeAS46fyWw5MhYfGTT0IjBpFw2SS34Dv4IrsBAgJYIXBlcmVncmluLnRvb2tAdHVja2Jvcm91Z2guZXhhbXBsZQ",
+        "format": null
+      }
+    }
+  ]
+}

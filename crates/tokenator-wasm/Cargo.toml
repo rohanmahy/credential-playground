@@ -1,0 +1,44 @@
+[package]
+name = "tokenator-wasm"
+description = "wasm-bindgen bindings over the tokenator-core Engine (JSON in, JSON out)"
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license-file.workspace = true
+repository.workspace = true
+publish = false
+
+[lib]
+# cdylib for wasm-pack; rlib so the binding layer also compiles (and is
+# unit-tested) natively.
+crate-type = ["cdylib", "rlib"]
+
+# Runtime dependencies are deliberately few (TEST-PLAN.md §1):
+# - wasm-bindgen: the JS boundary.
+# - serde_json: requests and responses cross as JSON text, serialized by the
+#   same serializer on every target, so parity can compare strings
+#   (serde-wasm-bindgen is not used; see TEST-PLAN.md).
+# - console_error_panic_hook: panic messages on the console in debug builds.
+# No getrandom and no js-sys: randomness and time arrive in the requests.
+[dependencies]
+console_error_panic_hook = "0.1.7"
+serde_json = "1"
+tokenator-core = { path = "../tokenator-core" }
+wasm-bindgen = "0.2.106"
+
+[dev-dependencies]
+base64ct = { version = "1.8", features = ["alloc"] }
+parity = { path = "../../tools/parity" }
+serde_json = "1"
+
+[package.metadata.wasm-pack.profile.release]
+# wasm-opt is not run: wasm-pack would download binaryen at build time, and
+# the parity suite checks the artifact rustc and wasm-bindgen produce
+# (TEST-PLAN.md §1, "Size").
+wasm-opt = false
+
+[package.metadata.wasm-pack.profile.custom]
+wasm-opt = false
+
+[lints]
+workspace = true

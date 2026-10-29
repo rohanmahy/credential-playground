@@ -1,0 +1,18 @@
+{
+  "method": "key_generate",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "kid": null,
+        "role": "issuer",
+        "seed": {
+          "type": "well_known"
+        },
+        "spec": {
+          "type": "ml_dsa44"
+        }
+      }
+    }
+  ]
+}

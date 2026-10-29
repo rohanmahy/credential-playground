@@ -1,0 +1,30 @@
+{
+  "method": "render",
+  "source": "fixture bytes",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "pwF1Y29hcDovL2FzLmV4YW1wbGUuY29tAmVlcmlrdwN4GGNvYXA6Ly9saWdodC5leGFtcGxlLmNvbQQaVhKusAUaVhDZ8AYaVhDZ8AdCC3E",
+          "kind": {
+            "type": "cbor_claims"
+          }
+        },
+        "layers": [],
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

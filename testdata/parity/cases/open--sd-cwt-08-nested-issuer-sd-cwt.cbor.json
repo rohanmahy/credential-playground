@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/sd-cwt-08-nested-issuer-sd-cwt.cbor",
+  "args": [
+    {
+      "bytes": "0oRYLqQBOCIEWCBodHRwczovL2lzc3Vlci5leGFtcGxlL2Nvc2Uta2V5MxAZASUYqi-hEY9YIYNQWR6yCBsFvi3LtvhFnMD-UWtEQ0JBLTEwMTc3NxkB9VaDUOcOI-dxdvpZvrCyVZlDoHliY28CWBmDUMu_HNPRpdqD4dksCNVmpIFlODAzMDIDWGGDUMI6TRkr5129WDvlcEgt6N2iAWJ1c_g7glggG4lxcWfznVHuwIsTuu2lcO_10K7aodfQghGFwzY0paBYIElBKIT6HjeHwX0TIL3Uj24OU2XaAQzeBXHUp-_9E8wqGQH3WGaCUC330sEFtb86z5xpjzZYVS-jGQH09RkB9hpcXGuQ-DuCWCByV6hpffpAIhB5sA-2X-WHwxDmyj2hqjOwkDNd5m7IEFggwkxka1L-zXc8bqAcbKpac0IrhdOvpZAPqZgzbYOogCVYIYNQmjvImQkENWULN3GZRQwfoWtFRkdILTc4OTAxMhkB9VaDUF6FLS7vWcDr6rjAj8olLMVibnYCWBmDUD3Ua9feoJye59_k4NUQEptlODkxNTUDWGGDUMIlYHQn4BByu6_M5-SASeOiAWJ1c_g7glgg2iaNm4HBnAL86nxMrcLiPwRUpFUKOAzeiwhCRj7QNNpYIGHc24y657ZsPjayUQ2vYbqRaKUPIPTK1CE-0jHjPVt7GQH3WGaCUBskjUac8AuN-olvBp8EaXujGQH09RkB9hpgHblQ-DuCWCCY0V-C363Bj1cAWC_0eyhs18oEe7HgUppTdMWdbcUFfVggXeyPJo07lzWTZ0DJG5uvAEPejuQjV6QU4-jUqwmPrl1YIYNQuuYRBnu4I0hnl9oeu7Uvg2tBQkNELTEyMzQ1NhkB9VaDUFLaneXcYbM3dfk0i5kdPXhiY2ECWBmDUKll3jWqWZ1gP-G3qolJDrBlOTQxODgDWGGDUEg-SzwZTfYHOpxByp8nQGeiAWJ1c_g7glggJHD7kXWwYsNHqzw6GXdtAkdhEqF818_JQWZkvAWMIgtYIM85egiRdShiTKOzMsntzFSnLJQR3VmD9oAXzhYPcJ9SGQH3WGaCUM2Zs4WPHWWfnRYDmr-MX7qjGQH09RkB9hpjx0kE-DuCWCCvN13D-6HQgkSGQsAL57L3uwXJ2Pthz8Iw3f37Rhamk1ggnRUavrgArcwR_xD_YfvT11lEwTS0CiSr7xeH065lg6pZAQGnAXZodHRwczovL2lzc3Vlci5leGFtcGxlAnZodHRwczovL2hvbGRlci5leGFtcGxlBBpm1nSoBRpm1SH8Bhpm1SMoCKEBpAECIAEhWCCFVOsnXc1vvRx6xkGqLJDZICL9DTAkta8Yx8xhrVJ6LSJYIE3HrixnfpbQzIJZdlXOktVQP1QpPYeHXR55zkdwGUNDGQH4g9g8WCDKa4UWiCNnRP8M8IFFCOTxgdOBG_7E7Vu4rOeCMTLbwNg8WCAN_cadDvtl7sFL8or3jNjwbKv-jisaBhHvi8qGnONbYdg8WCAg2bsRNjuuSYUc_Uo_FmU50KoAQzwwrt4YOAv6mNeB3FhgjB6ZV7VzGRxHqfQkSrxL4nyZRMKpkuAVqG4ZwksEEZVR7pIAYQZu2yKCMRT5bawqG_qcelA-MDOgzVqtbZFl91SD6aeesx-b_fsH31-3uOUNqKy6utl0mZ0SCW9K6LQg"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "COSE_Sign1 tag 18",
+          "SD-CWT"
+        ],
+        "confidence": 94,
+        "kind": {
+          "type": "sd_cwt"
+        },
+        "layers": [
+          {
+            "tag": 18,
+            "type": "cbor_tag"
+          }
+        ],
+        "payload_range": {
+          "end": 1275,
+          "start": 1
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

@@ -59,6 +59,17 @@ describe('production CSP', () => {
     }
   });
 
+  it("limits connect-src to 'self' and https: (user-confirmed fetches)", () => {
+    // https: is the SPEC §9 tradeoff: arbitrary key URLs (kid, jwt-vc-issuer
+    // metadata) and https://www.iana.org for Update registries, all fetched
+    // only after the user confirms. Nothing else: no http:, ws:, data:, blob:.
+    const content =
+      /http-equiv="Content-Security-Policy"\s+content="([^"]+)"/.exec(html)?.[1] ?? '';
+    const policy = directives(content.replace(/&#39;/g, "'"));
+    expect(policy.get('connect-src')).toEqual(["'self'", 'https:']);
+    expect(policy.get('worker-src')).toEqual(["'self'"]);
+  });
+
   it('has no inline scripts and loads scripts from its own origin', () => {
     const scripts = html.match(/<script\b[^>]*>/g) ?? [];
     expect(scripts.length).toBeGreaterThan(0);

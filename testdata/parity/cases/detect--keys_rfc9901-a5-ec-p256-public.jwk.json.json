@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "keys/rfc9901-a5-ec-p256-public.jwk.json",
+  "args": [
+    {
+      "bytes": "ewogICJrdHkiOiAiRUMiLAogICJjcnYiOiAiUC0yNTYiLAogICJ4IjogImIyOGQ0TXdaTWp3OC0wMENHNHhmbm45U0xNVk1NMTlTbHFacFZiX3VOdFEiLAogICJ5IjogIlh2NXpXd3VvYVRnZFM2aFY0M3lJNmdCd1RuanVrbUZRUW5KX2tDeHpxazgiCn0K"
+    }
+  ]
+}

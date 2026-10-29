@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "keys/sd-cwt-08-c2-issuer-private.cosekey.cbor",
+  "args": [
+    {
+      "bytes": "pwECAnggaHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZS9jd2szLmNib3IDODIgAiFYMMMXmLDHiF-jUo-_h35bTDptxnpaXcazB7cow3JZJvKr5ftJZM2R45SKVJP267bLvyJYMI9sfsdhaRytN0xNqpOHRT8YBY7OWOsKjoSgVaMft_khSydQlSLBWedk-HEeEWCVVCNYMHHFTSIhk36mEtsSIfDT3fdxyTgcTjvkHVqgqJ1oXwnP73TEu_EEeD_VfoerIn0HTA"
+    }
+  ]
+}

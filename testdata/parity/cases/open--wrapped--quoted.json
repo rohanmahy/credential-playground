@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "constructed: quoted",
+  "args": [
+    {
+      "bytes": "ImV5SmhiR2NpT2lKRlV6STFOaUo5LmV5SnBjM01pT2lKcWIyVWlMQTBLSUNKbGVIQWlPakV6TURBNE1Ua3pPREFzRFFvZ0ltaDBkSEE2THk5bGVHRnRjR3hsTG1OdmJTOXBjMTl5YjI5MElqcDBjblZsZlEuRHRFaFUzbGpiRWc4TDM4VldBZlVBcU95S0FNNi1YeC1GNEdhd3hhZXBtWEZDZ2ZUakR4dzVkanhMYThJU2xTQXBtV1F4ZktUVUpxUFAzLUtnNk5VMVEi"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "quotes",
+          "JWT"
+        ],
+        "confidence": 90,
+        "kind": {
+          "type": "jwt"
+        },
+        "layers": [
+          {
+            "quote": "\"",
+            "type": "quotes"
+          }
+        ],
+        "payload_range": {
+          "end": 203,
+          "start": 1
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,30 @@
+{
+  "method": "render",
+  "source": "fixture bytes",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "eyJpc3MiOiJqb2UiLAogImV4cCI6MTMwMDgxOTM4MCwKICJodHRwOi8vZXhhbXBsZS5jb20vaXNfcm9vdCI6dHJ1ZX0K",
+          "kind": {
+            "type": "json_claims"
+          }
+        },
+        "layers": [],
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

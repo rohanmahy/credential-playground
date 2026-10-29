@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"sd_kbt"},"confidence":96,"layers":[{"type":"cbor_tag","tag":18}],"payload_range":{"start":1,"end":1049},"breadcrumb":["COSE_Sign1 tag 18","SD-KBT"]}]}

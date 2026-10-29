@@ -1,0 +1,24 @@
+{
+  "method": "key_export",
+  "source": "key fixture",
+  "args": [
+    {
+      "json": {
+        "format": {
+          "encoding": "auto",
+          "type": "pem"
+        },
+        "key": {
+          "bytes": "eyJrdHkiOiJFQyIsImNydiI6IlAtMjU2IiwieCI6IlNCc2g1VTlDOFdycUhvd185MkVOXzVTV2dqT2xqQ0hBYmt2VXZING40emsiLCJ5IjoiZ1NSejhLRTNKMnRac3RhdDlpSll2YjJWUWUzaFNYTkQ3ZzJLemdhRG9JMCIsImQiOiJPRlZUcWlPaVN4VFl1OExmOWdZbmYwUk9CSmVYcm40RUJPT3B1ZzdPOHZzIn0",
+          "format": {
+            "type": "jwk"
+          },
+          "index": 0,
+          "label": null,
+          "role": null
+        },
+        "visibility": "private"
+      }
+    }
+  ]
+}

@@ -1,0 +1,21 @@
+{
+  "method": "key_export",
+  "source": "key fixture",
+  "args": [
+    {
+      "json": {
+        "format": {
+          "type": "cose_key_set"
+        },
+        "key": {
+          "bytes": "pgECAyYgASFYIIVU6yddzW-9HHrGQaoskNkgIv0NMCS1rxjHzGGtUnotIlggTceuLGd-ltDMgll2Vc6S1VA_VCk9h4ddHnnOR3AZQ0MjWCBXWahuWbs7AC3eRn2ktS89BubCzUOUVs8Ehbm4ZClM5Q",
+          "format": null,
+          "index": 0,
+          "label": "sd-cwt-08-c1-holder-private.cosekey.cbor",
+          "role": null
+        },
+        "visibility": "public"
+      }
+    }
+  ]
+}

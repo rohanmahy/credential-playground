@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc9052-c2.1-sign1.cbor",
+  "args": [
+    {
+      "bytes": "0oRDoQEmoQRCMTFUVGhpcyBpcyB0aGUgY29udGVudC5YQI6zPkyjHRxGWrBarDTMayPVj-9cCDEGxNJaka7wsBF-Kvmikaoy4Uq4NNxW7SoiNERUfgHxHTsJFuWkw0XKyzY"
+    }
+  ]
+}

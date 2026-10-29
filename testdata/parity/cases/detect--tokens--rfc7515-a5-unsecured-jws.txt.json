@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc7515-a5-unsecured-jws.txt",
+  "args": [
+    {
+      "bytes": "ZXlKaGJHY2lPaUp1YjI1bEluMC5leUpwYzNNaU9pSnFiMlVpTEEwS0lDSmxlSEFpT2pFek1EQTRNVGt6T0RBc0RRb2dJbWgwZEhBNkx5OWxlR0Z0Y0d4bExtTnZiUzlwYzE5eWIyOTBJanAwY25WbGZRLgo"
+    }
+  ]
+}

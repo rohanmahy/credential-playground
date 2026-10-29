@@ -1,0 +1,32 @@
+{
+  "method": "disclose",
+  "source": "issued above",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRKowEmEBkBJRiqL6ERg1eDUMEONWdq2TrasOWiDUE6d5FheBkB9FOCUJsD0Vw9q_1ZWynpiNYe0RQBVYNQajjq44VN_LnCKcoEo14YYAFhYVi7pQF2aHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZRkB9YLYPFggaHzA3zqtpuqti5D4zDYCqWR6sONxv-cyRnRsCPWuvvgCGQH2ofg7gVggeXG5sZmIHQXBQPNl44xLowKcrvW6MLVRDAvbmgw-yxkIoQGjAQEgBiFYIIE5dw6ofRdfVqNUZsNMfszLjYqRtO43ol32D1uPybOU-DuBWCDK4VMuucOFiuA6HSnhAAfvmgEymJuSOGYzlx7Lgxuak1hAKtT6MnRbAXFmnv6KDY-kVEy0-r1wAZeOrEtOS896LMRbYMapIcpe3202Fz6D7PoIF9E8RtItQ7sddcZx1xE60A",
+          "kind": {
+            "type": "sd_cwt"
+          }
+        },
+        "keep": [
+          0
+        ],
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

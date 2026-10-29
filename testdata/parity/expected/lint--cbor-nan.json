@@ -1,0 +1,1 @@
+{"ok":[{"id":"lint.nan","category":"lint","status":"info","message":"non_canonical_nan: preferred f97e00","node_ids":["1"],"raw":{"start":2,"end":11},"detail":{"type":"encoding","finding":"non_canonical_nan","preferred_hex":"f97e00"}}]}

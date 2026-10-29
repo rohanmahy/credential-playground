@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "keys/sd-cwt-08-c1-holder-private.jwk.json",
+  "args": [
+    {
+      "bytes": "ewogICJrdHkiOiAiRUMiLAogICJhbGciOiAiRVMyNTYiLAogICJraWQiOiAiV1JRMlJiWTVSWUpDSXhmRFFMOWFnbDlmRlNDWVZ1NFhvY3FiNnplcmMxTSIsCiAgImNydiI6ICJQLTI1NiIsCiAgIngiOiAiaFZUckoxM05iNzBjZXNaQnFpeVEyU0FpX1Ewd0pMV3ZHTWZNWWExU2VpMCIsCiAgInkiOiAiVGNldUxHZC1sdERNZ2xsMlZjNlMxVkFfVkNrOWg0ZGRIbm5PUjNBWlEwTSIsCiAgImQiOiAiVjFtb2JsbTdPd0F0M2taOXBMVXZQUWJtd3MxRGxGYlBCSVc1dUdRcFRPVSIKfQo"
+    }
+  ]
+}

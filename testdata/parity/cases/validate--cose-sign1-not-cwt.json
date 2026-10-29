@@ -1,0 +1,22 @@
+{
+  "method": "validate",
+  "source": "tokens/rfc9052-c2.1-sign1.cbor",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRDoQEmoQRCMTFUVGhpcyBpcyB0aGUgY29udGVudC5YQI6zPkyjHRxGWrBarDTMayPVj-9cCDEGxNJaka7wsBF-Kvmikaoy4Uq4NNxW7SoiNERUfgHxHTsJFuWkw0XKyzY",
+          "kind": {
+            "type": "cose_sign1"
+          }
+        },
+        "expected_aud": null,
+        "expected_nonce": null,
+        "keys": [],
+        "max_kb_age": null,
+        "now": 1444000000,
+        "skew": 60
+      }
+    }
+  ]
+}

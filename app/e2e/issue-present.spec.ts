@@ -1,8 +1,7 @@
-// Issue → Present → Validate, JOSE and COSE, with created keys.
+// Issue → Present → Validate, JOSE and COSE, with created keys, through
+// the real WasmEngine.
 import { expect, test } from '@playwright/test';
-import { createKey, fixtureText, paste, skipUnlessEnabled, validate } from './helpers';
-
-skipUnlessEnabled();
+import { actions, createKey, fixtureText, paste, validate } from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -52,4 +51,48 @@ test('SD-CWT: redact tagged EDN, present as SD-KBT, validate', async ({ page }) 
 
   await validate(page);
   await expect(page.getByTestId('report-overall')).toHaveText(/pass|warn/i);
+});
+
+test('JWT: issue a plain JWT and validate it with the issuer key', async ({ page }) => {
+  await paste(page, fixtureText('tokens/rfc9901-s5.1-input-claims.json'));
+  await actions(page).getByRole('button', { name: 'Issue' }).click();
+  await page.getByRole('dialog', { name: 'Issue' }).getByRole('button', { name: 'Issue' }).click();
+  await expect(page.getByTestId('detected-type')).toHaveText('JWT');
+  await expect(page.getByRole('navigation', { name: 'Provenance' })).toContainText('Issue');
+  const report = await validate(page);
+  await expect(report.locator('[data-status]').first()).toHaveAttribute('data-status', 'pass');
+});
+
+test('CWT: issue from EDN, present in an SD-KBT, validate', async ({ page }) => {
+  await paste(page, '{1: "https://issuer.example", 2: "alice", 4: 1900000000}');
+  await expect(page.getByTestId('detected-type')).toHaveText('EDN claim set');
+  await actions(page).getByRole('button', { name: 'Issue' }).click();
+  await page.getByRole('dialog', { name: 'Issue' }).getByRole('button', { name: 'Issue' }).click();
+  await expect(page.getByTestId('detected-type')).toHaveText('CWT');
+  await expect(page.getByRole('tree', { name: 'Raw pane' })).toBeVisible();
+
+  await actions(page).getByRole('button', { name: 'Present' }).click();
+  await page
+    .getByRole('dialog', { name: 'Present' })
+    .getByRole('button', { name: 'Present' })
+    .click();
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-KBT');
+  const report = await validate(page);
+  await expect(report.locator('[data-status]').first()).toHaveAttribute('data-status', 'pass');
+  await expect(page.getByTestId('report-overall')).toHaveText(/pass|warn/i);
+});
+
+test('ML-DSA-87: issue a JWT and validate it (post-quantum in the browser)', async ({ page }) => {
+  await createKey(page, 'ML-DSA-87', 'issuer');
+  await paste(page, fixtureText('tokens/rfc9901-s5.1-input-claims.json'));
+  await actions(page).getByRole('button', { name: 'Issue' }).click();
+  const dialog = page.getByRole('dialog', { name: 'Issue' });
+  const issuer = dialog.getByRole('combobox', { name: 'Issuer key' });
+  const option = await issuer.locator('option', { hasText: 'ML-DSA-87' }).textContent();
+  await issuer.selectOption({ label: option ?? 'ML-DSA-87' });
+  await dialog.getByRole('button', { name: 'Issue' }).click();
+  await expect(page.getByTestId('detected-type')).toHaveText('JWT');
+  await expect(page.getByRole('tree', { name: 'Main pane' })).toContainText('"ML-DSA-87"');
+  const report = await validate(page);
+  await expect(report.locator('[data-status]').first()).toHaveAttribute('data-status', 'pass');
 });

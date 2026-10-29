@@ -1,0 +1,1 @@
+{"err":{"code":"key","message":"unsupported key spec: RSA keys can be generated with 2048, 3072, or 4096 bits","node_id":null}}

@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cose_sign1"},"confidence":85,"layers":[{"type":"cbor_tag","tag":18}],"payload_range":{"start":1,"end":98},"breadcrumb":["COSE_Sign1 tag 18","COSE_Sign1"]}]}

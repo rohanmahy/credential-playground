@@ -1,0 +1,22 @@
+{
+  "method": "key_generate",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "kid": {
+          "hash": "sha256",
+          "type": "jwk_thumbprint"
+        },
+        "role": null,
+        "seed": {
+          "bytes": "AQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQEBAQE",
+          "type": "seed"
+        },
+        "spec": {
+          "type": "p256"
+        }
+      }
+    }
+  ]
+}

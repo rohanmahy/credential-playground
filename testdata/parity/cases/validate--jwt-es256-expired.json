@@ -1,0 +1,30 @@
+{
+  "method": "validate",
+  "source": "tokens/rfc7515-a3-jws-es256.txt",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "ZXlKaGJHY2lPaUpGVXpJMU5pSjkuZXlKcGMzTWlPaUpxYjJVaUxBMEtJQ0psZUhBaU9qRXpNREE0TVRrek9EQXNEUW9nSW1oMGRIQTZMeTlsZUdGdGNHeGxMbU52YlM5cGMxOXliMjkwSWpwMGNuVmxmUS5EdEVoVTNsamJFZzhMMzhWV0FmVUFxT3lLQU02LVh4LUY0R2F3eGFlcG1YRkNnZlRqRHh3NWRqeExhOElTbFNBcG1XUXhmS1RVSnFQUDMtS2c2TlUxUQ",
+          "kind": {
+            "type": "jwt"
+          }
+        },
+        "expected_aud": null,
+        "expected_nonce": null,
+        "keys": [
+          {
+            "bytes": "eyJjcnYiOiJQLTI1NiIsImQiOiJqcHNRbm5HUW1MLVlCSWZmSDExMzZjc3BZRzYtMGlZN1gxZkNFOS1FOUxJIiwia3R5IjoiRUMiLCJ4IjoiZjgzT0ozRDJ4RjFCZzh2dWI5dExlMWdITXpWNzZlOFR1czl1UEh2UlZFVSIsInkiOiJ4X0ZFelJ1OW0zNkhMTl90dWU2NTlMTnBYVzZwQ3lTdGlrWWpLSVdJNWEwIn0",
+            "format": null,
+            "index": 0,
+            "label": null,
+            "role": null
+          }
+        ],
+        "max_kb_age": null,
+        "now": 1800000000,
+        "skew": 60
+      }
+    }
+  ]
+}

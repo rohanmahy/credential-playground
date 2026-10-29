@@ -1,0 +1,1 @@
+{"ok":[{"id":"lint.alg_none","category":"lint","status":"warn","message":"alg none: the token is unsecured","node_ids":["protected/~e/alg"],"raw":null,"detail":null}]}

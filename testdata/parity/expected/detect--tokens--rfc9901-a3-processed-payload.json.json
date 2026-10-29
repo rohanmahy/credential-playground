@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"json_claims"},"confidence":60,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":392},"breadcrumb":["JSON claim set"]}]}

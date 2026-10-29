@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "constructed: quoted around RFC 7515 A.3 / RFC 8392 A.3",
+  "args": [
+    {
+      "bytes": "ImV5SmhiR2NpT2lKRlV6STFOaUo5LmV5SnBjM01pT2lKcWIyVWlMQTBLSUNKbGVIQWlPakV6TURBNE1Ua3pPREFzRFFvZ0ltaDBkSEE2THk5bGVHRnRjR3hsTG1OdmJTOXBjMTl5YjI5MElqcDBjblZsZlEuRHRFaFUzbGpiRWc4TDM4VldBZlVBcU95S0FNNi1YeC1GNEdhd3hhZXBtWEZDZ2ZUakR4dzVkanhMYThJU2xTQXBtV1F4ZktUVUpxUFAzLUtnNk5VMVEi"
+    }
+  ]
+}

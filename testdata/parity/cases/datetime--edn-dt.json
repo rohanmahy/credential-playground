@@ -1,0 +1,16 @@
+{
+  "method": "datetime",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "input": {
+          "text": "dt'2011-03-22T18:43:00Z'",
+          "type": "edn"
+        },
+        "local_offset_minutes": 0,
+        "now": 1300819000
+      }
+    }
+  ]
+}

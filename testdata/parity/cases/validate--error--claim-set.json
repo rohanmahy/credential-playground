@@ -1,0 +1,22 @@
+{
+  "method": "validate",
+  "source": "tokens/rfc7519-s3.1-claims.json",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "eyJpc3MiOiJqb2UiLAogImV4cCI6MTMwMDgxOTM4MCwKICJodHRwOi8vZXhhbXBsZS5jb20vaXNfcm9vdCI6dHJ1ZX0K",
+          "kind": {
+            "type": "json_claims"
+          }
+        },
+        "expected_aud": null,
+        "expected_nonce": null,
+        "keys": [],
+        "max_kb_age": null,
+        "now": 1800000000,
+        "skew": 60
+      }
+    }
+  ]
+}

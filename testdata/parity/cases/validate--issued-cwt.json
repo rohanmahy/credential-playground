@@ -1,0 +1,32 @@
+{
+  "method": "validate",
+  "source": "issued above",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRDoQEmoFgspAF2aHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZQJlYWxpY2UEGnE_swAGGmVT8QBYQC4TsoEWZQ4v5DvYYjkr5TGyIfBk1mUL5EHB71gq_fAF9_yGjz2j1S4hX-O49_uNckSjMy-6Lva2NSC3_c8dJ2o",
+          "kind": {
+            "type": "cwt"
+          }
+        },
+        "expected_aud": null,
+        "expected_nonce": null,
+        "keys": [
+          {
+            "bytes": "eyJrdHkiOiJFQyIsImNydiI6IlAtMjU2IiwieCI6IlpaQmFPc1pRNkZ0ZkR5SzN5eXRlOWFtMy1HaDJhR3FrYjNVM1NKVnMzamsiLCJ5IjoiWV8xTGZqeDJ3VkhWX0Z1SVRNeHY4T0FyNUszVml4SDJhQ2FQMmtnNk9RYyJ9",
+            "format": {
+              "type": "jwk"
+            },
+            "index": 0,
+            "label": null,
+            "role": null
+          }
+        ],
+        "max_kb_age": null,
+        "now": 1800000000,
+        "skew": 60
+      }
+    }
+  ]
+}

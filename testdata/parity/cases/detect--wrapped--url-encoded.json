@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "constructed: url-encoded around RFC 7515 A.3 / RFC 8392 A.3",
+  "args": [
+    {
+      "bytes": "ZXlKaGJHY2lPaUpGVXpJMU5pSjklMkVleUpwYzNNaU9pSnFiMlVpTEEwS0lDSmxlSEFpT2pFek1EQTRNVGt6T0RBc0RRb2dJbWgwZEhBNkx5OWxlR0Z0Y0d4bExtTnZiUzlwYzE5eWIyOTBJanAwY25WbGZRJTJFRHRFaFUzbGpiRWc4TDM4VldBZlVBcU95S0FNNi1YeC1GNEdhd3hhZXBtWEZDZ2ZUakR4dzVkanhMYThJU2xTQXBtV1F4ZktUVUpxUFAzLUtnNk5VMVE"
+    }
+  ]
+}

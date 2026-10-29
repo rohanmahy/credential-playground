@@ -1,0 +1,14 @@
+{
+  "method": "key_import",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "bytes": "eyJrdHkiOiJvY3QiLCJrIjoiQUFBQSJ9",
+        "format": {
+          "type": "jwk"
+        }
+      }
+    }
+  ]
+}

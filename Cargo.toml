@@ -18,3 +18,13 @@ unwrap_used = "warn"
 expect_used = "warn"
 panic = "warn"
 indexing_slicing = "warn"
+
+# The web build (`pnpm build:wasm` in app/): small rather than fast. Release
+# settings for native builds (Tauri) are untouched.
+[profile.wasm-release]
+inherits = "release"
+opt-level = "s"
+lto = true
+codegen-units = 1
+panic = "abort"
+strip = "debuginfo"

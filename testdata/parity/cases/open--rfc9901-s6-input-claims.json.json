@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-s6-input-claims.json",
+  "args": [
+    {
+      "bytes": "ewogICJzdWIiOiAiNmM1YzBhNDktYjU4OS00MzFkLWJhZTctMjE5MTIyYTllYzJjIiwKICAiYWRkcmVzcyI6IHsKICAgICJzdHJlZXRfYWRkcmVzcyI6ICJTY2h1bHN0ci4gMTIiLAogICAgImxvY2FsaXR5IjogIlNjaHVscGZvcnRhIiwKICAgICJyZWdpb24iOiAiU2FjaHNlbi1BbmhhbHQiLAogICAgImNvdW50cnkiOiAiREUiCiAgfQp9Cg"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON claim set"
+        ],
+        "confidence": 60,
+        "kind": {
+          "type": "json_claims"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 192,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

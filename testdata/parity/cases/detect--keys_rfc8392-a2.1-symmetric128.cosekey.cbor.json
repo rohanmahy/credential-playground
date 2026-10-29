@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "keys/rfc8392-a2.1-symmetric128.cosekey.cbor",
+  "args": [
+    {
+      "bytes": "pCBQIx9MTU0wUf3C7Ao4UdWzgwEEAkxTeW1tZXRyaWMxMjgDCg"
+    }
+  ]
+}

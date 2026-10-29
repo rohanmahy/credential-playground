@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc7519-s3.1-claims.json",
+  "args": [
+    {
+      "bytes": "eyJpc3MiOiJqb2UiLAogImV4cCI6MTMwMDgxOTM4MCwKICJodHRwOi8vZXhhbXBsZS5jb20vaXNfcm9vdCI6dHJ1ZX0K"
+    }
+  ]
+}

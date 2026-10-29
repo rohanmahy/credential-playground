@@ -1,0 +1,1 @@
+{"ok":{"overall":"pass","items":[{"id":"signature","category":"signature","status":"pass","message":"ES256 signature verified with key 0","node_ids":["signature","protected"],"raw":null,"detail":{"type":"signature","alg":"ES256","key_index":0,"key_label":null,"selection":"panel_unmatched","untrusted":false}}],"fetchable":[]}}

@@ -1,0 +1,50 @@
+{
+  "method": "present",
+  "source": "issued above",
+  "args": [
+    {
+      "json": {
+        "alg": null,
+        "aud": "https://verifier.example",
+        "doc": {
+          "bytes": "ZXlKaGJHY2lPaUpGVXpJMU5pSjkuZXlKZmMyUWlPbHNpTTNwQlp6UlJjMkpuVjFKc1QzUnpaRlp2UldoWFFucFNOelIxVFRCSlFUUlJZWE5WVm5VdGJVTTRNQ0lzSWt0Vk1saE9ibGcxZWxCTmRtUmlWakZNTVROTFZqVnBWMVJ0V0ZOd2QyWllUMUJGVnpjNWVYTlhhMFVpTENKTVMweG5SblJOVEhnMVVuTXdXRWN3VEhSWGFrdzBWMmRIVVdkSVdFNTNka3BmZEZSTFVEbG1XVlJySWl3aWVUVnBhV2h2YlhCcVRtNUpRVFJQZGxRNWJWTTBja3R2V1hsaWJFRTBZamREYlVKaVpIbHZZbUZMTUNKZExDSnpkV0lpT2lKMWMyVnlYelF5SWl3aVoybDJaVzVmYm1GdFpTSTZJa3B2YUc0aUxDSm1ZVzFwYkhsZmJtRnRaU0k2SWtSdlpTSXNJbkJvYjI1bFgyNTFiV0psY2lJNklpc3hMVEl3TWkwMU5UVXRNREV3TVNJc0luQm9iMjVsWDI1MWJXSmxjbDkyWlhKcFptbGxaQ0k2ZEhKMVpTd2lZbWx5ZEdoa1lYUmxJam9pTVRrME1DMHdNUzB3TVNJc0luVndaR0YwWldSZllYUWlPakUxTnpBd01EQXdNREFzSW01aGRHbHZibUZzYVhScFpYTWlPbHQ3SWk0dUxpSTZJbVpIZW1Ga2VXTXplSFJaTUhVdFZGTkxaRzVzZVdSa01FdE1OWE0zU0RoTE4xSnZMV2xzZUVneVRGVWlmU3dpUkVVaVhTd2lZMjVtSWpwN0ltcDNheUk2ZXlKcmRIa2lPaUpQUzFBaUxDSmpjbllpT2lKRlpESTFOVEU1SWl3aWVDSTZJbWRVYkRORWNXZzVSakU1VjI4eFVtMTNNSGd0ZWsxMVRtbHdSekEzYW1WcFdHWlpVRmMwWDBwek5WRWlmWDE5LmlWeFdJYVltMXR5Y3ZiV0RkZTZYaDE3MnZRbzZxdWdIOGFwVjJDRG1JVzNsUHBId2piNG5fZkhsV3VnM2h1M0hIVlZvT1FjTkVuakVoNTU5QnhpaEJRfld5SkNiMU16TTNFNWNqUXdaVkpVVnpZMVltNVpVR1ZCSWl3aVpXMWhhV3dpTENKcWIyaHVaRzlsUUdWNFlXMXdiR1V1WTI5dElsMH5XeUkwVkdkU1puUlBTV1ZGUjFscFpqSm5hWGROZFRkUklpd2lZV1JrY21WemN5SXNleUp6ZEhKbFpYUmZZV1JrY21WemN5STZJakV5TXlCTllXbHVJRk4wSWl3aWJHOWpZV3hwZEhraU9pSkJibmwwYjNkdUlpd2ljbVZuYVc5dUlqb2lRVzU1YzNSaGRHVWlMQ0pqYjNWdWRISjVJam9pVlZNaWZWMH5XeUpoWlhaamNEUktkRk14Y3psdk9YWkRTVFJxZGpOUklpd2lWVk1pWFF-",
+          "kind": {
+            "kb": false,
+            "type": "sd_jwt"
+          }
+        },
+        "holder": {
+          "bytes": "eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6ImdUbDNEcWg5RjE5V28xUm13MHgtek11TmlwRzA3amVpWGZZUFc0X0pzNVEiLCJkIjoiQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSSJ9",
+          "format": {
+            "type": "jwk"
+          },
+          "index": 0,
+          "label": null,
+          "role": null
+        },
+        "iat": 1800000000,
+        "keep": [
+          1
+        ],
+        "nonce": {
+          "type": "text",
+          "value": "n-42"
+        },
+        "randomness": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

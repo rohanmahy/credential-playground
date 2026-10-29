@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "constructed: cwt-base64url around RFC 7515 A.3 / RFC 8392 A.3",
+  "args": [
+    {
+      "bytes": "MG9SRG9RRW1vUVJTUVhONWJXMWxkSEpwWTBWRFJGTkJNalUyV0ZDbkFYVmpiMkZ3T2k4dllYTXVaWGhoYlhCc1pTNWpiMjBDWldWeWFXdDNBM2dZWTI5aGNEb3ZMMnhwWjJoMExtVjRZVzF3YkdVdVkyOXRCQnBXRXE2d0JScFdFTm53QmhwV0VObndCMElMY1ZoQVZDZkJfeWpTUDdyUjhweE1mR3BWWG1BZGI2S2ZrWG04UFhRNHVzcktXczBJeU5UVS1XRXhhQXhDbWdINFdWSHM3blE2VXJtMk5qTEZjZ2tTRGh5ZU1B"
+    }
+  ]
+}

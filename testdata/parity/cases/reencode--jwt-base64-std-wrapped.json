@@ -1,0 +1,40 @@
+{
+  "method": "reencode",
+  "source": "opened fixture",
+  "args": [
+    {
+      "json": {
+        "cbor": "preserve",
+        "cose_tags": null,
+        "deep": false,
+        "doc": {
+          "bytes": "ZXlKaGJHY2lPaUpGVXpJMU5pSjkuZXlKcGMzTWlPaUpxYjJVaUxBMEtJQ0psZUhBaU9qRXpNREE0TVRrek9EQXNEUW9nSW1oMGRIQTZMeTlsZUdGdGNHeGxMbU52YlM5cGMxOXliMjkwSWpwMGNuVmxmUS5EdEVoVTNsamJFZzhMMzhWV0FmVUFxT3lLQU02LVh4LUY0R2F3eGFlcG1YRkNnZlRqRHh3NWRqeExhOElTbFNBcG1XUXhmS1RVSnFQUDMtS2c2TlUxUQ",
+          "kind": {
+            "type": "jwt"
+          }
+        },
+        "jose": null,
+        "layers": [
+          {
+            "padded": true,
+            "type": "base64_std",
+            "wrap": 20
+          }
+        ],
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

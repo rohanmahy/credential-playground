@@ -1,0 +1,9 @@
+{
+  "method": "detect",
+  "source": "tokens/rfc9901-s6-input-claims.json",
+  "args": [
+    {
+      "bytes": "ewogICJzdWIiOiAiNmM1YzBhNDktYjU4OS00MzFkLWJhZTctMjE5MTIyYTllYzJjIiwKICAiYWRkcmVzcyI6IHsKICAgICJzdHJlZXRfYWRkcmVzcyI6ICJTY2h1bHN0ci4gMTIiLAogICAgImxvY2FsaXR5IjogIlNjaHVscGZvcnRhIiwKICAgICJyZWdpb24iOiAiU2FjaHNlbi1BbmhhbHQiLAogICAgImNvdW50cnkiOiAiREUiCiAgfQp9Cg"
+    }
+  ]
+}

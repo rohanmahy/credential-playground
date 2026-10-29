@@ -1,0 +1,16 @@
+{
+  "method": "datetime",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "input": {
+          "text": "1443944944.5",
+          "type": "epoch"
+        },
+        "local_offset_minutes": 0,
+        "now": 1444000000
+      }
+    }
+  ]
+}

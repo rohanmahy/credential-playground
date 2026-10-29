@@ -1,0 +1,47 @@
+{
+  "method": "present",
+  "source": "issued above",
+  "args": [
+    {
+      "json": {
+        "alg": null,
+        "aud": "https://verifier.example",
+        "doc": {
+          "bytes": "0oRDoQEmoFgspAF2aHR0cHM6Ly9pc3N1ZXIuZXhhbXBsZQJlYWxpY2UEGnE_swAGGmVT8QBYQC4TsoEWZQ4v5DvYYjkr5TGyIfBk1mUL5EHB71gq_fAF9_yGjz2j1S4hX-O49_uNckSjMy-6Lva2NSC3_c8dJ2o",
+          "kind": {
+            "type": "cwt"
+          }
+        },
+        "holder": {
+          "bytes": "eyJrdHkiOiJPS1AiLCJjcnYiOiJFZDI1NTE5IiwieCI6ImdUbDNEcWg5RjE5V28xUm13MHgtek11TmlwRzA3amVpWGZZUFc0X0pzNVEiLCJkIjoiQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSUNBZ0lDQWdJQ0FnSSJ9",
+          "format": {
+            "type": "jwk"
+          },
+          "index": 0,
+          "label": null,
+          "role": null
+        },
+        "iat": 1800000000,
+        "keep": [],
+        "nonce": {
+          "type": "bytes",
+          "value": "bm9uY2UtYnl0ZXM"
+        },
+        "randomness": "CAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAg",
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,46 @@
+{
+  "method": "open",
+  "source": "tokens/rfc9901-a2-input-claims.json",
+  "args": [
+    {
+      "bytes": "ewogICJ2ZXJpZmllZF9jbGFpbXMiOiB7CiAgICAidmVyaWZpY2F0aW9uIjogewogICAgICAidHJ1c3RfZnJhbWV3b3JrIjogImRlX2FtbCIsCiAgICAgICJ0aW1lIjogIjIwMTItMDQtMjNUMTg6MjVaIiwKICAgICAgInZlcmlmaWNhdGlvbl9wcm9jZXNzIjogImYyNGM2Zi02ZDNmLTRlYzUtOTczZS1iMGQ4NTA2ZjNiYzciLAogICAgICAiZXZpZGVuY2UiOiBbCiAgICAgICAgewogICAgICAgICAgInR5cGUiOiAiZG9jdW1lbnQiLAogICAgICAgICAgIm1ldGhvZCI6ICJwaXBwIiwKICAgICAgICAgICJ0aW1lIjogIjIwMTItMDQtMjJUMTE6MzBaIiwKICAgICAgICAgICJkb2N1bWVudCI6IHsKICAgICAgICAgICAgInR5cGUiOiAiaWRjYXJkIiwKICAgICAgICAgICAgImlzc3VlciI6IHsKICAgICAgICAgICAgICAibmFtZSI6ICJTdGFkdCBBdWdzYnVyZyIsCiAgICAgICAgICAgICAgImNvdW50cnkiOiAiREUiCiAgICAgICAgICAgIH0sCiAgICAgICAgICAgICJudW1iZXIiOiAiNTM1NTQ1NTQiLAogICAgICAgICAgICAiZGF0ZV9vZl9pc3N1YW5jZSI6ICIyMDEwLTAzLTIzIiwKICAgICAgICAgICAgImRhdGVfb2ZfZXhwaXJ5IjogIjIwMjAtMDMtMjIiCiAgICAgICAgICB9CiAgICAgICAgfQogICAgICBdCiAgICB9LAogICAgImNsYWltcyI6IHsKICAgICAgImdpdmVuX25hbWUiOiAiTWF4IiwKICAgICAgImZhbWlseV9uYW1lIjogIk3DvGxsZXIiLAogICAgICAibmF0aW9uYWxpdGllcyI6IFsKICAgICAgICAiREUiCiAgICAgIF0sCiAgICAgICJiaXJ0aGRhdGUiOiAiMTk1Ni0wMS0yOCIsCiAgICAgICJwbGFjZV9vZl9iaXJ0aCI6IHsKICAgICAgICAiY291bnRyeSI6ICJJUyIsCiAgICAgICAgImxvY2FsaXR5IjogIsOeeWtrdmFiw6ZqYXJrbGF1c3R1ciIKICAgICAgfSwKICAgICAgImFkZHJlc3MiOiB7CiAgICAgICAgImxvY2FsaXR5IjogIk1heHN0YWR0IiwKICAgICAgICAicG9zdGFsX2NvZGUiOiAiMTIzNDQiLAogICAgICAgICJjb3VudHJ5IjogIkRFIiwKICAgICAgICAic3RyZWV0X2FkZHJlc3MiOiAiV2VpZGVuc3RyYcOfZSAyMiIKICAgICAgfQogICAgfQogIH0sCiAgImJpcnRoX21pZGRsZV9uYW1lIjogIlRpbW90aGV1cyIsCiAgInNhbHV0YXRpb24iOiAiRHIuIiwKICAibXNpc2RuIjogIjQ5MTIzNDU2Nzg5Igp9Cg"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "JSON claim set"
+        ],
+        "confidence": 60,
+        "kind": {
+          "type": "json_claims"
+        },
+        "layers": [
+          {
+            "leading": "",
+            "trailing": "\n",
+            "type": "trim"
+          }
+        ],
+        "payload_range": {
+          "end": 1152,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

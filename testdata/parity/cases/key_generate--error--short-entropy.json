@@ -1,0 +1,19 @@
+{
+  "method": "key_generate",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "kid": null,
+        "role": null,
+        "seed": {
+          "bytes": "AQEBAQEBAQEBAQEBAQEBAQ",
+          "type": "entropy"
+        },
+        "spec": {
+          "type": "p256"
+        }
+      }
+    }
+  ]
+}

@@ -1,0 +1,40 @@
+{
+  "method": "open",
+  "source": "tokens/derived-rfc8392-a3-untagged.cbor",
+  "args": [
+    {
+      "bytes": "hEOhASahBFJBc3ltbWV0cmljRUNEU0EyNTZYUKcBdWNvYXA6Ly9hcy5leGFtcGxlLmNvbQJlZXJpa3cDeBhjb2FwOi8vbGlnaHQuZXhhbXBsZS5jb20EGlYSrrAFGlYQ2fAGGlYQ2fAHQgtxWEBUJ8H_KNI_utHynEx8alVeYB1vop-Rebw9dDi6yspazQjI1NT5YTFoDEKaAfhZUezudDpSubY2MsVyCRIOHJ4w"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "CWT"
+        ],
+        "confidence": 92,
+        "kind": {
+          "type": "cwt"
+        },
+        "layers": [],
+        "payload_range": {
+          "end": 174,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

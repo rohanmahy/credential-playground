@@ -1,0 +1,35 @@
+{
+  "method": "validate",
+  "source": "presented above",
+  "args": [
+    {
+      "json": {
+        "doc": {
+          "bytes": "0oRYf6MBMg3ShEOhASagWCykAXZodHRwczovL2lzc3Vlci5leGFtcGxlAmVhbGljZQQacT-zAAYaZVPxAFhALhOygRZlDi_kO9hiOSvlMbIh8GTWZQvkQcHvWCr98AX3_IaPPaPVLiFf47j3-41yRKMzL7ou9rY1ILf9zx0nahAZASagWDCjA3gYaHR0cHM6Ly92ZXJpZmllci5leGFtcGxlBhprSdIAGCdLbm9uY2UtYnl0ZXNYQEWS2OzXesuF3TCDWGmBONTpfI9BbRJHXwcvD9P2hz28jRqKQIQCvP7S6j-8--7fyPb1EJ54VyEF0XNZZkL_pg8",
+          "kind": {
+            "type": "sd_kbt"
+          }
+        },
+        "expected_aud": "https://verifier.example",
+        "expected_nonce": {
+          "type": "bytes",
+          "value": "bm9uY2UtYnl0ZXM"
+        },
+        "keys": [
+          {
+            "bytes": "eyJrdHkiOiJFQyIsImNydiI6IlAtMjU2IiwieCI6IlpaQmFPc1pRNkZ0ZkR5SzN5eXRlOWFtMy1HaDJhR3FrYjNVM1NKVnMzamsiLCJ5IjoiWV8xTGZqeDJ3VkhWX0Z1SVRNeHY4T0FyNUszVml4SDJhQ2FQMmtnNk9RYyJ9",
+            "format": {
+              "type": "jwk"
+            },
+            "index": 0,
+            "label": null,
+            "role": null
+          }
+        ],
+        "max_kb_age": null,
+        "now": 1800000005,
+        "skew": 60
+      }
+    }
+  ]
+}

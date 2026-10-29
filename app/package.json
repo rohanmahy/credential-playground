@@ -9,14 +9,20 @@
     "node": ">=22"
   },
   "scripts": {
-    "dev": "vite",
-    "build": "vite build",
+    "build:wasm": "wasm-pack build ../crates/tokenator-wasm --target web --profile wasm-release --no-opt --no-pack",
+    "build:wasm:debug": "wasm-pack build ../crates/tokenator-wasm --target web --dev --no-pack",
+    "dev": "pnpm build:wasm && vite",
+    "build": "pnpm build:wasm && vite build",
     "preview": "vite preview",
     "typecheck": "svelte-check --tsconfig ./tsconfig.json --fail-on-warnings",
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:wasm": "pnpm build:wasm && vitest run --config vitest.wasm.config.ts",
+    "test:parity": "pnpm build:wasm && vitest run --config vitest.wasm.config.ts src/test/wasm/parity.test.ts",
+    "parity:regen": "cargo run --release --locked -p parity -- regen",
+    "parity:check": "cargo run --release --locked -p parity -- check",
     "test:e2e": "playwright test",
     "gen:types": "node scripts/gen-types.mjs",
     "check:types": "node scripts/gen-types.mjs --check"

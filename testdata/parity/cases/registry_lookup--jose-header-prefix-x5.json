@@ -1,0 +1,14 @@
+{
+  "method": "registry_lookup",
+  "source": "bundled registry",
+  "args": [
+    {
+      "json": {
+        "kind": "jose_header",
+        "label": null,
+        "name": null,
+        "prefix": "x5"
+      }
+    }
+  ]
+}

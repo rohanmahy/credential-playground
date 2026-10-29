@@ -1,0 +1,14 @@
+{
+  "method": "registry_lookup",
+  "source": "bundled registry",
+  "args": [
+    {
+      "json": {
+        "kind": null,
+        "label": null,
+        "name": "iss",
+        "prefix": null
+      }
+    }
+  ]
+}

@@ -1,0 +1,16 @@
+{
+  "method": "datetime",
+  "source": "constructed",
+  "args": [
+    {
+      "json": {
+        "input": {
+          "text": "yesterday",
+          "type": "rfc3339"
+        },
+        "local_offset_minutes": 0,
+        "now": null
+      }
+    }
+  ]
+}

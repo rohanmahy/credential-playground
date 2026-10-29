@@ -1,0 +1,1 @@
+{"ok":{"overall":"skip","items":[{"id":"signature","category":"signature","status":"skip","message":"no key for ES512","node_ids":["signature","protected"],"raw":null,"detail":{"type":"signature","alg":"ES512","key_index":null,"key_label":null,"selection":"none","untrusted":false}}],"fetchable":[]}}

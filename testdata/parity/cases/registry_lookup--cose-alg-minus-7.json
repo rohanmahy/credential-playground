@@ -1,0 +1,14 @@
+{
+  "method": "registry_lookup",
+  "source": "bundled registry",
+  "args": [
+    {
+      "json": {
+        "kind": "cose_alg",
+        "label": -7,
+        "name": null,
+        "prefix": null
+      }
+    }
+  ]
+}
