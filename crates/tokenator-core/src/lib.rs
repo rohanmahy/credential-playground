@@ -30,8 +30,16 @@
 //! # Ok::<(), tokenator_core::EngineError>(())
 //! ```
 
+mod annotate;
+mod cbor;
+mod datetime;
+mod detect;
 pub mod dto;
 mod engine;
+mod keyring;
+mod reg;
+mod util;
+mod view;
 #[cfg(feature = "ts")]
 pub mod ts;
 

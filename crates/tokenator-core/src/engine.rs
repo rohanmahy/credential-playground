@@ -1,9 +1,12 @@
 //! The Engine facade. Every method is a pure function of the engine's
 //! registry and its arguments.
-// Skeleton: the bodies are written by the implementation phase.
 #![allow(unused_variables, clippy::unused_self)]
 
 use tokenator_registry::Registry;
+
+use crate::dto::common::Bytes;
+use crate::dto::detect::Kind;
+use crate::{datetime, detect, keyring, reg, view};
 
 use crate::dto::actions::{
     DecodeEmbeddedRequest, DiscloseRequest, EditDisclosuresRequest, EditRequest, EditResult,
@@ -27,31 +30,34 @@ use crate::dto::report::{CheckItem, ValidationReport};
 /// annotations; documents, keys, time, and randomness are always passed in.
 #[derive(Clone, Debug)]
 pub struct Engine {
-    #[allow(dead_code)] // read by the implementation
     registry: Registry,
 }
 
 impl Engine {
     /// An engine with the bundled registry snapshot.
     pub fn new() -> Result<Engine, EngineError> {
-        unimplemented!()
+        Registry::bundled()
+            .map(|registry| Engine { registry })
+            .map_err(|e| reg::registry_error(&e))
     }
 
     /// An engine with a registry snapshot from
     /// [`Engine::registry_merge`] (the cached refresh).
     pub fn with_registry_snapshot(snapshot: &[u8]) -> Result<Engine, EngineError> {
-        unimplemented!()
+        Registry::from_snapshot(snapshot)
+            .map(|registry| Engine { registry })
+            .map_err(|e| reg::registry_error(&e))
     }
 
     /// Versions for the About box.
     pub fn info(&self) -> EngineInfo {
-        unimplemented!()
+        reg::info(&self.registry)
     }
 
     /// Ranked readings of `input`. EDN candidates are confirmed by parsing
     /// (and dropped if they do not parse). Never panics.
     pub fn detect(&self, input: &[u8]) -> Vec<Candidate> {
-        unimplemented!()
+        detect::detect(input)
     }
 
     /// Opens `input` as `candidate` (one of [`Engine::detect`]'s results).
@@ -64,12 +70,12 @@ impl Engine {
         candidate: &Candidate,
         view: &ViewOptions,
     ) -> Result<Document, EngineError> {
-        unimplemented!()
+        detect::open(&self.registry, input, candidate, view)
     }
 
     /// Re-renders a document (new view options, after an action).
     pub fn render(&self, req: &RenderRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        view::document(&self.registry, &req.doc.kind, &req.doc.bytes, req.layers.clone(), &req.view)
     }
 
     /// Live edit: parses the main pane text and rebuilds the bytes, keeping
@@ -142,52 +148,57 @@ impl Engine {
 
     /// Imports keys (a set gives several).
     pub fn key_import(&self, req: &KeyImportRequest) -> Result<Vec<KeyInfo>, EngineError> {
-        unimplemented!()
+        keyring::key_import(req)
     }
 
     /// Exports a key.
     pub fn key_export(&self, req: &KeyExportRequest) -> Result<KeyExport, EngineError> {
-        unimplemented!()
+        keyring::key_export(req)
     }
 
     /// The public key of a key, as a new card.
     pub fn key_public(&self, key: &KeyRef) -> Result<KeyInfo, EngineError> {
-        unimplemented!()
+        keyring::key_public(key)
     }
 
     /// Generates a key from a seed or from platform entropy.
     pub fn key_generate(&self, req: &KeyGenRequest) -> Result<KeyInfo, EngineError> {
-        unimplemented!()
+        keyring::key_generate(req)
     }
 
     /// A JWK or COSE thumbprint.
     pub fn key_thumbprint(&self, req: &ThumbprintRequest) -> Result<Thumbprint, EngineError> {
-        unimplemented!()
+        keyring::key_thumbprint(req)
     }
 
     /// Sets the kid.
     pub fn key_assign_kid(&self, req: &AssignKidRequest) -> Result<KeyInfo, EngineError> {
-        unimplemented!()
+        keyring::key_assign_kid(req)
     }
 
     /// The key as JWK JSON text.
     pub fn key_to_jwk(&self, req: &KeyConvertRequest) -> Result<String, EngineError> {
-        unimplemented!()
+        keyring::key_to_jwk(req)
     }
 
     /// The key as a COSE_Key document (EDN and hex views).
     pub fn key_to_cwk(&self, req: &KeyConvertRequest) -> Result<Document, EngineError> {
-        unimplemented!()
+        let bytes = keyring::key_to_cwk_bytes(req)?;
+        view::document(&self.registry, &Kind::CoseKey, &bytes, Vec::new(), &crate::ViewOptions::default())
+            .map(|mut d| {
+                d.bytes = Bytes(bytes);
+                d
+            })
     }
 
     /// Date/time conversions for the chit.
     pub fn datetime(&self, req: &DateTimeRequest) -> Result<DateTimeForms, EngineError> {
-        unimplemented!()
+        datetime::convert(req)
     }
 
     /// Registry entries matching a query.
     pub fn registry_lookup(&self, query: &RegistryQuery) -> Vec<RegistryEntry> {
-        unimplemented!()
+        reg::lookup(&self.registry, query)
     }
 
     /// Merges a fetched IANA registry into a snapshot and returns the new
@@ -196,6 +207,6 @@ impl Engine {
         &self,
         req: &RegistryMergeRequest,
     ) -> Result<RegistryMergeResult, EngineError> {
-        unimplemented!()
+        reg::merge(&self.registry, req)
     }
 }
