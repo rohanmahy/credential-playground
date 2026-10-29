@@ -5,6 +5,8 @@ import type {
   AssignKidRequest,
   Candidate,
   CheckItem,
+  ConvertClaimsRequest,
+  ConvertClaimsResult,
   DateTimeForms,
   DateTimeRequest,
   DecodeEmbeddedRequest,
@@ -49,6 +51,10 @@ export interface Engine {
   render(req: RenderRequest): Promise<Document>;
   /** Never rejects for bad text: problems come back as diagnostics. */
   parseEdit(req: EditRequest): Promise<EditResult>;
+  /** Claim sets between JSON and EDN text (a draft's Format switch).
+   *  `ok: false` when the text does not parse or EDN has no JSON form
+   *  (`convert.not_representable`, with the node). */
+  convertClaims(req: ConvertClaimsRequest): Promise<ConvertClaimsResult>;
   issue(req: IssueRequest): Promise<Document>;
   redact(req: IssueRequest): Promise<Document>;
   disclose(req: DiscloseRequest): Promise<Document>;

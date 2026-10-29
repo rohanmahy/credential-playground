@@ -21,6 +21,7 @@ export const METHODS = [
   'open',
   'render',
   'parse_edit',
+  'convert_claims',
   'issue',
   'redact',
   'disclose',

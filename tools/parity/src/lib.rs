@@ -28,21 +28,22 @@ use base64ct::{Base64UrlUnpadded, Encoding};
 use serde::de::DeserializeOwned;
 use serde::{Deserialize, Serialize};
 use tokenator_core::{
-    AssignKidRequest, Candidate, DateTimeRequest, DecodeEmbeddedRequest, DiscloseRequest,
-    EditDisclosuresRequest, EditRequest, Engine, EngineError, IssueRequest, KeyConvertRequest,
-    KeyExportRequest, KeyGenRequest, KeyImportRequest, KeyRef, LintRequest, PresentRequest,
-    ReencodeRequest, RegistryMergeRequest, RegistryQuery, RenderRequest, ResignRequest,
-    TamperRequest, ThumbprintRequest, ValidateRequest, ViewOptions,
+    AssignKidRequest, Candidate, ConvertClaimsRequest, DateTimeRequest, DecodeEmbeddedRequest,
+    DiscloseRequest, EditDisclosuresRequest, EditRequest, Engine, EngineError, IssueRequest,
+    KeyConvertRequest, KeyExportRequest, KeyGenRequest, KeyImportRequest, KeyRef, LintRequest,
+    PresentRequest, ReencodeRequest, RegistryMergeRequest, RegistryQuery, RenderRequest,
+    ResignRequest, TamperRequest, ThumbprintRequest, ValidateRequest, ViewOptions,
 };
 
 /// Every Engine method, by its core name (which is also the binding name
 /// on `TokenatorEngine`).
-pub const METHODS: [&str; 27] = [
+pub const METHODS: [&str; 28] = [
     "info",
     "detect",
     "open",
     "render",
     "parse_edit",
+    "convert_claims",
     "issue",
     "redact",
     "disclose",
@@ -148,6 +149,7 @@ impl Case {
             )),
             "render" => envelope(&e.render(&self.json::<RenderRequest>(0)?)),
             "parse_edit" => ok(&e.parse_edit(&self.json::<EditRequest>(0)?)),
+            "convert_claims" => ok(&e.convert_claims(&self.json::<ConvertClaimsRequest>(0)?)),
             "issue" => envelope(&e.issue(&self.json::<IssueRequest>(0)?)),
             "redact" => envelope(&e.redact(&self.json::<IssueRequest>(0)?)),
             "disclose" => envelope(&e.disclose(&self.json::<DiscloseRequest>(0)?)),

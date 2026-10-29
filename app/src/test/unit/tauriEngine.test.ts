@@ -68,6 +68,11 @@ const CASES: Record<keyof Engine, Case> = {
     cmd: 'engine_parse_edit',
     args: { req: req('pe') },
   },
+  convertClaims: {
+    call: (e) => e.convertClaims(req('cc')),
+    cmd: 'engine_convert_claims',
+    args: { req: req('cc') },
+  },
   issue: { call: (e) => e.issue(req('is')), cmd: 'engine_issue', args: { req: req('is') } },
   redact: { call: (e) => e.redact(req('rd')), cmd: 'engine_redact', args: { req: req('rd') } },
   disclose: {
@@ -153,8 +158,8 @@ const CASES: Record<keyof Engine, Case> = {
 };
 
 describe('TauriEngine commands', () => {
-  it('covers all 27 Engine methods', () => {
-    expect(Object.keys(CASES)).toHaveLength(27);
+  it('covers all 28 Engine methods', () => {
+    expect(Object.keys(CASES)).toHaveLength(28);
   });
 
   it.each(Object.entries(CASES))('%s invokes its command', async (_name, c) => {

@@ -10,6 +10,14 @@
   import ActionBar from './ActionBar.svelte';
   import DetectedAsMenu from './DetectedAsMenu.svelte';
   import KeyChoiceDialog from './KeyChoiceDialog.svelte';
+  import Dialog from './Dialog.svelte';
+  import {
+    DRAFT_FORMATS,
+    isDraftKeyKind,
+    openableAs,
+    type DiscardReason,
+    type DraftFormat,
+  } from '../logic/drafts';
 
   let { tabId }: { tabId: string } = $props();
 
@@ -45,14 +53,70 @@
     else choosing = true;
   }
 
+  // --- drafts (#43) ---------------------------------------------------
+  const draftKind = $derived(tab ? workspace.draftKind(tab) : null);
+  const openAs = $derived(tab?.draft ? openableAs(tab.draft.detected) : null);
+  let asking = $state<{ reason: DiscardReason; resolve: (ok: boolean) => void } | null>(null);
+
+  async function switchFormat(select: HTMLSelectElement) {
+    error = null;
+    const format = select.value as DraftFormat;
+    try {
+      const changed = await workspace.setDraftFormat(tabId, format, (reason) => {
+        // Point at the node the engine named (selected in the editor).
+        if (reason.nodeId !== null) workspace.select(tabId, reason.nodeId);
+        return new Promise<boolean>((resolve) => (asking = { reason, resolve }));
+      });
+      // Declined: put the select back on the draft's format.
+      if (!changed && tab?.draft) select.value = tab.draft.format;
+    } catch (e) {
+      error = errorMessage(e);
+      if (tab?.draft) select.value = tab.draft.format;
+    }
+  }
+
+  function answer(ok: boolean) {
+    asking?.resolve(ok);
+    asking = null;
+  }
+
+  async function draftAction(task: () => Promise<unknown>) {
+    error = null;
+    try {
+      await task();
+    } catch (e) {
+      error = errorMessage(e);
+    }
+  }
+
   const title = (id: string) => workspace.tab(id)?.title ?? 'a closed tab';
 </script>
 
 {#if tab}
   <header class="tab-header">
     <div class="row">
-      <strong class="kind" data-testid="detected-type">{kindLabel(tab.doc.kind)}</strong>
+      <strong class="kind" data-testid="detected-type"
+        >{kindLabel(draftKind ?? tab.doc.kind)}</strong
+      >
       <DetectedAsMenu {tabId} />
+      {#if tab.draft}
+        <label class="inline">
+          <span>Format</span>
+          <select value={tab.draft.format} onchange={(e) => void switchFormat(e.currentTarget)}>
+            {#each DRAFT_FORMATS as f (f.format)}<option value={f.format}>{f.label}</option>{/each}
+          </select>
+        </label>
+        {#if draftKind && isDraftKeyKind(draftKind)}
+          <button type="button" onclick={() => draftAction(() => workspace.importDraftKey(tabId))}
+            >Add to key panel</button
+          >
+        {/if}
+        {#if openAs}
+          <button type="button" onclick={() => draftAction(() => workspace.openDraftAs(tabId))}
+            >Open as {kindLabel(openAs)}</button
+          >
+        {/if}
+      {/if}
       <nav aria-label="Unwrapping layers" class="crumbs">
         <ol>
           {#each crumbs as c, i (i)}<li>{c}</li>{/each}
@@ -109,6 +173,22 @@
     {/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
   </header>
+  {#if asking}
+    {@const a = asking}
+    <Dialog title="Discard the draft?" role="alertdialog" onClose={() => answer(false)}>
+      <p>
+        {a.reason.message}{#if a.reason.nodeId !== null}
+          (at <code>{a.reason.nodeId || '(root)'}</code>){/if}
+      </p>
+      <p>Switching the Format starts over from an empty draft.</p>
+      <div class="buttons">
+        <button type="button" class="primary" onclick={() => answer(true)}
+          >Discard and switch</button
+        >
+        <button type="button" onclick={() => answer(false)}>Cancel</button>
+      </div>
+    </Dialog>
+  {/if}
   {#if choosing}
     <KeyChoiceDialog
       title="Re-sign"

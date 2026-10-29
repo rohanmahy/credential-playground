@@ -209,6 +209,6 @@ fn commands_are_unique() {
             .iter()
             .filter(|c| c.starts_with("engine_"))
             .count(),
-        28
+        29
     );
 }

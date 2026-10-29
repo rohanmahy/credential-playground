@@ -3,8 +3,21 @@
   import { tick } from 'svelte';
   import { getAppContext } from '../context';
   import CredentialTab from './CredentialTab.svelte';
+  import { DRAFT_FORMATS, type DraftFormat } from '../logic/drafts';
+  import { errorMessage } from '../ui';
 
   const { workspace } = getAppContext();
+
+  let draftError = $state<string | null>(null);
+
+  async function startDraft(format: DraftFormat) {
+    draftError = null;
+    try {
+      await workspace.newDraft(format);
+    } catch (e) {
+      draftError = errorMessage(e);
+    }
+  }
 
   const shown = $derived.by(() => {
     const split = workspace.split;
@@ -98,6 +111,7 @@
           </div>
         {/each}
       </div>
+      {@render draftButtons()}
       <button
         type="button"
         aria-pressed={workspace.split !== null}
@@ -115,10 +129,21 @@
   {:else}
     <div class="empty">
       <p>Paste, drop, or open a credential (JWT, SD-JWT, CWT, SD-CWT) or a key.</p>
+      <p>Or start writing one in Live edit: {@render draftButtons()}</p>
       <p class="muted">Everything stays in this page's memory. Nothing is uploaded or stored.</p>
     </div>
   {/if}
+  {#if draftError}<p class="error">{draftError}</p>{/if}
 </section>
+
+<!-- Shown once: in the empty state, or in the tab bar once there are tabs. -->
+{#snippet draftButtons()}
+  <span class="drafts">
+    {#each DRAFT_FORMATS as f (f.format)}
+      <button type="button" onclick={() => void startDraft(f.format)}>New {f.label} draft</button>
+    {/each}
+  </span>
+{/snippet}
 
 <style>
   .tabs {
@@ -174,6 +199,13 @@
   }
   .panels.split .panel + .panel {
     border-left: 2px solid var(--border);
+  }
+  .drafts {
+    display: inline-flex;
+    gap: 0.25rem;
+  }
+  .bar .drafts {
+    margin-bottom: 0.25rem;
   }
   .empty {
     padding: 2rem;

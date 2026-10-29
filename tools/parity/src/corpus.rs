@@ -11,15 +11,15 @@ use std::path::Path;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use serde::Serialize;
 use tokenator_core::{
-    AlgValue, AssignKidRequest, Bytes, CborSerialization, CnfChoice, DateTimeInput,
-    DateTimeRequest, DecodeEmbeddedRequest, DecoyRequest, DiscloseRequest, DisclosureOp, DocRef,
-    Document, EditDisclosuresRequest, EditRequest, Engine, EngineError, EquivalentEncoding,
-    HashName, IssueRequest, JoseSerialization, JsonLayout, KeyConvertRequest, KeyExportRequest,
-    KeyFormat, KeyGenRequest, KeyImportRequest, KeyInfo, KeyRef, KeySeed, KeySpec, KidSource, Kind,
-    Layer, Layout, LintRequest, NodeId, Nonce, PartRef, PemEncoding, PresentRequest,
-    ReencodeRequest, RegistryId, RegistryKind, RegistryLabel, RegistryMergeRequest, RegistryQuery,
-    RenderRequest, ResignRequest, SdOptions, TamperOp, TamperRequest, ThumbprintKind,
-    ThumbprintRequest, ValidateRequest, ViewOptions, Visibility,
+    AlgValue, AssignKidRequest, Bytes, CborSerialization, CnfChoice, ConvertClaimsRequest,
+    DateTimeInput, DateTimeRequest, DecodeEmbeddedRequest, DecoyRequest, DiscloseRequest,
+    DisclosureOp, DocRef, Document, EditDisclosuresRequest, EditRequest, Engine, EngineError,
+    EquivalentEncoding, HashName, IssueRequest, JoseSerialization, JsonLayout, KeyConvertRequest,
+    KeyExportRequest, KeyFormat, KeyGenRequest, KeyImportRequest, KeyInfo, KeyRef, KeySeed,
+    KeySpec, KidSource, Kind, Language, Layer, Layout, LintRequest, NodeId, Nonce, PartRef,
+    PemEncoding, PresentRequest, ReencodeRequest, RegistryId, RegistryKind, RegistryLabel,
+    RegistryMergeRequest, RegistryQuery, RenderRequest, ResignRequest, SdOptions, TamperOp,
+    TamperRequest, ThumbprintKind, ThumbprintRequest, ValidateRequest, ViewOptions, Visibility,
 };
 
 use crate::{Arg, Case};
@@ -47,6 +47,9 @@ const MAX_DEPTH: usize = tokenator_cbor::MAX_DEPTH;
 /// default depth limit (128) for claim sets.
 const SD_CHAIN: usize = 120;
 
+/// An EC P-256 COSE_Key written as EDN (#44).
+const COSE_KEY_EDN: &str = "{1: 2, -1: 1, -2: h'58a9fe64819ebdcc06232cabcc5a1934175aabdfd3b2acc697dea8734096ba2b', -3: h'cbbeedf91bc01d1293b1219d21851fc1eb8ebf0aef0c3f90dc7bf92747d229b1'}";
+
 /// Builds every case, in id order. Fails on a duplicate id or when a
 /// chained native call fails unexpectedly.
 pub fn build(e: &Engine, testdata: &Path) -> Result<Vec<(String, Case)>, String> {
@@ -59,6 +62,7 @@ pub fn build(e: &Engine, testdata: &Path) -> Result<Vec<(String, Case)>, String>
     b.detect_and_open()?;
     b.render()?;
     b.parse_edit()?;
+    b.convert_claims()?;
     b.keys()?;
     b.actions()?;
     b.validate()?;
@@ -367,6 +371,16 @@ impl Builder<'_> {
             ),
             ("empty", Vec::new()),
             ("garbage", b"\x00\xff not a token \xfe".to_vec()),
+            // EDN text classified by the CBOR it encodes (#44).
+            // The rendered main pane of the CWT: EDN with registry comments.
+            (
+                "cwt-edn",
+                self.open_token("rfc8392-a3-signed-cwt.cbor")?
+                    .main
+                    .text
+                    .into_bytes(),
+            ),
+            ("cose-key-edn", COSE_KEY_EDN.as_bytes().to_vec()),
         ];
         for (name, input) in wrapped {
             self.add(
@@ -590,6 +604,73 @@ impl Builder<'_> {
                 format!("parse_edit--{name}"),
                 "opened fixture",
                 "parse_edit",
+                vec![json(&req)?],
+            );
+        }
+        Ok(())
+    }
+
+    // ------------------------------------------------------------ convert_claims
+
+    fn convert_claims(&mut self) -> Result<(), String> {
+        let claims = String::from_utf8(self.token("rfc9901-s5.1-input-claims.json")?)
+            .map_err(|e| e.to_string())?;
+        let cases: [(&str, &str, Language, Language, bool); 6] = [
+            (
+                "json-to-edn-mapped",
+                &claims,
+                Language::Json,
+                Language::Edn,
+                true,
+            ),
+            (
+                "json-to-edn-plain",
+                &claims,
+                Language::Json,
+                Language::Edn,
+                false,
+            ),
+            (
+                "json-numbers",
+                r#"{"a": 1, "b": -1, "c": 1.5, "d": 18446744073709551616, "e": 1e2}"#,
+                Language::Json,
+                Language::Edn,
+                false,
+            ),
+            (
+                "edn-to-json-mapped",
+                r#"{1: "x", 4: 1893456000, "n": [2.0, null]}"#,
+                Language::Edn,
+                Language::Json,
+                true,
+            ),
+            (
+                "edn-not-representable",
+                r#"{"a": [1, h'00']}"#,
+                Language::Edn,
+                Language::Json,
+                false,
+            ),
+            (
+                "edn-syntax",
+                "{1: zzz}",
+                Language::Edn,
+                Language::Json,
+                false,
+            ),
+        ];
+        for (name, text, from, to, map) in cases {
+            let req = ConvertClaimsRequest {
+                text: text.to_owned(),
+                from,
+                to,
+                map_claim_labels: map,
+                view: view(),
+            };
+            self.add(
+                format!("convert_claims--{name}"),
+                "constructed claim sets (#44)",
+                "convert_claims",
                 vec![json(&req)?],
             );
         }

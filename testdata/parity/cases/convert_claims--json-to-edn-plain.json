@@ -1,0 +1,27 @@
+{
+  "method": "convert_claims",
+  "source": "constructed claim sets (#44)",
+  "args": [
+    {
+      "json": {
+        "from": "json",
+        "map_claim_labels": false,
+        "text": "{\n  \"sub\": \"user_42\",\n  \"given_name\": \"John\",\n  \"family_name\": \"Doe\",\n  \"email\": \"johndoe@example.com\",\n  \"phone_number\": \"+1-202-555-0101\",\n  \"phone_number_verified\": true,\n  \"address\": {\n    \"street_address\": \"123 Main St\",\n    \"locality\": \"Anytown\",\n    \"region\": \"Anystate\",\n    \"country\": \"US\"\n  },\n  \"birthdate\": \"1940-01-01\",\n  \"updated_at\": 1570000000,\n  \"nationalities\": [\n    \"US\",\n    \"DE\"\n  ]\n}\n",
+        "to": "edn",
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

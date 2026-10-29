@@ -11,7 +11,15 @@
     text,
     language,
     onChange,
-  }: { text: string; language: Language; onChange: (text: string) => void } = $props();
+    highlight = null,
+  }: {
+    text: string;
+    language: Language;
+    onChange: (text: string) => void;
+    /** A range of `text` to select and scroll to (e.g. a node a message
+     *  points at). */
+    highlight?: { start: number; end: number } | null;
+  } = $props();
 
   let host: HTMLDivElement | undefined = $state();
   let view: EditorView | undefined = $state();
@@ -27,6 +35,15 @@
     });
     view = v;
     return () => v.destroy();
+  });
+
+  $effect(() => {
+    const range = highlight;
+    if (!view || !range || range.end > view.state.doc.length) return;
+    view.dispatch({
+      selection: { anchor: range.start, head: range.end },
+      scrollIntoView: true,
+    });
   });
 
   $effect(() => {

@@ -1,0 +1,1 @@
+{"ok":{"ok":false,"text":null,"document":null,"diagnostics":[{"severity":"error","code":"convert.not_representable","message":"\"a\"/1: a byte string has no JSON form","node_id":"\"a\"/1","main":{"start":10,"end":15,"line_start":0,"line_end":1},"raw":null}]}}

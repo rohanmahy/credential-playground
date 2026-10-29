@@ -63,6 +63,7 @@ export class TauriEngine implements Engine {
     this.run('engine_open', { input: toB64u(input), candidate, view });
   render: Engine['render'] = (req) => this.run('engine_render', { req });
   parseEdit: Engine['parseEdit'] = (req) => this.run('engine_parse_edit', { req });
+  convertClaims: Engine['convertClaims'] = (req) => this.run('engine_convert_claims', { req });
   issue: Engine['issue'] = (req) => this.run('engine_issue', { req });
   redact: Engine['redact'] = (req) => this.run('engine_redact', { req });
   disclose: Engine['disclose'] = (req) => this.run('engine_disclose', { req });

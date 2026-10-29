@@ -2,7 +2,13 @@
 // `engine.detect.mockResolvedValueOnce(...)` etc.
 import { vi } from 'vitest';
 import type { Engine } from '../lib/engine/Engine';
-import type { Candidate, Document, Kind } from '../lib/engine/types';
+import type {
+  Candidate,
+  ConvertClaimsRequest,
+  ConvertClaimsResult,
+  Document,
+  Kind,
+} from '../lib/engine/types';
 import * as fx from './fixtures';
 
 function docFor(kind: Kind): Document {
@@ -95,4 +101,7 @@ export class MockEngine implements Engine {
       iana_updated: null,
     },
   }));
+  convertClaims = vi.fn(async (req: ConvertClaimsRequest): Promise<ConvertClaimsResult> =>
+    req.to === 'edn' ? fx.convertedToEdn : fx.convertedToJson,
+  );
 }

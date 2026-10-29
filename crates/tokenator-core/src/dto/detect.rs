@@ -200,6 +200,12 @@ pub enum Layer {
         /// Tag number.
         tag: u64,
     },
+    /// EDN text encoding the CBOR payload (draft-ietf-cbor-edn-literals),
+    /// for EDN text that is not a claim set (a COSE_Sign1, a COSE_Key, …).
+    /// Opening applies it with encoding indicators honored; re-encoding
+    /// prints the CBOR as EDN. Core only: `tokenator-detect` reports such
+    /// text as EDN and core classifies its encoding (#44).
+    Edn,
 }
 
 /// One step of a [`Layer::JsonField`] path: a member name or an index.

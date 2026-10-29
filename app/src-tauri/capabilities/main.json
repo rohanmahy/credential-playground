@@ -11,6 +11,7 @@
     "allow-engine-open",
     "allow-engine-render",
     "allow-engine-parse-edit",
+    "allow-engine-convert-claims",
     "allow-engine-issue",
     "allow-engine-redact",
     "allow-engine-disclose",

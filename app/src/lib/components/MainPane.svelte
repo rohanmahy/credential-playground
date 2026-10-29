@@ -62,8 +62,6 @@
 
   let treeEl: HTMLDivElement | undefined = $state();
   let menu = $state<{ x: number; y: number; id: NodeId } | null>(null);
-  let editTimer: ReturnType<typeof setTimeout> | undefined;
-
   function isCollapsed(id: NodeId): boolean {
     return tab?.collapsed.has(id) ?? false;
   }
@@ -179,8 +177,7 @@
   }
 
   function onEdit(text: string) {
-    clearTimeout(editTimer);
-    editTimer = setTimeout(() => void workspace.applyEdit(tabId, text), 150);
+    workspace.scheduleEdit(tabId, text);
   }
 
   /** The part of a line to carry the hover text: the member name / label
@@ -207,7 +204,14 @@
 {#if tab && doc}
   {#if tab.liveEdit}
     <div class="live">
-      <CodeEditor text={tab.editText} language={doc.main.language} onChange={onEdit} />
+      {#key doc.main.language}
+        <CodeEditor
+          text={tab.editText}
+          language={doc.main.language}
+          onChange={onEdit}
+          highlight={doc.main.text === tab.editText ? selectedRange : null}
+        />
+      {/key}
       {#if tab.editDiagnostics.length > 0}
         <div class="diagnostics" role="alert">
           {#each tab.editDiagnostics as d, i (i)}

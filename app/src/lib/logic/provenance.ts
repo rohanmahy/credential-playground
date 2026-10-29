@@ -2,7 +2,7 @@
 import type { Provenance } from '../model';
 import { ACTION_LABELS } from './actions';
 
-/** `Pasted`, `Clipboard`, `File: token.txt`, `URL: https://…`, `Generated`,
+/** `Pasted`, `Clipboard`, `File: token.txt`, `URL: https://…`, `Generated`, `New`,
  *  `Derived from Tab 2 via Present`. `title` resolves a tab or key id. */
 export function provenanceLabel(p: Provenance, title: (id: string) => string): string {
   switch (p.type) {
@@ -18,6 +18,8 @@ export function provenanceLabel(p: Provenance, title: (id: string) => string): s
       return `URL: ${p.url}`;
     case 'generated':
       return 'Generated';
+    case 'new':
+      return 'New';
     case 'derived':
       return `Derived from ${title(p.parent)} via ${ACTION_LABELS[p.action]}`;
     case 'derived_key':

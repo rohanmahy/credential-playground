@@ -10,7 +10,7 @@
         "breadcrumb": [
           "EDN claim set"
         ],
-        "confidence": 40,
+        "confidence": 54,
         "kind": {
           "type": "edn_claims"
         },

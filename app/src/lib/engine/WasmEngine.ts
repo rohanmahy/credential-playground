@@ -98,6 +98,8 @@ export class WasmEngine implements Engine {
     this.call((e) => e.open(input, JSON.stringify(candidate), JSON.stringify(view)));
   render: Engine['render'] = (req) => this.call((e) => e.render(JSON.stringify(req)));
   parseEdit: Engine['parseEdit'] = (req) => this.call((e) => e.parse_edit(JSON.stringify(req)));
+  convertClaims: Engine['convertClaims'] = (req) =>
+    this.call((e) => e.convert_claims(JSON.stringify(req)));
   issue: Engine['issue'] = (req) => this.call((e) => e.issue(JSON.stringify(req)));
   redact: Engine['redact'] = (req) => this.call((e) => e.redact(JSON.stringify(req)));
   disclose: Engine['disclose'] = (req) => this.call((e) => e.disclose(JSON.stringify(req)));

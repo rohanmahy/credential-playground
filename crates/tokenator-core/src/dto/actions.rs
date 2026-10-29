@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use super::common::{Bytes, HashName, KidValue, NodeId, Nonce};
 use super::detect::{Kind, Layer};
-use super::document::{Diagnostic, Document, Node, ViewOptions};
+use super::document::{Diagnostic, Document, Language, Node, ViewOptions};
 use super::keys::KeyRef;
 
 /// A document as the UI holds it: kind plus bytes.
@@ -683,5 +683,48 @@ pub struct ManualDecode {
     /// document's raw buffer.
     pub tree: Node,
     /// `cbor.trailing_bytes` and other warnings.
+    pub diagnostics: Vec<Diagnostic>,
+}
+
+/// Input of [`Engine::convert_claims`](crate::Engine::convert_claims): a
+/// claim set (a draft) from JSON text to EDN, or back.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
+pub struct ConvertClaimsRequest {
+    /// The claim set text.
+    pub text: String,
+    /// Its language.
+    pub from: Language,
+    /// The language to convert to.
+    pub to: Language,
+    /// Map registered JWT claim names to CWT labels (JSON → EDN) and back
+    /// (EDN → JSON), through the registry (SPEC §7). Top-level claims only.
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<bool>", optional))]
+    pub map_claim_labels: bool,
+    /// View options for the returned document.
+    #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
+    pub view: ViewOptions,
+}
+
+/// The result of a claim set conversion. Never an error: problems are
+/// diagnostics.
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+pub struct ConvertClaimsResult {
+    /// The text converted.
+    pub ok: bool,
+    /// The converted text.
+    pub text: Option<String>,
+    /// The converted claim set (`json_claims` / `edn_claims`).
+    pub document: Option<Document>,
+    /// Why it did not convert: a parse error of `text` (`json.syntax`,
+    /// `edn.syntax`, with its position), or `convert.not_representable`
+    /// naming the first node JSON cannot hold (a byte string, a non-text
+    /// key that is not a mapped claim label, a tag, a simple value other
+    /// than true/false/null, undefined, a non-finite float, or nesting
+    /// beyond JSON's 128 levels).
     pub diagnostics: Vec<Diagnostic>,
 }

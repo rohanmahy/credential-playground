@@ -1,0 +1,27 @@
+{
+  "method": "convert_claims",
+  "source": "constructed claim sets (#44)",
+  "args": [
+    {
+      "json": {
+        "from": "edn",
+        "map_claim_labels": false,
+        "text": "{1: zzz}",
+        "to": "json",
+        "view": {
+          "annotations": true,
+          "byte_style": "hex",
+          "decoded_views": true,
+          "dt_literals": false,
+          "hide_decoded": [],
+          "indent": 2,
+          "json_layout": "original",
+          "layout": "indented",
+          "local_offset_minutes": 0,
+          "manual_decode": [],
+          "now": null
+        }
+      }
+    }
+  ]
+}

@@ -48,11 +48,13 @@ Accessible names are matched exactly unless a regex is shown in the test.
 
 | Element | Contract |
 |---|---|
-| Input area | textbox _Paste a credential or key_ with an _Open_ button; _From clipboard_ and _Open file…_ buttons (the only ones with those names outside dialogs) |
+| Input area | textbox _Paste a credential or key_ with an _Open_ button; _From clipboard_ and _Open file…_ buttons (the only ones with those names outside dialogs); a _New_ button next to _Open_ that starts a JSON draft (#43) |
+| Empty state | with no tabs, buttons _New JSON draft_ and _New EDN draft_ next to the paste hint (#43) |
+| Draft header (#43) | tabs started with New: a _Format_ select (`json` / `edn`, labels JSON / EDN), only on draft tabs; `detected-type` shows the draft's type (`effectiveDraftKind`); _Detected as…_ opens a `menu` of `menuitemradio`: _Auto-detect_ (checked while no type is set), then `DRAFT_KINDS[format]` by `Kind::label()`, the detected one suffixed "(detected)", the explicit one checked; key types show _Add to key panel_; a detected kind that is not a draft type (e.g. JWS JSON) shows _Open as <label>_; a Format switch that cannot convert opens a `role="alertdialog"` with the reason, _Discard and switch_ and _Cancel_; drafts never show the stale banner; provenance `New` |
 | Key panel | `<aside aria-label="Keys">` (complementary); each card `role="article"` named by its label, with a _Role_ select (`issuer`/`holder`/`verifier`), `data-testid="kid"`, private/public, provenance label, both thumbprints and a _Thumbprint hash_ select; card buttons _Export_, _Convert_, _Set kid_ (menu: _JWK thumbprint_, _COSE thumbprint_, text), _Derive public key_. Panel buttons _Create key_, _Import key_, _Fetch from URL_ |
 | Key dialogs | _Create key_: _Algorithm_ select (`KEY_SPECS` labels in order), radios _Random_ / _Well-known test seed_ / _From a seed_ with a _Seed_ textbox, _Role_, _Create_. _Import key_: _Key_ textbox, _Import_, _From clipboard_, _From file…_; closes after a successful import. _Export key_: _Format_ select (JWK, JWK Set, COSE_Key, COSE_KeySet, PEM …), radios _Public_ (default) / _Private_, checkbox _I understand this exports the private key_ gating _Copy private key_ and _Save…_, a `role="status"` announcing the copy. _Convert_: regions _JWK_ and _COSE_Key_ side by side and a _Private_ switch |
 | Tabs | `role="tablist"` (_Credentials_), `role="tab"` per tab (title `Tab N · <kind label>`) with `aria-selected`, roving focus with ArrowLeft/Right/Home/End (moving also activates); `role="tabpanel"` with `aria-labelledby`; _Split view_ shows two panels; only the active (or split) panels are rendered |
-| Tab header | `data-testid="detected-type"` (`Kind::label()`); _Detected as…_ button → `role="menu"` of `menuitemradio` (current one `aria-checked`); `nav` _Unwrapping layers_ with one `listitem` per breadcrumb entry; `nav` _Provenance_ (root: `Pasted`, `Clipboard`, `File: name`, `URL: url`, `Generated`; derived: parent title as a button, then the action label); `data-testid="validation-badge"` (`Not validated`, the overall status, or `tampered`); `role="switch"` _Live edit_ |
+| Tab header | `data-testid="detected-type"` (`Kind::label()`); _Detected as…_ button → `role="menu"` of `menuitemradio` (current one `aria-checked`); `nav` _Unwrapping layers_ with one `listitem` per breadcrumb entry; `nav` _Provenance_ (root: `Pasted`, `Clipboard`, `File: name`, `URL: url`, `Generated`, `New`; derived: parent title as a button, then the action label); `data-testid="validation-badge"` (`Not validated`, the overall status, or `tampered`); `role="switch"` _Live edit_ |
 | Actions | `role="toolbar"` (_Actions_) with exactly the buttons Issue, Redact, Disclose, Present, Validate, Re-sign, Tamper, Re-encode, Edit disclosures. Disabled ones have `aria-disabled="true"` (never the `disabled` attribute) and a `title` listing what is missing; clicks on them do nothing. Re-encode opens `role="menu"` (_Re-encode_) of `menuitem`s from `reencodeChoices` (_As received_, _Preferred-plus_, _Deterministic_ / _Compact_, _JSON (flattened)_, _JSON (general)_). Issue, Redact, and Present open dialogs named after the action: Issue has _Issuer key_ (defaults to the first issuer key), _Serialization_, _Holder key (cnf)_; Present has a checkbox per disclosure (labelled with its claim, all checked), _Holder key_, _Audience_, _Nonce_. Re-sign uses the only private key, or asks when there are several |
 | SD marks | the context menu of a JSON claim line offers `menuitemcheckbox` _Selectively disclosable_; marked lines carry `data-sd-mark="true"` |
 | Stale state | `role="status"` containing "modified – signature stale" with _Re-sign_ and _Keep original signature_; an edit that does not parse shows its diagnostic in `role="alert"` |
@@ -84,6 +86,7 @@ Accessible names are matched exactly unless a regex is shown in the test.
 | Settings and clock | `unit/settings` | 3 (1 passes now) |
 | About box with §9 notes | `components/about` | 2 (1 passes now) |
 | Scaffold: engine/platform selection, base64url, defaults, EDN mode, fixture consistency, production CSP | `scaffold/*` | 21 (pass now) |
+| New drafts and explicit type (#43): New / empty state, template, re-detection, explicit type kept across edits, Format conversion and discard prompt, key drafts, Open as, actions by type | `unit/drafts`, `components/drafts`, `wasm/drafts` (`pnpm test:wasm`), `e2e/drafts.spec.ts` | 18 + 11 (2 pass now: data, no Format on other tabs) + 7 (4 pin current core, 3 need #44) + 10 e2e |
 
 Total: 164 tests; 25 pass against the scaffold, 139 fail until implemented.
 
@@ -118,6 +121,39 @@ Behaviour tests fail against the stubs (stub methods throw
 - **Fetch**: no `fetchUrl` before the user confirms; cancelling fetches
   nothing; a `FetchError` of kind `cors` on the web shows why and offers
   pasting the content (or the desktop app).
+- **New drafts and explicit type (#43)** (`logic/drafts.ts`,
+  `Workspace.newDraft`/`setDraftFormat`/`setDraftKind`/`importDraftKey`/
+  `openDraftAs`, `Tab.draft`):
+  - _New_ opens an active tab in Live edit with `DRAFT_TEMPLATES[format]`
+    (`{}`), parsed by `parse_edit` with the format's default kind
+    (`json_claims` / `edn_claims`) and an empty `base`; provenance
+    `{type: "new"}` (label `New`); `Tab.draft = {format, detected: null,
+    override: null}`. `open` is not called.
+  - Every edit of a draft calls `detect` on the text (UTF-8) and stores the
+    top candidate's kind in `draft.detected`, then `parse_edit` with
+    `draftParseKind(effectiveDraftKind(format, detected, override))`. The
+    effective type is the explicit one, else the detected kind when it is in
+    `DRAFT_KINDS[format]`, else the format default (so `{}` in an EDN
+    draft, which detects as JSON, stays an EDN claim set). JWK / JWK Set
+    drafts are parsed and shown as JSON claim sets.
+  - Drafts have no original signature: `stale` stays false whatever
+    `parse_edit` reports (it reports signed kinds stale against the empty
+    base), so the stale banner never shows.
+  - _Detected as…_ sets `draft.override` (and re-parses); it is kept across
+    edits and Format switches that support it, and cleared by _Auto-detect_
+    or by switching to a format without that type.
+  - Format switch: same format is a no-op; an untouched draft (the
+    template, no explicit type) takes the other template; otherwise
+    `engine.convertClaims({text, from, to, map_claim_labels: true, view})`;
+    on success the text and document are replaced. When the engine lacks it or returns `ok: false`, the user is
+    asked; declining keeps everything, agreeing starts over from the new
+    format's template.
+  - Key drafts: _Add to key panel_ imports the text (JWK, format `jwk` /
+    `jwk_set`) or the parsed CBOR (`cose_key` / `cose_key_set`) with
+    provenance `new`. _Open as …_ opens the text as the detected candidate
+    in a new, non-draft tab (provenance `new`).
+  - Actions follow the existing enablement rules for the draft's document
+    (Issue/Redact for claim sets; Validate, Re-sign, … for COSE types).
 - **Never persist**: during open, edit, validate, key create/export, and
   settings changes, `localStorage`/`sessionStorage` `setItem` and
   `indexedDB.open` are never called; only `registryCache` may use IndexedDB.
@@ -136,6 +172,22 @@ flows against the Linux desktop binary (native engine, WebKitGTK) through
 tauri-driver and WebdriverIO; see `src-tauri/TEST-PLAN.md`, "Desktop
 end-to-end".
 
+`e2e/drafts.spec.ts` (#43) starts JSON and EDN drafts, issues them as a
+JWT and a CWT, sets an EDN COSE_Sign1 to CWT explicitly, sends JWK and
+COSE_Key drafts to the key panel, and switches Format both ways. Two specs
+(EDN COSE_Sign1 detected as CWT; JSON → EDN conversion) also need the core
+additions of #44.
+
+## Core additions for #43 (#44, done)
+
+`detect` classifies EDN text by the CBOR it encodes (`Layer::Edn`; an EDN
+COSE_Sign1 detects as a CWT, an EDN COSE_Key ranks above `edn_claims`),
+and `convert_claims` (JSON ↔ EDN claim sets) is part of `Engine`
+(`convertClaims`, the wasm binding, and `engine_convert_claims`).
+`parse_edit` with an empty `base` and an explicit `kind` builds a draft's
+document, so an explicit type needs no `open`/`render` override. All pinned
+by `src/test/wasm/drafts.test.ts`.
+
 ## CSP
 
 `scaffold/csp.test.ts` builds the app with Vite into a temporary directory
@@ -152,6 +204,8 @@ engine running.
 - #33: UI defaults: CSP, the read-only main pane as a line tree, hex
   alignment by EDN line, action enablement rules, live-edit outcomes, the
   labelled private-key copy, keys routed from the input area, TypeScript 6.
+- #44: core additions for #43 drafts (EDN detection of COSE structures,
+  `convert_claims`).
 - #34: core TS export: `#[serde(default)]` fields are required `T | null`
   in TypeScript (the app uses `lib/engine/defaults.ts`), and how raw
   `detect`/`open` input crosses the boundary.

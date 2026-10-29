@@ -94,9 +94,7 @@
       tabindex="-1"
       onclick={() => pick(item)}
     >
-      {#if item.role && item.role !== 'menuitem'}<span class="check" aria-hidden="true"
-          >{item.checked ? '✓' : ''}</span
-        >{/if}{item.label}
+      {item.label}
     </button>
   {/each}
 </div>
@@ -131,8 +129,14 @@
   button[aria-disabled='true'] {
     color: var(--muted);
   }
-  .check {
+  /* The check mark is drawn by CSS so it stays out of the item's text. */
+  [role='menuitemradio']::before,
+  [role='menuitemcheckbox']::before {
+    content: '';
     display: inline-block;
     width: 1.2em;
+  }
+  [aria-checked='true']::before {
+    content: '✓';
   }
 </style>

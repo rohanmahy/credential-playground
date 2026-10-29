@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cose_key"},"confidence":87,"layers":[{"type":"edn"}],"payload_range":{"start":0,"end":159},"breadcrumb":["EDN","COSE_Key"]},{"kind":{"type":"edn_claims"},"confidence":54,"layers":[],"payload_range":{"start":0,"end":159},"breadcrumb":["EDN claim set"]}]}

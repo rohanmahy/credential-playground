@@ -1,0 +1,45 @@
+{
+  "method": "open",
+  "source": "constructed: cose-key-edn",
+  "args": [
+    {
+      "bytes": "ezE6IDIsIC0xOiAxLCAtMjogaCc1OGE5ZmU2NDgxOWViZGNjMDYyMzJjYWJjYzVhMTkzNDE3NWFhYmRmZDNiMmFjYzY5N2RlYTg3MzQwOTZiYTJiJywgLTM6IGgnY2JiZWVkZjkxYmMwMWQxMjkzYjEyMTlkMjE4NTFmYzFlYjhlYmYwYWVmMGMzZjkwZGM3YmY5Mjc0N2QyMjliMSd9"
+    },
+    {
+      "json": {
+        "breadcrumb": [
+          "EDN",
+          "COSE_Key"
+        ],
+        "confidence": 87,
+        "kind": {
+          "type": "cose_key"
+        },
+        "layers": [
+          {
+            "type": "edn"
+          }
+        ],
+        "payload_range": {
+          "end": 159,
+          "start": 0
+        }
+      }
+    },
+    {
+      "json": {
+        "annotations": true,
+        "byte_style": "hex",
+        "decoded_views": true,
+        "dt_literals": false,
+        "hide_decoded": [],
+        "indent": 2,
+        "json_layout": "original",
+        "layout": "indented",
+        "local_offset_minutes": 0,
+        "manual_decode": [],
+        "now": null
+      }
+    }
+  ]
+}

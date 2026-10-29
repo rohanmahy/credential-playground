@@ -159,6 +159,31 @@ fn parse_edit() {
 }
 
 #[test]
+fn convert_claims() {
+    let h = Harness::new();
+    let req = ConvertClaimsRequest {
+        text: r#"{"iss": "https://issuer.example", "n": [1, 1.5]}"#.into(),
+        from: Language::Json,
+        to: Language::Edn,
+        map_claim_labels: true,
+        view: ViewOptions::default(),
+    };
+    check_req(&h, "engine_convert_claims", &req, |e, r| {
+        Ok(e.convert_claims(r))
+    });
+    // No JSON form is a diagnostic in core, never an IPC error (#44).
+    let bad = ConvertClaimsRequest {
+        text: "{1: h'00'}".into(),
+        from: Language::Edn,
+        to: Language::Json,
+        ..req
+    };
+    check_req(&h, "engine_convert_claims", &bad, |e, r| {
+        Ok(e.convert_claims(r))
+    });
+}
+
+#[test]
 fn issue_and_redact() {
     let (h, fx) = (Harness::new(), Fx::new());
     let req = Fx::issue_request(&fx.issuer, &fx.holder, &fx.engine);

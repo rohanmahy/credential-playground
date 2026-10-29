@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cwt"},"confidence":91,"layers":[{"type":"edn"},{"type":"cbor_tag","tag":18}],"payload_range":{"start":0,"end":506},"breadcrumb":["EDN","COSE_Sign1 tag 18","CWT"]}]}
