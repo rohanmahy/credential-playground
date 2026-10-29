@@ -2,6 +2,7 @@
 // bytes on every call.
 import type { Engine } from '../engine/Engine';
 import type {
+  Candidate,
   Document,
   HashName,
   KeyExport,
@@ -129,8 +130,15 @@ export class KeyStore {
     bytes: Uint8Array,
     provenance: Provenance,
     format?: KeyFormat | null,
+    candidate?: Candidate | null,
   ): Promise<KeyCard[]> {
-    const infos = await this.#engine.keyImport({ bytes: toB64u(bytes), format: format ?? null });
+    // With a detected candidate, the engine unwraps its layers (hex,
+    // base64, quotes, …) before importing (#42).
+    const infos = await this.#engine.keyImport({
+      bytes: toB64u(bytes),
+      format: format ?? null,
+      ...(candidate ? { candidate: $state.snapshot(candidate) } : {}),
+    });
     return infos.map((info) => {
       const kid = kidText(info.kid);
       return this.#add(

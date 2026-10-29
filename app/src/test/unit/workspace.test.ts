@@ -2,6 +2,7 @@
 // state across re-renders and edits (SPEC §3–§6).
 import { describe, expect, it } from 'vitest';
 import { toB64u, utf8 } from '../../lib/engine/bytes';
+import type { Candidate } from '../../lib/engine/types';
 import type { ActionRequest } from '../../lib/stores/workspace.svelte';
 import * as fx from '../fixtures';
 import { seedKeys, seedTab, setupApp } from '../render';
@@ -36,6 +37,25 @@ describe('opening inputs', () => {
     expect(app.engine.open).not.toHaveBeenCalled();
     expect(app.workspace.tabs).toHaveLength(0);
     expect(app.keys.cards[0]?.provenance).toEqual({ type: 'clipboard' });
+  });
+
+  it('imports a key through its detected candidate, so wrapped keys unwrap (#42)', async () => {
+    const app = setupApp();
+    const hex = Uint8Array.from('a4010220012158', (c) => c.charCodeAt(0));
+    const candidate: Candidate = {
+      kind: { type: 'cose_key' },
+      confidence: 90,
+      layers: [{ type: 'hex', upper: false, separator: null, wrap: null }],
+      payload_range: { start: 0, end: hex.length },
+      breadcrumb: ['hex', 'COSE_Key'],
+    };
+    const candidates = [candidate];
+    app.engine.detect.mockResolvedValueOnce(candidates);
+    await app.workspace.openInput(hex, { type: 'pasted' });
+    expect(app.engine.keyImport).toHaveBeenCalledWith(
+      expect.objectContaining({ bytes: toB64u(hex), candidate }),
+    );
+    expect(app.keys.cards[0]?.provenance).toEqual({ type: 'pasted' });
   });
 
   it('re-opens the same input as another candidate ("Detected as…")', async () => {

@@ -4,6 +4,7 @@
 use serde::{Deserialize, Serialize};
 
 use super::common::{Bytes, HashName, KidValue};
+use super::detect::Candidate;
 
 /// A key as the UI holds it: serialized bytes plus workspace metadata.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
@@ -152,11 +153,17 @@ pub struct KeyInfo {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct KeyImportRequest {
-    /// The bytes.
+    /// The bytes: the key itself, or (with `candidate`) the input `detect`
+    /// was given.
     pub bytes: Bytes,
     /// Format hint.
     #[serde(default)]
     pub format: Option<KeyFormat>,
+    /// A key candidate from `detect(bytes)`: its layers (hex, base64,
+    /// quotes, a JSON field, ...) are unwrapped first, as `open` does for
+    /// credentials.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub candidate: Option<Candidate>,
 }
 
 /// Input of [`Engine::key_export`](crate::Engine::key_export).
