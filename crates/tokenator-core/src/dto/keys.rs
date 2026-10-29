@@ -8,6 +8,7 @@ use super::common::{Bytes, HashName, KidValue};
 /// A key as the UI holds it: serialized bytes plus workspace metadata.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct KeyRef {
     /// JWK, JWK Set, COSE_Key, COSE_KeySet, or PEM bytes.
     pub bytes: Bytes,
@@ -16,6 +17,7 @@ pub struct KeyRef {
     pub format: Option<KeyFormat>,
     /// Which key of a set (0 for a single key).
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<u32>", optional))]
     pub index: u32,
     /// Workspace role (never serialized into key formats).
     #[serde(default)]
@@ -110,8 +112,10 @@ pub enum Visibility {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub struct KeyInfo {
-    /// A self-contained reference to this one key: a JWK (private when
-    /// available), or a COSE_Key when the kid is bytes that are not UTF-8.
+    /// A self-contained reference to this one key (private when
+    /// available): a JWK, or a COSE_Key when the kid is binary (so it stays
+    /// binary), or PKCS#8 PEM for an ML-DSA key known only by its expanded
+    /// private key (neither JWK nor COSE_Key can hold that).
     pub key: KeyRef,
     /// JWK `kty`: `EC`, `OKP`, `RSA`, `AKP`.
     pub kty: String,
@@ -146,6 +150,7 @@ pub struct KeyInfo {
 /// Input of [`Engine::key_import`](crate::Engine::key_import).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct KeyImportRequest {
     /// The bytes.
     pub bytes: Bytes,
@@ -181,6 +186,7 @@ pub struct KeyExport {
 /// Input of [`Engine::key_generate`](crate::Engine::key_generate).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct KeyGenRequest {
     /// Key type.
     pub spec: KeySpec,
@@ -272,6 +278,7 @@ pub enum KidSource {
 /// Input of [`Engine::key_thumbprint`](crate::Engine::key_thumbprint).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct ThumbprintRequest {
     /// The key.
     pub key: KeyRef,
@@ -279,6 +286,7 @@ pub struct ThumbprintRequest {
     pub kind: ThumbprintKind,
     /// Hash.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<HashName>", optional))]
     pub hash: HashName,
 }
 

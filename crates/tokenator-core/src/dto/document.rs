@@ -340,29 +340,40 @@ pub struct Segment {
 /// How to render a document.
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 #[serde(default)]
 pub struct ViewOptions {
     /// EDN layout.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Layout>", optional))]
     pub layout: Layout,
     /// Indent width for indented layouts.
+    #[cfg_attr(feature = "ts", ts(as = "Option<u32>", optional))]
     pub indent: u32,
     /// Show decoded views at the format-defined locations.
+    #[cfg_attr(feature = "ts", ts(as = "Option<bool>", optional))]
     pub decoded_views: bool,
     /// Byte string nodes whose decoded view is toggled off.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<NodeId>>", optional))]
     pub hide_decoded: Vec<NodeId>,
     /// Byte string nodes the user chose to decode as CBOR.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<NodeId>>", optional))]
     pub manual_decode: Vec<NodeId>,
     /// Registry comments and hover annotations.
+    #[cfg_attr(feature = "ts", ts(as = "Option<bool>", optional))]
     pub annotations: bool,
     /// How byte strings that are not decoded are printed.
+    #[cfg_attr(feature = "ts", ts(as = "Option<ByteStyle>", optional))]
     pub byte_style: ByteStyle,
     /// Print tag 1 as `DT'…'` where exact.
+    #[cfg_attr(feature = "ts", ts(as = "Option<bool>", optional))]
     pub dt_literals: bool,
     /// Layout of decoded JOSE JSON.
+    #[cfg_attr(feature = "ts", ts(as = "Option<JsonLayout>", optional))]
     pub json_layout: JsonLayout,
     /// Clock for relative times in [`TimeHint`]s.
     pub now: Option<i64>,
     /// Local offset east of UTC, in minutes, for display.
+    #[cfg_attr(feature = "ts", ts(as = "Option<i32>", optional))]
     pub local_offset_minutes: i32,
 }
 

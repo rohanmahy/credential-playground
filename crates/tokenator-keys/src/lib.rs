@@ -70,7 +70,8 @@ mod pem;
 pub use cwk::{CoseKey, cose_thumbprint, from_cwk, params_from_cwk, to_cwk};
 pub use error::KeyError;
 pub use format::{
-    KeyFormat, MlDsaPrivateForm, PemEncoding, export, export_set, import, import_each,
+    KeyFormat, MlDsaPrivateForm, PemEncoding, export, export_set, import, import_certificate,
+    import_each,
 };
 pub use jwk::{Jwk, from_jwk, jwk_thumbprint, params_from_jwk, to_jwk};
 pub use key::{Extra, Key, KeyOp, Kid, Label, Role, Visibility};

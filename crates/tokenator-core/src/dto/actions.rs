@@ -39,20 +39,24 @@ impl From<&Document> for DocRef {
 /// Input of [`Engine::render`](crate::Engine::render).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct RenderRequest {
     /// The document.
     pub doc: DocRef,
     /// Outer layers to record in the result (from the original `open`).
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<Layer>>", optional))]
     pub layers: Vec<Layer>,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
 /// Input of [`Engine::parse_edit`](crate::Engine::parse_edit).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct EditRequest {
     /// The kind being edited.
     pub kind: Kind,
@@ -62,6 +66,7 @@ pub struct EditRequest {
     pub text: String,
     /// View options for the returned document.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
@@ -85,6 +90,7 @@ pub struct EditResult {
 /// [`Engine::redact`](crate::Engine::redact).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct IssueRequest {
     /// The claim set: `json_claims` issues JOSE, `edn_claims` and
     /// `cbor_claims` issue COSE.
@@ -97,15 +103,18 @@ pub struct IssueRequest {
     pub alg: Option<String>,
     /// Header options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<HeaderOptions>", optional))]
     pub header: HeaderOptions,
     /// Selective disclosure options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<SdOptions>", optional))]
     pub sd: SdOptions,
     /// Holder confirmation (`cnf`).
     #[serde(default)]
     pub cnf: Option<CnfChoice>,
     /// JOSE output serialization.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<JoseSerialization>", optional))]
     pub jose_serialization: JoseSerialization,
     /// COSE tags, outermost first (default `[18]`).
     #[serde(default)]
@@ -116,19 +125,24 @@ pub struct IssueRequest {
     pub randomness: Option<Bytes>,
     /// View options for the result.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
 /// Header options for Issue.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 #[serde(default)]
 pub struct HeaderOptions {
     /// `typ`.
+    #[cfg_attr(feature = "ts", ts(as = "Option<TypChoice>", optional))]
     pub typ: TypChoice,
     /// `kid`.
+    #[cfg_attr(feature = "ts", ts(as = "Option<KidChoice>", optional))]
     pub kid: KidChoice,
     /// JOSE `x5c` (base64 DER), in order.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<String>>", optional))]
     pub x5c: Vec<String>,
     /// More protected header members: a JSON object (JOSE) or EDN map
     /// (COSE), appended in order.
@@ -176,21 +190,27 @@ pub enum KidChoice {
 /// Selective disclosure options for Issue/Redact.
 #[derive(Clone, Debug, Default, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 #[serde(default)]
 pub struct SdOptions {
     /// NodeIds of JSON claims to make selectively disclosable (marking a
     /// claim and something inside it gives recursive disclosures). EDN uses
     /// tags 58/62 instead.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<NodeId>>", optional))]
     pub marks: Vec<NodeId>,
     /// Decoy digests (JOSE).
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<DecoyRequest>>", optional))]
     pub decoys: Vec<DecoyRequest>,
     /// SD hash (`_sd_alg` / `sd_alg`).
     pub sd_alg: Option<HashName>,
     /// Fixed salts in creation order: JOSE salt strings, COSE hex.
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<String>>", optional))]
     pub fixed_salts: Vec<String>,
     /// `_sd` order.
+    #[cfg_attr(feature = "ts", ts(as = "Option<DigestOrder>", optional))]
     pub digest_order: DigestOrder,
     /// Issue SD form even if nothing is marked.
+    #[cfg_attr(feature = "ts", ts(as = "Option<bool>", optional))]
     pub force_sd: bool,
 }
 
@@ -250,6 +270,7 @@ pub enum JoseSerialization {
 /// Input of [`Engine::disclose`](crate::Engine::disclose).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct DiscloseRequest {
     /// The SD credential.
     pub doc: DocRef,
@@ -257,12 +278,14 @@ pub struct DiscloseRequest {
     pub keep: Vec<u32>,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
 /// Input of [`Engine::present`](crate::Engine::present).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct PresentRequest {
     /// The credential (SD-JWT, SD-CWT, or a plain CWT).
     pub doc: DocRef,
@@ -286,22 +309,26 @@ pub struct PresentRequest {
     pub randomness: Option<Bytes>,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
 /// Input of [`Engine::validate`](crate::Engine::validate).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct ValidateRequest {
     /// The credential.
     pub doc: DocRef,
     /// Candidate keys from the panel.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<KeyRef>>", optional))]
     pub keys: Vec<KeyRef>,
     /// The clock (seconds since the epoch).
     pub now: i64,
     /// Allowed skew in seconds.
     #[serde(default = "default_skew")]
+    #[cfg_attr(feature = "ts", ts(as = "Option<u64>", optional))]
     pub skew: u64,
     /// Expected KB `aud`.
     #[serde(default)]
@@ -336,17 +363,20 @@ impl ValidateRequest {
 /// Input of [`Engine::lint`](crate::Engine::lint).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct LintRequest {
     /// The document.
     pub doc: DocRef,
     /// Keys to check against the header `alg` (the verifying key).
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<KeyRef>>", optional))]
     pub keys: Vec<KeyRef>,
 }
 
 /// Input of [`Engine::resign`](crate::Engine::resign).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct ResignRequest {
     /// The (edited) credential.
     pub doc: DocRef,
@@ -360,12 +390,14 @@ pub struct ResignRequest {
     pub randomness: Option<Bytes>,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
 /// Input of [`Engine::tamper`](crate::Engine::tamper).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct TamperRequest {
     /// The credential.
     pub doc: DocRef,
@@ -373,6 +405,7 @@ pub struct TamperRequest {
     pub op: TamperOp,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
@@ -488,28 +521,33 @@ pub enum EquivalentEncoding {
 /// Input of [`Engine::reencode`](crate::Engine::reencode).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct ReencodeRequest {
     /// The credential.
     pub doc: DocRef,
     /// Outer layers for the output, outermost first (no `cbor_tag` layers;
     /// use `cose_tags`).
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<Vec<Layer>>", optional))]
     pub layers: Vec<Layer>,
     /// New COSE tags; `None` keeps them.
     #[serde(default)]
     pub cose_tags: Option<Vec<u64>>,
     /// CBOR serialization.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<CborSerialization>", optional))]
     pub cbor: CborSerialization,
     /// Also re-serialize the protected header, payload, and disclosure
     /// contents (may make the signature stale).
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<bool>", optional))]
     pub deep: bool,
     /// New JOSE serialization; `None` keeps it.
     #[serde(default)]
     pub jose: Option<JoseSerialization>,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
@@ -540,6 +578,7 @@ pub struct Reencoded {
 /// Input of [`Engine::edit_disclosures`](crate::Engine::edit_disclosures).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct EditDisclosuresRequest {
     /// The SD credential.
     pub doc: DocRef,
@@ -550,6 +589,7 @@ pub struct EditDisclosuresRequest {
     pub randomness: Option<Bytes>,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 
@@ -621,6 +661,7 @@ pub enum DisclosureOp {
 /// Input of [`Engine::decode_embedded`](crate::Engine::decode_embedded).
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
+#[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct DecodeEmbeddedRequest {
     /// The document.
     pub doc: DocRef,
@@ -628,6 +669,7 @@ pub struct DecodeEmbeddedRequest {
     pub node_id: NodeId,
     /// View options.
     #[serde(default)]
+    #[cfg_attr(feature = "ts", ts(as = "Option<ViewOptions>", optional))]
     pub view: ViewOptions,
 }
 

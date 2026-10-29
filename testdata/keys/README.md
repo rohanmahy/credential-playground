@@ -51,6 +51,21 @@ ML-DSA seeds are SHA-256(`"tokenator ml-dsa-NN"`) and stay the same.
 | `<name>.json` | the raw components (lowercase hex) from `openssl pkey -text`: EC `d`/`x`/`y`; Ed25519 `d`/`x`; RSA `n`, `e`, `d`, `p`, `q`, `dp`, `dq`, `qi` (no leading zeros) and `bits`; ML-DSA `seed`, `expanded`, `pub` |
 | `unsupported/` | inputs that must fail cleanly: X25519, Ed448, secp256k1, explicit EC parameters, an encrypted PKCS#8 key (password `tokenator`), and a certificate |
 
+### `x509/`
+
+Self-signed certificates for `tokenator_keys::import_certificate` and the
+`x5c`/`x5chain` key selection in `tokenator-core`, made once with OpenSSL
+4.1.0 from the `openssl/` fixture keys (their SPKI equals the matching
+`*-spki.pem`):
+
+```sh
+openssl req -x509 -key openssl/p256-pkcs8.pem -subj "/CN=tokenator test p256" \
+  -days 36500 -set_serial 1 -out x509/p256-selfsigned.pem
+openssl req -x509 -key openssl/ed25519-pkcs8.pem -subj "/CN=tokenator test ed25519" \
+  -days 36500 -set_serial 2 -out x509/ed25519-selfsigned.pem
+openssl x509 -in x509/p256-selfsigned.pem -outform DER -out x509/p256-selfsigned.der
+```
+
 ### RFC examples
 
 Extracted by
