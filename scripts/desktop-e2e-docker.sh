@@ -39,9 +39,8 @@ docker run --rm "${tty[@]}" --init \
   --mount "type=bind,src=$out,dst=/out" \
   -v tokenator-e2e-cargo:/usr/local/cargo/registry \
   -v tokenator-e2e-target:/work/target \
-  -v tokenator-e2e-pnpm:/pnpm-store \
+  -v tokenator-e2e-pnpm:/root/.local/share/pnpm/store \
   -v tokenator-e2e-node-modules:/work/app/node_modules \
-  -e npm_config_store_dir=/pnpm-store \
   -e TOKENATOR_E2E_OUT=/out \
   "$image" bash -c '
     set -euo pipefail
