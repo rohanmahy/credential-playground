@@ -677,8 +677,27 @@ pub(crate) fn reencode(
     };
     let mut document = view::document(registry, &probe, &out, req.layers.clone(), &req.view)?;
     document.signature_stale = signed_changed(kind, bytes, &out);
-    let td_layers: Vec<tokenator_detect::Layer> = req.layers.iter().map(layer_td).collect();
-    let output = tokenator_detect::rewrap(&out, &td_layers);
+    // An EDN layer is innermost: the CBOR printed as EDN, then the rest.
+    let (outer, edn) = match req.layers.split_last() {
+        Some((Layer::Edn, rest)) => (rest, true),
+        _ => (req.layers.as_slice(), false),
+    };
+    let Some(td_layers) = outer.iter().map(layer_td).collect::<Option<Vec<_>>>() else {
+        return err(
+            ErrorCode::InvalidInput,
+            "an EDN layer must be the innermost",
+        );
+    };
+    let payload = if edn {
+        let item = decode(&out)
+            .map_err(|e| EngineError::new(ErrorCode::InvalidInput, format!("not CBOR: {e:?}")))?;
+        tokenator_edn::print(&item, &tokenator_edn::PrintOptions::indented(2))
+            .text
+            .into_bytes()
+    } else {
+        out.clone()
+    };
+    let output = tokenator_detect::rewrap(&payload, &td_layers);
     Ok(Reencoded {
         output: crate::Bytes(output),
         document,
