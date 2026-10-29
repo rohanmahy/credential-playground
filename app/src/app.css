@@ -1,0 +1,168 @@
+/* Light/dark theme follows the OS (color-scheme); Settings can force one. */
+:root {
+  color-scheme: light dark;
+  --bg: Canvas;
+  --fg: CanvasText;
+  --muted: GrayText;
+  --accent: light-dark(#2f5fc4, #7fa6ff);
+  --border: light-dark(#d4d7dd, #3a3f47);
+  --hover: light-dark(#eef1f6, #262b33);
+  --sel: light-dark(#d6e4ff, #2b3f66);
+  --sel-soft: light-dark(#f1f5ff, #1f2838);
+  --mark: light-dark(#ffe08a, #7a5d00);
+  --pass: light-dark(#1d7a3a, #5fd38a);
+  --fail: light-dark(#b42318, #ff8a7a);
+  --warn: light-dark(#9a6200, #f2c14e);
+  --warn-bg: light-dark(#fff4d6, #3b3115);
+  --mono: ui-monospace, 'SF Mono', Menlo, Consolas, monospace;
+  font-family:
+    system-ui,
+    -apple-system,
+    'Segoe UI',
+    sans-serif;
+  font-size: 15px;
+  background: var(--bg);
+  color: var(--fg);
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+.mono,
+code,
+pre {
+  font-family: var(--mono);
+}
+
+button,
+select,
+input,
+textarea {
+  font: inherit;
+  color: inherit;
+}
+
+button {
+  padding: 0.2rem 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+button:hover:not(:disabled) {
+  background: var(--hover);
+}
+
+button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--bg);
+}
+
+button.link {
+  border: 0;
+  padding: 0;
+  background: none;
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+button.icon {
+  border: 0;
+  background: none;
+  padding: 0 0.3rem;
+  color: var(--muted);
+  font-size: 1.1em;
+  line-height: 1;
+}
+
+input[type='text'],
+input[type='url'],
+input[type='number'],
+select,
+textarea {
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 0.25rem 0.4rem;
+  background: var(--bg);
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  margin: 0.4rem 0;
+  font-size: 0.9rem;
+}
+
+.field > span,
+.inline > span {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
+.inline {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+
+.check {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.2rem 0;
+}
+
+fieldset {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  margin: 0.5rem 0;
+}
+
+.buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.4rem;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.error {
+  color: var(--fail);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
