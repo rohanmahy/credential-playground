@@ -26,6 +26,7 @@ fn import(e: &Engine, bytes: Vec<u8>) -> Vec<KeyInfo> {
     e.key_import(&KeyImportRequest {
         bytes: bytes.into(),
         format: None,
+        candidate: None,
     })
     .unwrap()
 }
@@ -105,6 +106,7 @@ fn unsupported_keys_fail_cleanly() {
             .key_import(&KeyImportRequest {
                 bytes: std::fs::read(&path).unwrap().into(),
                 format: None,
+                candidate: None,
             })
             .unwrap_err();
         assert_eq!(err.code, ErrorCode::Key, "{}", path.display());
@@ -117,6 +119,7 @@ fn unsupported_keys_fail_cleanly() {
             .key_import(&KeyImportRequest {
                 bytes: key_file(name).into(),
                 format: None,
+                candidate: None,
             })
             .unwrap_err();
         assert_eq!(err.code, ErrorCode::Key, "{name}");
@@ -182,6 +185,7 @@ fn each_set_member_gets_a_self_contained_reference() {
             let again = e.key_import(&KeyImportRequest {
                 bytes: k.key.bytes.clone(),
                 format: k.key.format,
+                candidate: None,
             });
             let again = again.unwrap();
             assert_eq!(again.len(), 1, "{name}");
@@ -225,6 +229,7 @@ fn format_hints_are_honored() {
         .key_import(&KeyImportRequest {
             bytes: key_file("rfc9901-a5-ec-p256-public.jwk.json").into(),
             format: Some(KeyFormat::CoseKey),
+            candidate: None,
         })
         .unwrap_err();
     assert_eq!(err.code, ErrorCode::Key);
@@ -234,6 +239,7 @@ fn format_hints_are_honored() {
             format: Some(KeyFormat::Pem {
                 encoding: PemEncoding::Auto,
             }),
+            candidate: None,
         })
         .unwrap();
     assert_eq!(ok.len(), 1);
@@ -692,4 +698,85 @@ fn key_operations_reject_garbage() {
         .code,
         ErrorCode::Key
     );
+}
+
+/// #42: a key pasted in an encoded form imports through its detected
+/// candidate, which unwraps the layers first.
+mod import_candidate {
+    use super::*;
+
+    fn import_detected(e: &Engine, input: &[u8]) -> Result<Vec<KeyInfo>, ErrorCode> {
+        let candidate = e.detect(input).into_iter().next().expect("a candidate");
+        e.key_import(&KeyImportRequest {
+            bytes: input.to_vec().into(),
+            format: None,
+            candidate: Some(candidate),
+        })
+        .map_err(|err| err.code)
+    }
+
+    fn hex(bytes: &[u8]) -> String {
+        bytes.iter().map(|b| format!("{b:02x}")).collect()
+    }
+
+    #[test]
+    fn hex_and_base64url_cose_keys_import_like_the_binary() {
+        let e = engine();
+        let raw = key_file("rfc8392-a2.3-ec-p256.cosekey.cbor");
+        let want = import(&e, raw.clone());
+        assert_eq!(want.len(), 1);
+        // `xxd -p` wraps at 60 characters.
+        let h = hex(&raw);
+        let xxd: String = h
+            .as_bytes()
+            .chunks(60)
+            .map(|c| format!("{}\n", std::str::from_utf8(c).unwrap()))
+            .collect();
+        let b64 = Base64UrlUnpadded::encode_string(&raw);
+        for input in [xxd, b64] {
+            let got = import_detected(&e, input.as_bytes()).unwrap();
+            assert_eq!(got.len(), 1, "{input}");
+            assert_eq!(got[0].cose_thumbprint, want[0].cose_thumbprint, "{input}");
+        }
+    }
+
+    #[test]
+    fn base64_jwk_imports() {
+        let e = engine();
+        let jwk = key_file("sd-cwt-08-c1-holder-private.jwk.json");
+        let b64 = base64ct::Base64::encode_string(&jwk);
+        let got = import_detected(&e, b64.as_bytes()).unwrap();
+        assert_eq!(got[0].jwk_thumbprint, import(&e, jwk)[0].jwk_thumbprint);
+        assert!(got[0].private);
+    }
+
+    #[test]
+    fn without_a_candidate_encoded_keys_still_fail() {
+        let e = engine();
+        let h = hex(&key_file("rfc8392-a2.3-ec-p256.cosekey.cbor"));
+        let res = e.key_import(&KeyImportRequest {
+            bytes: h.into_bytes().into(),
+            format: None,
+            candidate: None,
+        });
+        assert!(res.is_err());
+    }
+
+    #[test]
+    fn a_credential_candidate_is_refused() {
+        let e = engine();
+        let jws = std::fs::read(testdata("tokens/rfc7515-a3-jws-es256.txt")).unwrap();
+        assert_eq!(import_detected(&e, &jws), Err(ErrorCode::InvalidCandidate));
+    }
+
+    #[test]
+    fn the_candidate_is_omitted_from_the_wire_when_absent() {
+        let req = KeyImportRequest {
+            bytes: b"x".to_vec().into(),
+            format: None,
+            candidate: None,
+        };
+        let json = serde_json::to_value(&req).unwrap();
+        assert!(json.get("candidate").is_none(), "{json}");
+    }
 }

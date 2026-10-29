@@ -311,6 +311,7 @@ fn key_commands() {
     let import = KeyImportRequest {
         bytes: Bytes(jwks),
         format: None,
+        candidate: None,
     };
     check_req(&h, "engine_key_import", &import, |e, r| e.key_import(r));
 
@@ -373,6 +374,7 @@ fn key_import_error() {
     let req = KeyImportRequest {
         bytes: Bytes(b"not a key".to_vec()),
         format: None,
+        candidate: None,
     };
     let err = h
         .call("engine_key_import", json!({ "req": v(&req) }))

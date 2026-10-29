@@ -248,7 +248,21 @@ pub(crate) fn info(key: &Key, label: Option<String>) -> Result<KeyInfo, EngineEr
 }
 
 pub(crate) fn key_import(req: &KeyImportRequest) -> Result<Vec<KeyInfo>, EngineError> {
-    import(&req.bytes, req.format)?
+    let unwrapped;
+    let bytes = match &req.candidate {
+        None => &req.bytes,
+        Some(c) if !c.kind.is_key() => {
+            return err(
+                ErrorCode::InvalidCandidate,
+                format!("{} is not a key (open it instead)", c.kind.label()),
+            );
+        }
+        Some(c) => {
+            unwrapped = Bytes(crate::detect::unwrap(&req.bytes, c)?.0);
+            &unwrapped
+        }
+    };
+    import(bytes, req.format)?
         .iter()
         .map(|k| info(k, None))
         .collect()
