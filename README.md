@@ -8,7 +8,10 @@ web and macOS (Tauri). See [SPEC.md](SPEC.md) and [ARCHITECTURE.md](ARCHITECTURE
 
 Needs Rust (with the `wasm32-unknown-unknown` target), wasm-pack 0.15,
 Node 22+, and pnpm. CI (`.github/workflows/ci.yml`) runs exactly these
-commands.
+commands: a push to any branch runs only `cargo test` (Linux) and
+`pnpm test`; a pull request runs everything below on Linux, the desktop
+app included; a merge to `main` adds the macOS build and tests. The
+comment at the top of `ci.yml` has the full matrix.
 
 ```sh
 # Rust
@@ -47,7 +50,9 @@ scripts/desktop-e2e-docker.sh     # the same in a Linux container, e.g. on macOS
                                   # (--clean removes its image and cache volumes)
 
 # Fuzzing (nightly + cargo-fuzz; see fuzz/README.md)
-fuzz/seed-corpora.sh && fuzz/smoke.sh 60
+fuzz/seed-corpora.sh && fuzz/smoke.sh 60    # PRs: 60 s per target, pinned nightly
+FUZZ_TOOLCHAIN=nightly fuzz/smoke.sh 900 cose   # what fuzz-nightly.yml runs per target
+fuzz/minimize.sh                            # minimize every crash in fuzz/artifacts/
 ```
 
 The web build uses the `wasm-release` Cargo profile (size-optimized).
