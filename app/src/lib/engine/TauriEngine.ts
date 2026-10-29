@@ -1,11 +1,17 @@
-// The desktop Engine: calls the Tauri commands `engine_<snake_name>` with
-// the DTO as the argument (`invoke` from @tauri-apps/api/core). The commands
-// live in app/src-tauri, which does not exist yet; EngineError rejections
-// must be wrapped in EngineFailure.
+// The desktop Engine: calls the Tauri commands `engine_<snake_name>` in
+// app/src-tauri (`invoke` from @tauri-apps/api/core) with the core parameter
+// names as argument keys (`{ req }`, `{ input, candidate, view }`, `{ key }`,
+// `{ query }`); raw input crosses as base64url. Before the first call it
+// invokes `engine_init { snapshot }` once. Every rejection becomes an
+// EngineFailure (a Tauri string error: code `invalid_input`). Contract:
+// app/src-tauri/TEST-PLAN.md.
 import type { Engine } from './Engine';
 import { NotImplemented } from '../notImplemented';
 
-const stub = (name: string) => () => Promise.reject(new NotImplemented(`TauriEngine.${name}`));
+const stub =
+  (name: string) =>
+  (..._args: unknown[]) =>
+    Promise.reject(new NotImplemented(`TauriEngine.${name}`));
 
 export class TauriEngine implements Engine {
   /** Sent once to the shell so its Engine uses the cached registry snapshot. */

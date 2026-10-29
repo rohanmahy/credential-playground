@@ -15,7 +15,7 @@ contract for the implementer; the tests pin it.
 | `build.rs` | `tauri_build` with an explicit app manifest, so every command needs a permission |
 | `tauri.conf.json` | product name, identifier, window, CSP, bundle (`.app`) |
 | `capabilities/main.json` | the only capability: the `main` window, local content, our commands |
-| `src/lib.rs` | `run()` (plugins + `setup`), and `register(builder)` (state + invoke handler) that the tests reuse with the mock runtime |
+| `src/lib.rs` | `COMMANDS`, `register(builder)` (invoke handler), `manage(app, engine, services)` (state), `run()` (plugins, `setup` resolving the app data dir); the tests reuse `register`/`manage` on the mock runtime |
 | `src/engine.rs` | `EngineState` and one `engine_*` command per `tokenator_core::Engine` method, plus `engine_init` |
 | `src/fetch.rs` | `Fetcher` (reqwest + rustls) and its `FetchPolicy` |
 | `src/files.rs` | `open_file` / `save_file` over a `FileDialog` trait |
@@ -29,7 +29,7 @@ contract for the implementer; the tests pin it.
 about the same code), and shares `target/`. Tauri's CLI supports workspace
 members. The cost is that `cargo build --workspace` on Linux needs the
 WebKitGTK development packages; CI that only wants the crates can use
-`--exclude tokenator-desktop` (see the issue).
+`--exclude tokenator-desktop` (#36).
 
 **Thin commands.** Each engine command takes the core request DTO(s) with
 the core parameter names (`req`, `input`, `candidate`, `view`, `key`,
@@ -70,7 +70,7 @@ our own `allow-*` command permissions; no `core:*`, `dialog:*`,
 `Platform.randomBytes()` are synchronous in the TS interface, so an `invoke`
 cannot serve them. `TauriPlatform` keeps `Date.now()` and
 `crypto.getRandomValues()` (WKWebView backs it with the OS CSPRNG). Adding
-unused commands would only widen the IPC surface (see the issue).
+unused commands would only widen the IPC surface (#36).
 
 ## Commands
 
@@ -96,7 +96,7 @@ Platform:
 | `open_file` | `accept: string[] \| null` | `{name, bytes} \| null` | native dialog; reads only the picked file; size cap |
 | `save_file` | `suggested_name, data: Bytes` | `bool` | native dialog; writes only the picked file |
 | `read_clipboard` | — | `string` | clipboard plugin from Rust |
-| `write_clipboard` | `text, sensitive` | — | `sensitive` is accepted; no expiry yet (see the issue) |
+| `write_clipboard` | `text, sensitive` | — | `sensitive` is required on the wire; no expiry yet (#36) |
 | `registry_cache_get` | — | `Bytes \| null` | `<app data dir>/registry-snapshot.bin` |
 | `registry_cache_put` | `snapshot: Bytes` | — | atomic: temp file in the same dir, then rename |
 | `registry_cache_clear` | — | — | removes the file; no error if absent |
@@ -106,8 +106,9 @@ Platform errors are `PlatformError {kind, message, url, status}` with
 desktop can produce), `io`, `dialog`, `clipboard`, `invalid_argument`.
 
 **Fetch policy** (`FetchPolicy::default()`): scheme `https` only (any other
-scheme, or a redirect to one, is `blocked` before connecting); at most 5
-redirects; total timeout 30 s, connect timeout 10 s (`network`); body cap
+scheme, a redirect to one, or a URL with `user:pass@` is `blocked` before
+connecting); at most 5 redirects (more is `blocked`); total timeout 30 s,
+connect timeout 10 s (`network`); body cap
 8 MiB, checked against `Content-Length` and while streaming (`blocked`,
 "larger than 8 MiB"); non-2xx is `http` with the status; no cookie store
 (reqwest built without `cookies`), `referer(false)`, no auth, no default
@@ -126,24 +127,33 @@ Rust (`cargo test -p tokenator-desktop`):
 
 | File | Tests |
 |---|---|
-| `tests/common/mod.rs` | mock app (`tauri::test::mock_builder()` + `register`), `invoke(cmd, args) -> Result<String, Value>` through `get_ipc_response`, fake dialog and clipboard, the plain-HTTP test server (std `TcpListener`, no extra crate), testdata helpers |
-| `tests/engine_commands.rs` | every engine command delegates to core (same JSON as calling core); the argument keys are snake_case; `EngineError` comes back unchanged as the error value; malformed args are rejected without panicking; `engine_init` with a merged snapshot changes `info`/`registry_lookup`, `null` restores the bundled registry, a bad snapshot keeps the previous engine |
-| `tests/parity.rs` | a corpus of requests (detect/open of every `testdata/tokens` sample, seeded key generation, issue/present/validate, keys, datetime, registry, error cases) through IPC vs `serde_json::to_string` of the direct core call: byte-identical |
-| `tests/fetch.rs` | https-only (http, file, data, ftp, invalid URL → `blocked` without a connection); redirects to http blocked; size cap by `Content-Length` and by streaming; timeout; non-2xx → `http`; no `Cookie` even after `Set-Cookie`; no `Referer`; final URL, status, content type, and bytes reported; the `fetch_url` command maps to `PlatformError` |
-| `tests/files.rs` | `open_file` reads exactly the picked file (name and bytes), cancel → `null`, size cap, `accept` → dialog extension filters; `save_file` writes exactly the picked file, cancel → `false`; no command takes a path argument (an extra `path` key is ignored) |
-| `tests/clipboard.rs` | read and write through the `Clipboard` backend; `sensitive` passed through |
-| `tests/cache.rs` | location is `<dir>/registry-snapshot.bin`; get on empty → `null`; put/get round trip; put replaces atomically (no temp file left); clear; after a full session of commands the data dir contains only that file |
-| `tests/config.rs` | `tauri.conf.json`: product name, identifier, `withGlobalTauri` false, one window `main` with a local URL and `incognito`, CSP directives, bundle target `app`, no updater/shell plugin config; `capabilities/`: exactly one file, `windows: ["main"]`, no `remote`, permissions exactly the expected set; `build.rs` manifest lists the same commands as `generate_handler!` |
-| `tests/hygiene.rs` | no logging in the command layer (`println!`, `eprintln!`, `dbg!`, `log::`, `tracing::`, `{:?}` of requests); no `log`/`tracing`/`tauri-plugin-log`/fs/shell/http plugin in `Cargo.toml`; tauri built without its `tracing` feature; reqwest without `cookies`/`native-tls`; no `std::fs` outside `files.rs` and `cache.rs` |
+| `tests/common/mod.rs` | mock app (`tauri::test::mock_builder()` + `register` + `manage`), `invoke(cmd, args) -> Result<String, Value>` returning the exact IPC JSON text, fake `FileDialog` and `Clipboard` that record calls, the plain-HTTP test server (std `TcpListener`, no extra crate), core-built fixtures (`Fx`) |
+| `tests/engine_commands.rs` (31) | each engine command gives the same JSON as the direct core call, including errors (the `EngineError` value unchanged); TS-style requests with omitted defaults are accepted; `engine_init` with a merged snapshot changes `info`/`registry_lookup`, `null` restores the bundled registry, a second snapshot replaces the first, a bad snapshot keeps the previous engine; camelCase keys are rejected; malformed args are string errors and don't break the app; every `COMMANDS` entry is registered |
+| `tests/parity.rs` (3) | a 100+ request corpus (detect and open of every `testdata/tokens` sample in two views, seeded keygen for every family, issue/redact/present/validate, manipulation, key import/export/convert, datetime, registry, error cases) covering every engine command: IPC JSON vs `serde_json::to_string` of the direct call, byte-identical; repeated requests identical; the corpus itself well-formed |
+| `tests/fetch.rs` (21) | default policy values; https only (http, loopback http, file, data, ftp, ws, tauri, invalid, scheme-relative, `user:pass@` → `blocked`, with no connection made); `allow_loopback_http` admits only `127.0.0.1`/`[::1]`; URL, status, content type, and exact bytes reported; redirects followed with the final URL; redirects to http/file `blocked`; more than 5 redirects `blocked`; non-2xx → `http` with the status; size cap by `Content-Length` and while streaming; timeout and refused connection → `network`; no `Cookie` after `Set-Cookie`, no `Referer`/`Authorization`; `User-Agent: the-tokenator/<version>`; the command's wire shape and `PlatformError`s |
+| `tests/files.rs` (13) | `open_file` reads exactly the picked file (name and exact bytes), cancel → `null`, size cap → `invalid_argument`, missing file → `io`, `accept` → dialog extension filters (`extension_filters` rules); `save_file` writes exactly the picked file (replacing it), cancel → `false` and nothing written, unwritable → `io`; an extra `path` argument is ignored; no command signature takes a path |
+| `tests/clipboard.rs` (3) | read; write with `sensitive` passed to the backend; `sensitive` required |
+| `tests/cache.rs` (7) | location `<dir>/registry-snapshot.bin`; get/clear on an empty cache create nothing; put/get round trip creating the dir, atomic replace leaves no temp file; clear; the commands round-trip base64url and the file holds the raw snapshot; put failure → `io`; after a session of engine, clipboard, cache, and file commands the data dir holds only the cache file |
+| `tests/acl.rs` (4) | the real ACL (`generate_context!` with tauri.conf.json, capabilities, and the build.rs manifest) on the mock runtime: `main` may call every command; another window may call none; remote origins may call none; plugin and core commands (dialog, clipboard, fs, shell, http, app, path, event, window, webview) are unreachable |
+| `tests/config.rs` (13) | `tauri.conf.json`: product name, binary name, identifier, build commands, `withGlobalTauri` false, one window `main` with `url: index.html` and `incognito`, security settings (`capabilities: ["main"]`, no asset protocol, `devCsp: null`), the exact CSP, bundle target `app` unsigned with existing icons, no plugin config; `capabilities/`: one file, `windows: ["main"]`, `local`, no `remote`, permissions exactly `allow-<command>` for `COMMANDS`; `build.rs` and `generate_handler!` list the same commands |
+| `tests/hygiene.rs` (8) | no logging or Debug formatting in `src/` (`println!`, `eprintln!`, `dbg!`, `log::`, `tracing::`, `{:?}`); no log/tracing crates; no fs/shell/http/store/updater/opener plugins; reqwest `default-features = false` with `rustls`, without cookies or native-tls; tauri without `tracing`/`devtools`/`protocol-asset`; file system access only in `files.rs` and `cache.rs`; no `unsafe` or env reads |
+
+Rust total: 103 tests; 24 pass against the skeleton (config, hygiene, the
+corpus check, the default policy, the signature scan) and 79 fail on the
+`unimplemented!()` stubs.
 
 TS (`pnpm test`, Vitest, `@tauri-apps/api/mocks` `mockIPC`):
 
 | File | Tests |
 |---|---|
-| `src/test/unit/tauriEngine.test.ts` | each of the 27 methods invokes `engine_<snake>` with the right argument object; `Uint8Array` input → base64url; `engine_init` runs once before the first call, with the snapshot as base64url or `null`; an `EngineError` rejection becomes `EngineFailure` (code, message, node_id kept); a string rejection (Tauri arg error) becomes `EngineFailure` with code `invalid_input`; an `engine_init` failure rejects calls with `EngineFailure` |
-| `src/test/unit/tauriPlatform.test.ts` | `fetchUrl` → `fetch_url` and decodes bytes; `PlatformError` kinds → `FetchError(kind, url, message, status)`; `openFile` passes `accept`, decodes, `null` on cancel; `saveFile` encodes strings as UTF-8 and bytes as base64url; clipboard read/write with `sensitive`; registry cache get/put/clear; `now`/`randomBytes` stay local (no invoke) |
-| `src/test/unit/tauriConfig.test.ts` | the Tauri CSP equals the web CSP (`csp.config.ts`) except `script-src 'self'` (no `'wasm-unsafe-eval'`) and `connect-src` `ipc: http://ipc.localhost` instead of `https:`, plus `frame-ancestors 'none'`; no command logs (`console.`) in `TauriEngine.ts`/`TauriPlatform.ts` |
-| `src/test/scaffold/engine.test.ts` | selection: Tauri 2 exposes `window.__TAURI_INTERNALS__` (and `__TAURI__` only with `withGlobalTauri`, which stays off), so `isTauri` checks `__TAURI_INTERNALS__` |
+| `src/test/unit/tauriEngine.test.ts` (39) | a `Record<keyof Engine, …>` table: each of the 27 methods invokes `engine_<snake>` with the right argument object and resolves with the response; `Uint8Array` input → base64url (also a subarray view); `engine_init` is not called by the constructor, runs once before the first call (also for concurrent first calls) with the snapshot as base64url or `null`, and each new `TauriEngine` re-inits; an `engine_init` failure rejects calls with `EngineFailure` and sends nothing else; an `EngineError` rejection becomes `EngineFailure` (code, message, node_id kept); a string or other rejection becomes `EngineFailure` with code `invalid_input` |
+| `src/test/unit/tauriPlatform.test.ts` (20) | `fetchUrl` → `fetch_url`, decodes bytes, keeps a null content type; `PlatformError` kinds `blocked`/`network`/`http` → `FetchError(kind, url, message, status)`, the requested URL when the error has none, string rejections → `network` (never `cors`); `openFile` passes `accept` (or `null`), decodes, `null` on cancel; `saveFile` sends bytes as base64url and strings as UTF-8; clipboard read/write with `sensitive` (default false); registry cache get/put/clear; other errors → `Error(message)`; `now`/`localOffsetMinutes`/`randomBytes` stay local (no invoke) |
+| `src/test/unit/tauriConfig.test.ts` (4) | the Tauri CSP equals the web CSP (`csp.config.ts`) except `script-src 'self'`, `connect-src ipc: http://ipc.localhost`, and `frame-ancestors 'none'`; no network or eval sources; `TauriEngine.ts`/`TauriPlatform.ts` never use `console.`, import `invoke` from `@tauri-apps/api/core`, and use neither `window.__TAURI__` nor plugin JS packages |
+| `src/test/scaffold/engine.test.ts` (changed) | selection: Tauri 2 always injects `window.__TAURI_INTERNALS__`; `__TAURI__` exists only with `withGlobalTauri`, which stays off, so `isTauri` must check `__TAURI_INTERNALS__` |
+
+TS: 63 new tests plus the changed selection test; 6 new ones pass
+against the stubs, and 58 fail (57 new + the selection test). The
+other app suites are unchanged.
 
 ## Not covered (future work)
 
@@ -170,3 +180,28 @@ TS (`pnpm test`, Vitest, `@tauri-apps/api/mocks` `mockIPC`):
 `pnpm build`, then produces an unsigned
 `target/release/bundle/macos/The Tokenator.app`. `tests/config.rs` pins the
 config; building the bundle is a manual/CI step, not a unit test.
+
+## Notes for the implementer
+
+- `run()`: `tauri::Builder::default()` + the dialog and clipboard plugins +
+  `register`, and a `setup` that resolves `app.path().app_data_dir()` and
+  calls `manage` with `EngineState::bundled()`, `Fetcher::new(FetchPolicy::default())`,
+  `TauriFileDialog`/`TauriClipboard` over the app handle, and
+  `RegistryCacheFile::in_dir(data_dir)`. `generate_context!()` must build
+  without `../dist` in dev (it does today: `tests/acl.rs` uses it).
+- `engine.rs`: fill in the `req_command!` macro body
+  (`Ok(state.current().$method(&req)?)`-style) and the explicit commands;
+  no other logic.
+- reqwest: a `redirect::Policy::custom` that applies `check_url` to every
+  hop and stops after `max_redirects`; `referer(false)`; `user_agent`;
+  stream with `Response::chunk()` and stop at `max_bytes`.
+- `select.ts`: `isTauri` checks `'__TAURI_INTERNALS__' in win`.
+- `pnpm tauri dev` / `pnpm tauri build --bundles app` wrap `cargo tauri`
+  (no `@tauri-apps/cli` npm package).
+
+## Decisions (issues filed)
+
+- #36: bundle identifier (`io.github.rohanmahy.tokenator`), workspace
+  membership, `now`/`random_bytes` staying local, no clipboard expiry yet,
+  fetch limits and error kinds, IPC error mapping, base64url raw input
+  (#34 item 2), `devCsp: null`.

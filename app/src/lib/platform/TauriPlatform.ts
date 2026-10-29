@@ -1,6 +1,10 @@
-// Desktop implementation over Tauri commands (app/src-tauri, later):
-// reqwest for fetches (no CORS), dialog-scoped fs, the clipboard plugin, and
-// a file in the app data dir for the registry cache.
+// Desktop implementation over Tauri commands (app/src-tauri): `fetch_url`
+// (reqwest, no CORS), `open_file`/`save_file` (native dialog from Rust; the
+// webview never names a path), `read_clipboard`/`write_clipboard`, and
+// `registry_cache_*` (a file in the app data dir). Bytes cross as
+// base64url; PlatformErrors of kind blocked/network/http become FetchError,
+// others Error. now/randomBytes stay local (the interface is synchronous).
+// Contract: app/src-tauri/TEST-PLAN.md.
 import type {
   FetchResult,
   OpenFileOptions,
