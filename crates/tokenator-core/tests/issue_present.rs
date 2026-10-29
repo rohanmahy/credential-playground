@@ -543,7 +543,7 @@ const SD_EDN: &str = r#"{
   2: "https://holder.example",
   58(500): "secret",
   501: [58("a"), "b"],
-  58(502): {"x": 58(1)}
+  58(502): {58("x"): 1}
 }"#;
 
 fn issued_sd_cwt(e: &Engine, issuer: &KeyInfo, holder: &KeyInfo) -> Document {
