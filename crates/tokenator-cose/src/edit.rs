@@ -400,7 +400,7 @@ pub enum DisclosureOp<'a> {
         bytes: Cow<'a, [u8]>,
     },
     /// Append a forged disclosure built with
-    /// [`encode_disclosure`](crate::sd::encode_disclosure); with no value
+    /// [`encode_disclosure`]; with no value
     /// it is a decoy disclosure `[salt]`.
     Forge {
         /// Salt.

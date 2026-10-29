@@ -1,0 +1,103 @@
+# cargo-fuzz targets (SPEC §11). Not a member of the root workspace: it needs
+# nightly and libFuzzer. Run from the repository root:
+#
+#   fuzz/seed-corpora.sh            # seed fuzz/corpus/<target>/ from testdata/
+#   cargo +nightly fuzz run <target> fuzz/corpus/<target>
+#
+# See fuzz/README.md.
+[package]
+name = "tokenator-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+tokenator-cbor = { path = "../crates/tokenator-cbor" }
+tokenator-core = { path = "../crates/tokenator-core" }
+tokenator-cose = { path = "../crates/tokenator-cose" }
+tokenator-detect = { path = "../crates/tokenator-detect" }
+tokenator-edn = { path = "../crates/tokenator-edn", features = ["hash"] }
+tokenator-jose = { path = "../crates/tokenator-jose" }
+tokenator-json = { path = "../crates/tokenator-json" }
+tokenator-keys = { path = "../crates/tokenator-keys" }
+
+# Its own workspace, so the root workspace neither builds nor locks it.
+[workspace]
+members = ["."]
+
+[profile.release]
+debug = 1
+
+[[bin]]
+name = "cbor_decode"
+path = "fuzz_targets/cbor_decode.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "edn_parse"
+path = "fuzz_targets/edn_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "edn_print"
+path = "fuzz_targets/edn_print.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "json_parse"
+path = "fuzz_targets/json_parse.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "detect"
+path = "fuzz_targets/detect.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "jose"
+path = "fuzz_targets/jose.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "cose"
+path = "fuzz_targets/cose.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "keys"
+path = "fuzz_targets/keys.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "engine_open"
+path = "fuzz_targets/engine_open.rs"
+test = false
+doc = false
+bench = false
+
+[[bin]]
+name = "engine_validate"
+path = "fuzz_targets/engine_validate.rs"
+test = false
+doc = false
+bench = false
