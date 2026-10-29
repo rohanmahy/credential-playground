@@ -265,8 +265,9 @@ is an `EngineError` with code `decode`.
 
 `detect` wraps `tokenator-detect`, maps its candidates to DTOs (kind,
 confidence, layers, payload range, breadcrumb), and confirms low-confidence
-`EdnText` candidates with the EDN parser: a candidate that parses becomes
-`edn_claims`, one that doesn't is dropped. Key kinds (`jwk`, `jwk_set`,
+`EdnText` candidates with the EDN parser: a candidate that parses to a map
+becomes `edn_claims`; anything else is dropped. `key_import` also accepts
+COSE_Keys and COSE_KeySets written as EDN. Key kinds (`jwk`, `jwk_set`,
 `cose_key`, `cose_key_set`, `pem`) are returned as candidates so the UI can
 route them to the key panel. Breadcrumbs end with `Kind::label()`.
 
@@ -304,7 +305,7 @@ lint items `validate()` would include.
 **Key selection** for the issuer signature: (1) panel keys (`keys`) whose
 kid or JWK/COSE thumbprint matches the header kid (`panel_kid`,
 `panel_thumbprint`); (2) if none matches, every panel key that fits the alg
-(`panel_unmatched`); (3) embedded keys, labeled untrusted: the
+(`panel_unmatched`; if keys were tried and none verifies, `fail`); (3) embedded keys, labeled untrusted: the
 `x5c`/`x5chain` leaf (`embedded_x5c`); (4) otherwise `skip`, and
 `fetchable` lists hints that are never fetched: `kid_url` when the kid is a
 URL, `issuer_metadata` (`https://host/.well-known/jwt-vc-issuer/path`) when
@@ -358,13 +359,25 @@ bad signature gives `fail`.
 
 ## 10. Decisions encoded in the tests (issues filed)
 
-1. Engine holds the registry; `registry_merge` returns a new snapshot
-   instead of mutating (see clarification issue).
-2. Bytes as base64url strings; text ranges in UTF-16; snake_case JSON.
-3. COSE tags stay in `Document.bytes`; NodeIds fold envelope tags.
-4. No x5c/x5chain key extraction yet (tokenator-keys cannot read
-   certificates): `embedded_x5c` is reported as a skipped candidate.
-5. Unsupported alg → `skip`; `iat` in the future → `warn`.
+1. Wire conventions: base64url bytes, UTF-16 text ranges, snake_case,
+   `i64` as `number` (#28).
+2. The Engine holds the registry; `registry_merge` returns a new snapshot
+   instead of mutating (#29).
+3. Key-based NodeIds, COSE part names with envelope tags folded into the
+   root, COSE tags kept in `Document.bytes`, the JOSE view object with
+   verbatim decoded parts, and `tamper` always returning a Document (#30).
+   JOSE unprotected header nodes have no `raw` range (they are not
+   segments).
+4. Key selection: kid/thumbprint match, then every fitting panel key; keys
+   tried and none verifies → `fail`, no fitting key → `skip`. Unsupported
+   alg → `skip`; future `iat` → `warn`; claim sets cannot be validated;
+   presenting a presentation again is refused (#31). `lint` also accepts
+   claim sets (encoding and duplicate findings in drafts).
+5. Gaps in merged crates, worked around in core for now (#32): no
+   x5c/x5chain key extraction (tokenator-keys reads no certificates), no
+   COSE payload digest edits (`unsupported`), relative-time formatting
+   done in core, EDN COSE_Keys parsed with tokenator-edn before
+   `tokenator_keys::import`.
 
 ## 11. Files
 
