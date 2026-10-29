@@ -8,6 +8,33 @@ license-file.workspace = true
 repository.workspace = true
 
 [dependencies]
+base64ct = { version = "1.8", features = ["alloc"] }
+rand_chacha = { version = "0.10", default-features = false }
+serde = { version = "1.0.229", features = ["derive"] }
+tokenator-cbor = { path = "../tokenator-cbor" }
+tokenator-cose = { path = "../tokenator-cose" }
+tokenator-crypto = { path = "../tokenator-crypto" }
+tokenator-detect = { path = "../tokenator-detect" }
+tokenator-edn = { path = "../tokenator-edn", features = ["hash"] }
+tokenator-jose = { path = "../tokenator-jose" }
+tokenator-json = { path = "../tokenator-json" }
+tokenator-keys = { path = "../tokenator-keys" }
+tokenator-registry = { path = "../tokenator-registry" }
+ts-rs = { version = "12", optional = true }
+
+[features]
+default = []
+# Derives `ts_rs::TS` on every DTO and enables `tokenator_core::ts`.
+ts = ["dep:ts-rs"]
+
+[dev-dependencies]
+base64ct = { version = "1.8", features = ["alloc"] }
+hex = "0.4"
+proptest = "1"
+serde_json = "1"
+tokenator-cbor = { path = "../tokenator-cbor" }
+tokenator-edn = { path = "../tokenator-edn", features = ["hash"] }
+tokenator-json = { path = "../tokenator-json" }
 
 [lints]
 workspace = true

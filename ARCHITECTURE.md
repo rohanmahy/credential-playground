@@ -202,6 +202,12 @@ fn registry_lookup(q: RegistryQuery) -> Vec<RegistryEntry>;
 fn registry_merge(xml: Bytes, which: RegistryId) -> RegistryStats;
 ```
 
+The implemented signatures take request DTOs; `crates/tokenator-core/TEST-PLAN.md`
+§1 is authoritative. Randomness comes in as a 32-byte seed and every value is
+drawn from a ChaCha20 stream keyed per purpose (see
+`crates/tokenator-core/ARCHITECTURE.md`), so outputs are byte-identical on every
+target.
+
 `Document` = `{ kind, layers, bytes, tree: Node, main: Rendered, raw: RawView,
 disclosures, diagnostics }`. A `Node` has a **path-based `NodeId`** (e.g.
 `payload/2/cnf/1`, or `disclosure/3/value`), its own children, and references
