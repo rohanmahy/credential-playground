@@ -306,57 +306,52 @@ fn tamper_jose(kind: &Kind, bytes: &[u8], op: &TamperOp) -> Result<Vec<u8>, Engi
     // that changed back into the envelope.
     let compact = to_json_text(text, crate::dto::actions::JoseSerialization::Compact)?;
     let tampered = tj::tamper(&compact, &jose_op).map_err(|e| jose_error(&e))?;
-    let parts = |t: &str| -> Vec<String> {
-        let mut pieces: Vec<String> = t.split('~').map(str::to_owned).collect();
-        let issuer = pieces.remove(0);
-        let mut out: Vec<String> = issuer.splitn(3, '.').map(str::to_owned).collect();
-        out.resize(3, String::new());
-        out.extend(pieces);
-        out
+    // (protected, payload, signature) and the disclosures of compact text;
+    // the KB-JWT after the last `~` is left out.
+    let pieces = |t: &str| -> (Vec<String>, Vec<String>) {
+        let mut split: Vec<String> = t.split('~').map(str::to_owned).collect();
+        let issuer = split.remove(0);
+        if t.contains('~') {
+            split.pop();
+        }
+        let mut jws: Vec<String> = issuer.splitn(3, '.').map(str::to_owned).collect();
+        jws.resize(3, String::new());
+        (jws, split)
     };
-    let (before, after) = (parts(&compact), parts(&tampered));
+    let ((jws_before, d_before), (jws_after, d_after)) = (pieces(&compact), pieces(&tampered));
     with_parsed(text, |p, _| -> Result<String, EngineError> {
         let jws = p.token.jws();
         let sig = jws
             .signatures
             .first()
             .ok_or_else(|| EngineError::new(ErrorCode::Parse, "no signature"))?;
-        let mut spans: Vec<(tj::Span, usize)> = Vec::new();
-        if let Some(prot) = &sig.protected {
-            spans.push((prot.span(), 0));
-        }
-        spans.push((jws.payload.span(), 1));
-        spans.push((sig.signature.span(), 2));
-        let sd = p.token.sd_jwt();
-        if let Some(sd) = sd {
-            for (i, d) in sd.disclosures.iter().enumerate() {
-                spans.push((d.part().span(), 3 + i));
-            }
-        }
         let mut edits: Vec<(usize, usize, String)> = Vec::new();
-        for (span, i) in &spans {
-            if before.get(*i) != after.get(*i) {
-                edits.push((
-                    span.start,
-                    span.end,
-                    after.get(*i).cloned().unwrap_or_default(),
-                ));
+        let mut edit = |span: tj::Span, old: Option<&String>, new: Option<&String>| {
+            if old != new {
+                edits.push((span.start, span.end, new.cloned().unwrap_or_default()));
             }
+        };
+        if let Some(prot) = &sig.protected {
+            edit(prot.span(), jws_before.first(), jws_after.first());
         }
-        // A duplicated disclosure is a new array element.
-        if let (Some(sd), true) = (sd, after.len() > before.len())
-            && let Some(last) = sd.disclosures.last()
-        {
-            let at = last.part().span().end + 1;
-            let added: Vec<String> = after
-                .iter()
-                .skip(before.len())
-                .map(|d| format!(", {}", crate::util::json_string(d)))
-                .collect();
-            // `after` ends with the KB part (possibly empty): keep it out.
-            let n = added.len().saturating_sub(1);
-            let text: String = added.into_iter().take(n.max(1)).collect();
-            edits.push((at, at, text));
+        edit(jws.payload.span(), jws_before.get(1), jws_after.get(1));
+        edit(sig.signature.span(), jws_before.get(2), jws_after.get(2));
+        if let Some(sd) = p.token.sd_jwt() {
+            for (i, d) in sd.disclosures.iter().enumerate() {
+                edit(d.part().span(), d_before.get(i), d_after.get(i));
+            }
+            // Duplicated disclosures are new array elements after the last.
+            if let Some(last) = sd.disclosures.last()
+                && d_after.len() > d_before.len()
+            {
+                let added: String = d_after
+                    .iter()
+                    .skip(d_before.len())
+                    .map(|d| format!(", {}", crate::util::json_string(d)))
+                    .collect();
+                let at = last.part().span().end + 1;
+                edits.push((at, at, added));
+            }
         }
         edits.sort_by_key(|e| std::cmp::Reverse(e.0));
         let mut out = text.to_owned();
@@ -515,7 +510,12 @@ fn enc(item: &Item<'_>, m: EncodeMode) -> Result<Vec<u8>, EngineError> {
 }
 
 /// Re-encodes byte string contents that hold CBOR (one item).
-fn deepen_bytes(item: &mut Item<'_>, m: EncodeMode, sign1: bool) -> Result<(), EngineError> {
+fn deepen_bytes(
+    item: &mut Item<'_>,
+    m: EncodeMode,
+    sign1: bool,
+    depth: usize,
+) -> Result<(), EngineError> {
     let Value::Bytes(b) = &item.value else {
         return Ok(());
     };
@@ -527,7 +527,7 @@ fn deepen_bytes(item: &mut Item<'_>, m: EncodeMode, sign1: bool) -> Result<(), E
         if let Value::Map(entries) = &mut inner.value {
             for (k, v) in entries.iter_mut() {
                 if int_of(k) == Some(13) {
-                    deepen_sign1(v, m)?;
+                    deepen_sign1(v, m, depth + 1)?;
                 }
             }
         }
@@ -539,15 +539,19 @@ fn deepen_bytes(item: &mut Item<'_>, m: EncodeMode, sign1: bool) -> Result<(), E
 
 /// Re-encodes the protected header, payload, and disclosures of a
 /// COSE_Sign1 item (under its tags).
-fn deepen_sign1(item: &mut Item<'_>, m: EncodeMode) -> Result<(), EngineError> {
+fn deepen_sign1(item: &mut Item<'_>, m: EncodeMode, depth: usize) -> Result<(), EngineError> {
+    // Nested kcwt byte strings are not bounded by the decoder's depth limit.
+    if depth > 16 {
+        return Ok(());
+    }
     if let Value::Tag(_, inner) = &mut item.value {
-        return deepen_sign1(inner, m);
+        return deepen_sign1(inner, m, depth);
     }
     let Value::Array(parts) = &mut item.value else {
         return Ok(());
     };
     if let Some(p) = parts.get_mut(0) {
-        deepen_bytes(p, m, true)?;
+        deepen_bytes(p, m, true, depth)?;
     }
     if let Some(Value::Map(entries)) = parts.get_mut(1).map(|u| &mut u.value) {
         for (k, v) in entries.iter_mut() {
@@ -555,13 +559,13 @@ fn deepen_sign1(item: &mut Item<'_>, m: EncodeMode) -> Result<(), EngineError> {
                 && let Value::Array(ds) = &mut v.value
             {
                 for d in ds {
-                    deepen_bytes(d, m, false)?;
+                    deepen_bytes(d, m, false, depth)?;
                 }
             }
         }
     }
     if let Some(p) = parts.get_mut(2) {
-        deepen_bytes(p, m, false)?;
+        deepen_bytes(p, m, false, depth)?;
     }
     Ok(())
 }
@@ -583,7 +587,7 @@ fn reencode_cose(
         item = tags.iter().rev().fold(inner, |acc, t| Item::tag(*t, acc));
     }
     if deep {
-        deepen_sign1(&mut item, m)?;
+        deepen_sign1(&mut item, m, 0)?;
     }
     if tags.is_none() && !deep && m == EncodeMode::Preserve {
         return Ok(bytes.to_vec());
@@ -1080,10 +1084,31 @@ mod tests {
         assert_eq!(claim_name("\"x\""), "x");
     }
 
+    const SD_JWT_JSON: &str =
+        include_str!("../../../testdata/tokens/rfc9901-s8.2-sd-jwt-kb-json-flattened.json");
+
+    #[test]
+    fn duplicating_a_disclosure_in_json_adds_an_element() {
+        let kind = Kind::SdJwtJson {
+            general: false,
+            kb: true,
+        };
+        let op = TamperOp::DuplicateDisclosure { index: 0 };
+        let out = tamper_jose(&kind, SD_JWT_JSON.as_bytes(), &op).unwrap();
+        let text = String::from_utf8(out).unwrap();
+        let p = tj::parse(&text).unwrap();
+        let sd = p.token.sd_jwt().unwrap();
+        assert_eq!(sd.disclosures.len(), 3);
+        let first = sd.disclosures.first().map(tj::Disclosure::text);
+        assert_eq!(sd.disclosures.last().map(tj::Disclosure::text), first);
+        // The KB-JWT is untouched.
+        assert!(sd.kb_jwt.is_some());
+    }
+
     #[test]
     fn deep_reencode_of_a_non_sign1_is_a_no_op() {
         let mut item = Item::int(1);
-        deepen_sign1(&mut item, EncodeMode::PreferredPlus).unwrap();
+        deepen_sign1(&mut item, EncodeMode::PreferredPlus, 0).unwrap();
         assert_eq!(item, Item::int(1));
     }
 }

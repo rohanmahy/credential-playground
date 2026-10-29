@@ -110,8 +110,10 @@ pub enum Visibility {
 #[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 pub struct KeyInfo {
-    /// A self-contained reference to this one key: a JWK (private when
-    /// available), or a COSE_Key when the kid is bytes that are not UTF-8.
+    /// A self-contained reference to this one key (private when
+    /// available): a JWK, or a COSE_Key when the kid is binary (so it stays
+    /// binary), or PKCS#8 PEM for an ML-DSA key known only by its expanded
+    /// private key (neither JWK nor COSE_Key can hold that).
     pub key: KeyRef,
     /// JWK `kty`: `EC`, `OKP`, `RSA`, `AKP`.
     pub kty: String,
