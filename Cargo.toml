@@ -27,4 +27,4 @@ opt-level = "s"
 lto = true
 codegen-units = 1
 panic = "abort"
-strip = "debuginfo"
+strip = "symbols"

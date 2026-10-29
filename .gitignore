@@ -10,3 +10,6 @@ node_modules/
 .DS_Store
 /app/test-results
 /app/playwright-report
+# wasm-pack without --no-pack copies the workspace license-file here
+# (crates/tokenator-wasm/ARCHITECTURE.md)
+/crates/LICENSE
