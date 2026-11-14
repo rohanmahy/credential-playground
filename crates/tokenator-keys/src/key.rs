@@ -14,8 +14,6 @@ pub enum Role {
     Issuer,
     /// Holds a credential and signs key-binding tokens.
     Holder,
-    /// Verifies credentials.
-    Verifier,
 }
 
 /// A key identifier.

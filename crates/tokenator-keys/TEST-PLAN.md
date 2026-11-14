@@ -21,7 +21,7 @@ pub struct Key { /* material */ pub role: Option<Role>, pub kid: Option<Kid>,
                  pub key_ops: Option<Vec<KeyOp>>, pub extras: Vec<Extra>, pub derived: bool }
 Key::{from_private, from_public, is_private, private_key, public_key, key_type, same_material}
 impl PartialEq for Key        // material (same_material) + every metadata field
-pub enum Role { Issuer, Holder, Verifier }
+pub enum Role { Issuer, Holder }
 pub enum Kid { Text(String), Bytes(Vec<u8>) }   // as_bytes(), to_jose_string()
 pub enum KeyOp { Sign, Verify, Encrypt, Decrypt, WrapKey, UnwrapKey, DeriveKey, DeriveBits, Other(Label) }
 pub enum Label { Text(String), Int(i64) }

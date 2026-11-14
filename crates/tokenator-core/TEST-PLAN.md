@@ -32,6 +32,7 @@ outputs, which is what WASM/native parity relies on.
 |---|---|
 | `info` | → `EngineInfo` (crate version, SD-CWT revision, registry dates) |
 | `detect` | `&[u8]` → `Vec<Candidate>` |
+| `detect_key` | `&[u8]` → `Vec<Candidate>` |
 | `open` | `&[u8]`, `&Candidate`, `&ViewOptions` → `Document` |
 | `render` | `RenderRequest { doc, layers, view }` → `Document` |
 | `parse_edit` | `EditRequest { kind, base, text, view }` → `EditResult` (never `Err`) |
@@ -266,13 +267,18 @@ is an `EngineError` with code `decode`.
 `detect` wraps `tokenator-detect`, maps its candidates to DTOs (kind,
 confidence, layers, payload range, breadcrumb), and confirms low-confidence
 `EdnText` candidates with the EDN parser: a candidate that parses to a map
-becomes `edn_claims`; anything else is dropped. `key_import` also accepts
-COSE_Keys and COSE_KeySets written as EDN. Key kinds (`jwk`, `jwk_set`,
-`cose_key`, `cose_key_set`, `pem`) are returned as candidates so the UI can
-route them to the key panel; `KeyImportRequest.candidate` takes such a
-candidate and unwraps its layers before importing, as `open` does for
-credentials (so hex or base64 keys import, #42). Breadcrumbs end with
-`Kind::label()`.
+becomes `edn_claims`; anything else is dropped. `detect` returns only token
+and claim-set kinds, never a key kind: a JWK is `json_claims`, a COSE_Key
+`cbor_claims` or `edn_claims`. A `json_claims` candidate also comes with an
+`edn_claims` one (same layers and range, one point lower; JSON text is EDN)
+unless the JSON is a JWS JSON or holds a token. `detect_key` returns only the key kinds
+(`jwk`, `jwk_set`, `cose_key`, `cose_key_set`, `pem`), from the same readings
+and layers, ranked the same way. `key_import` also accepts COSE_Keys and
+COSE_KeySets written as EDN; `KeyImportRequest.candidate` takes a
+`detect_key` candidate and unwraps its layers before importing, as `open`
+does for credentials (so hex or base64 keys import, #42). A non-key
+candidate, or bytes with no key reading that fail to import, is
+`not_a_key` ("Not a recognized key"). Breadcrumbs end with `Kind::label()`.
 
 ## 8. Validation report (SPEC §6)
 

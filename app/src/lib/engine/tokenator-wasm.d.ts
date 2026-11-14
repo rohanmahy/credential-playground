@@ -11,6 +11,7 @@ declare module 'tokenator-wasm' {
     free(): void;
     info(): string;
     detect(input: Uint8Array): string;
+    detect_key(input: Uint8Array): string;
     open(input: Uint8Array, candidate: string, view: string): string;
     render(req: string): string;
     parse_edit(req: string): string;

@@ -8,6 +8,7 @@
     "allow-engine-init",
     "allow-engine-info",
     "allow-engine-detect",
+    "allow-engine-detect-key",
     "allow-engine-open",
     "allow-engine-render",
     "allow-engine-parse-edit",

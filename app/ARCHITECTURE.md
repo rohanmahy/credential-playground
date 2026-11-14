@@ -33,7 +33,9 @@ app/
 
 - **Engine** (`lib/engine/Engine.ts`): one async method per `Engine` method in
   `tokenator-core` (camelCase names, generated DTO types). Failures reject
-  with `EngineFailure` carrying the core `EngineError`. `selectEngine()`
+  with `EngineFailure` carrying the core `EngineError`. `detect` gives
+  token and claim-set candidates only; `detectKey` gives key candidates
+  only (for key import). `selectEngine()`
   picks `TauriEngine` when `window.__TAURI__` exists, else `WasmEngine`,
   and hands it the cached registry snapshot (if any) that `main.ts` reads
   from `Platform.registryCache` at start-up. Both stay stubs until

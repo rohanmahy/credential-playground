@@ -339,6 +339,12 @@ impl Builder<'_> {
                     "detect",
                     vec![raw(&input)],
                 );
+                self.add(
+                    format!("detect_key--{}", slug(&rel)),
+                    &rel,
+                    "detect_key",
+                    vec![raw(&input)],
+                );
             }
         }
         let jws = String::from_utf8(self.token("rfc7515-a3-jws-es256.txt")?)
@@ -387,6 +393,13 @@ impl Builder<'_> {
                 format!("detect--wrapped--{name}"),
                 format!("constructed: {name} around RFC 7515 A.3 / RFC 8392 A.3"),
                 "detect",
+                vec![raw(&input)],
+            );
+            // Tokens have no key reading; the COSE_Key in EDN has one.
+            self.add(
+                format!("detect_key--wrapped--{name}"),
+                format!("constructed: {name} around RFC 7515 A.3 / RFC 8392 A.3"),
+                "detect_key",
                 vec![raw(&input)],
             );
             if let Some(c) = self.e.detect(&input).into_iter().next() {
@@ -740,7 +753,7 @@ impl Builder<'_> {
         let hex_input = format!("{hex_text}\n").into_bytes();
         let candidate = self
             .e
-            .detect(&hex_input)
+            .detect_key(&hex_input)
             .into_iter()
             .next()
             .ok_or("no candidate for the hex COSE_Key")?;

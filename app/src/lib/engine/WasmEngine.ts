@@ -94,6 +94,7 @@ export class WasmEngine implements Engine {
 
   info: Engine['info'] = () => this.call((e) => e.info());
   detect: Engine['detect'] = (input) => this.call((e) => e.detect(input));
+  detectKey: Engine['detectKey'] = (input) => this.call((e) => e.detect_key(input));
   open: Engine['open'] = (input, candidate, view) =>
     this.call((e) => e.open(input, JSON.stringify(candidate), JSON.stringify(view)));
   render: Engine['render'] = (req) => this.call((e) => e.render(JSON.stringify(req)));

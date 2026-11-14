@@ -46,7 +46,12 @@ import type {
 
 export interface Engine {
   info(): Promise<EngineInfo>;
+  /** Token and claim-set candidates only, never keys: a JWK reads as
+   *  `json_claims`, a COSE_Key as `cbor_claims` / `edn_claims`. */
   detect(input: Uint8Array): Promise<Candidate[]>;
+  /** Key candidates only (JWK, JWK Set, COSE_Key, COSE_KeySet, PEM),
+   *  through the same unwrapping layers as `detect`. */
+  detectKey(input: Uint8Array): Promise<Candidate[]>;
   open(input: Uint8Array, candidate: Candidate, view: ViewOptions): Promise<Document>;
   render(req: RenderRequest): Promise<Document>;
   /** Never rejects for bad text: problems come back as diagnostics. */

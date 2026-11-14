@@ -5,7 +5,7 @@ in `TEST-PLAN.md`; this file records how it is built and why.
 
 ## Shape
 
-- `register(builder)` adds the 36 commands; `manage(app, engine, services)`
+- `register(builder)` adds the 38 commands; `manage(app, engine, services)`
   adds their state. `run()` is `Builder::default()` + the dialog and
   clipboard plugins + `register`, with a `setup` that resolves the app data
   dir and calls `manage` with the real services. The tests call the same

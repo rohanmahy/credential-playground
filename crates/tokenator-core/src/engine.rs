@@ -53,10 +53,30 @@ impl Engine {
         reg::info(&self.registry)
     }
 
-    /// Ranked readings of `input`. EDN candidates are confirmed by parsing
-    /// (and dropped if they do not parse). Never panics.
+    /// Ranked token and claim-set readings of `input`, never keys (see
+    /// [`Engine::detect_key`]): a JWK reads as a JSON claim set, a COSE_Key
+    /// as a CBOR or EDN one. EDN candidates are confirmed by parsing (and
+    /// dropped if they do not parse). Never panics.
     pub fn detect(&self, input: &[u8]) -> Vec<Candidate> {
         detect::detect(input)
+    }
+
+    /// Ranked key readings of `input` (JWK, JWK Set, COSE_Key,
+    /// COSE_KeySet, PEM) through the same unwrapping layers as
+    /// [`Engine::detect`], for the key panel's import. Never panics.
+    ///
+    /// ```
+    /// use tokenator_core::{Engine, Kind};
+    ///
+    /// let engine = Engine::new()?;
+    /// let jwk = br#"{"kty":"OKP","crv":"Ed25519","x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}"#;
+    /// assert_eq!(engine.detect_key(jwk)[0].kind, Kind::Jwk);
+    /// assert_eq!(engine.detect(jwk)[0].kind, Kind::JsonClaims);
+    /// assert!(engine.detect_key(b"eyJhbGciOiJub25lIn0.e30.").is_empty());
+    /// # Ok::<(), tokenator_core::EngineError>(())
+    /// ```
+    pub fn detect_key(&self, input: &[u8]) -> Vec<Candidate> {
+        detect::detect_key(input)
     }
 
     /// Opens `input` as `candidate` (one of [`Engine::detect`]'s results).
@@ -182,7 +202,9 @@ impl Engine {
         manipulate::decode_embedded(&self.registry, req)
     }
 
-    /// Imports keys (a set gives several).
+    /// Imports keys (a set gives several), from the bytes as they are or
+    /// through an [`Engine::detect_key`] candidate. A non-key candidate, or
+    /// bytes with no key reading, fail with `not_a_key`.
     pub fn key_import(&self, req: &KeyImportRequest) -> Result<Vec<KeyInfo>, EngineError> {
         keyring::key_import(req)
     }

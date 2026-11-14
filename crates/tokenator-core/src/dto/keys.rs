@@ -94,8 +94,6 @@ pub enum Role {
     Issuer,
     /// Holds credentials, signs key binding.
     Holder,
-    /// Verifies.
-    Verifier,
 }
 
 /// Public or private export.
@@ -153,15 +151,15 @@ pub struct KeyInfo {
 #[cfg_attr(feature = "ts", derive(ts_rs::TS))]
 #[cfg_attr(feature = "ts", ts(optional_fields = nullable))]
 pub struct KeyImportRequest {
-    /// The bytes: the key itself, or (with `candidate`) the input `detect`
-    /// was given.
+    /// The bytes: the key itself, or (with `candidate`) the input
+    /// `detect_key` was given.
     pub bytes: Bytes,
     /// Format hint.
     #[serde(default)]
     pub format: Option<KeyFormat>,
-    /// A key candidate from `detect(bytes)`: its layers (hex, base64,
+    /// A key candidate from `detect_key(bytes)`: its layers (hex, base64,
     /// quotes, a JSON field, ...) are unwrapped first, as `open` does for
-    /// credentials.
+    /// credentials. Any other kind fails with `not_a_key`.
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub candidate: Option<Candidate>,
 }

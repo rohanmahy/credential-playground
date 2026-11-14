@@ -1,1 +1,1 @@
-{"ok":[{"kind":{"type":"json_claims"},"confidence":60,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":147},"breadcrumb":["JSON claim set"]}]}
+{"ok":[{"kind":{"type":"json_claims"},"confidence":60,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":147},"breadcrumb":["JSON claim set"]},{"kind":{"type":"edn_claims"},"confidence":59,"layers":[{"type":"trim","leading":"","trailing":"\n"}],"payload_range":{"start":0,"end":147},"breadcrumb":["EDN claim set"]}]}

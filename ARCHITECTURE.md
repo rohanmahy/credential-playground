@@ -133,8 +133,8 @@ Backends: `p256`/`p384`/`p521`/`ecdsa`, `ed25519-dalek`, `rsa`, `ml-dsa`, and
 `sha2`, all pure Rust. These are the only crates that touch key material.
 
 ### tokenator-keys
-A `Key` model (private or public, by key type) with a role and metadata, kept
-separate from the formats.
+A `Key` model (private or public, by key type) with a role (issuer or holder)
+and metadata, kept separate from the formats.
 ```rust
 pub fn import(input: &[u8], hint: Option<KeyFormat>) -> Result<Vec<Key>, KeyError>; // sets → many
 pub fn export(key: &Key, fmt: KeyFormat, visibility: Visibility) -> Result<Vec<u8>, KeyError>;
@@ -180,7 +180,8 @@ parity trivial to test. Keys cross the boundary as serialized key bytes
 
 ```rust
 // all args/returns are serde DTOs exported to TS via ts-rs
-fn detect(input: Bytes) -> Vec<Candidate>;
+fn detect(input: Bytes) -> Vec<Candidate>;      // tokens and claim sets, never keys
+fn detect_key(input: Bytes) -> Vec<Candidate>;  // keys only (JWK/Set, COSE_Key/Set, PEM), same layers
 fn open(input: Bytes, choice: CandidateRef, opts: ViewOptions) -> Document;
 fn render(doc_bytes: Bytes, kind: Kind, opts: ViewOptions) -> Document;     // re-render
 fn parse_edit(kind: Kind, text: String) -> EditResult;                      // live edit → bytes + diagnostics

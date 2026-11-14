@@ -35,6 +35,7 @@ function docFor(kind: Kind): Document {
 export class MockEngine implements Engine {
   info = vi.fn(async () => fx.info);
   detect = vi.fn(async (_input: Uint8Array): Promise<Candidate[]> => fx.jwtCandidates);
+  detectKey = vi.fn(async (_input: Uint8Array): Promise<Candidate[]> => []);
   open = vi.fn(async (_input: Uint8Array, candidate: Candidate) => ({
     ...docFor(candidate.kind),
     layers: candidate.layers,

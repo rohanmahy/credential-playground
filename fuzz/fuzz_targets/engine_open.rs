@@ -1,12 +1,14 @@
 //! The Engine on arbitrary bytes, as the UI drives it: detect, open every
-//! candidate, then validate and lint each opened document with a few keys.
+//! candidate, then validate and lint each opened document with a few keys;
+//! and detect_key, importing every key candidate.
 #![no_main]
 
 use std::sync::OnceLock;
 
 use libfuzzer_sys::fuzz_target;
 use tokenator_core::{
-    DocRef, Engine, KeyRef, LintRequest, RenderRequest, ValidateRequest, ViewOptions,
+    DocRef, Engine, KeyImportRequest, KeyRef, LintRequest, RenderRequest, ValidateRequest,
+    ViewOptions,
 };
 
 fn engine() -> &'static Engine {
@@ -45,6 +47,13 @@ fuzz_target!(|data: &[u8]| {
             doc: doc_ref,
             layers: doc.layers.clone(),
             view: view.clone(),
+        });
+    }
+    for candidate in engine.detect_key(data).into_iter().take(8) {
+        let _ = engine.key_import(&KeyImportRequest {
+            bytes: data.to_vec().into(),
+            format: None,
+            candidate: Some(candidate),
         });
     }
 });

@@ -56,7 +56,6 @@ fn tk_role(r: Role) -> tk::Role {
     match r {
         Role::Issuer => tk::Role::Issuer,
         Role::Holder => tk::Role::Holder,
-        Role::Verifier => tk::Role::Verifier,
     }
 }
 
@@ -208,7 +207,6 @@ pub(crate) fn info(key: &Key, label: Option<String>) -> Result<KeyInfo, EngineEr
     let role = key.role.map(|r| match r {
         tk::Role::Issuer => Role::Issuer,
         tk::Role::Holder => Role::Holder,
-        tk::Role::Verifier => Role::Verifier,
     });
     let sha256 = tokenator_crypto::HashAlg::Sha256;
     Ok(KeyInfo {
@@ -247,25 +245,32 @@ pub(crate) fn info(key: &Key, label: Option<String>) -> Result<KeyInfo, EngineEr
     })
 }
 
+fn not_a_key() -> EngineError {
+    EngineError::new(ErrorCode::NotAKey, "Not a recognized key")
+}
+
+/// Imports from the bytes as they are or through a key candidate. A
+/// non-key candidate is `not_a_key`, and so is a failed import of bytes
+/// with no key reading at all; bytes that read as a key but do not import
+/// (an unsupported curve, a bad parameter) keep the `key` error.
 pub(crate) fn key_import(req: &KeyImportRequest) -> Result<Vec<KeyInfo>, EngineError> {
     let unwrapped;
     let bytes = match &req.candidate {
         None => &req.bytes,
-        Some(c) if !c.kind.is_key() => {
-            return err(
-                ErrorCode::InvalidCandidate,
-                format!("{} is not a key (open it instead)", c.kind.label()),
-            );
-        }
+        Some(c) if !c.kind.is_key() => return Err(not_a_key()),
         Some(c) => {
             unwrapped = Bytes(crate::detect::unwrap(&req.bytes, c)?.0);
             &unwrapped
         }
     };
-    import(bytes, req.format)?
-        .iter()
-        .map(|k| info(k, None))
-        .collect()
+    let keys = import(bytes, req.format).map_err(|e| {
+        if req.candidate.is_none() && crate::detect::detect_key(bytes).is_empty() {
+            not_a_key()
+        } else {
+            e
+        }
+    })?;
+    keys.iter().map(|k| info(k, None)).collect()
 }
 
 pub(crate) fn key_export(req: &KeyExportRequest) -> Result<KeyExport, EngineError> {

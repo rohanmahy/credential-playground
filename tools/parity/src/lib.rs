@@ -37,9 +37,10 @@ use tokenator_core::{
 
 /// Every Engine method, by its core name (which is also the binding name
 /// on `TokenatorEngine`).
-pub const METHODS: [&str; 28] = [
+pub const METHODS: [&str; 29] = [
     "info",
     "detect",
+    "detect_key",
     "open",
     "render",
     "parse_edit",
@@ -72,7 +73,7 @@ pub const METHODS: [&str; 28] = [
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Arg {
-    /// Raw input (`detect`/`open`): unpadded base64url here, a `Uint8Array`
+    /// Raw input (`detect`/`detect_key`/`open`): unpadded base64url here, a `Uint8Array`
     /// at the wasm boundary.
     Bytes(String),
     /// A request DTO: passed to the binding as `JSON.stringify(value)`.
@@ -142,6 +143,7 @@ impl Case {
         match self.method.as_str() {
             "info" => ok(&e.info()),
             "detect" => ok(&e.detect(&self.bytes(0)?)),
+            "detect_key" => ok(&e.detect_key(&self.bytes(0)?)),
             "open" => envelope(&e.open(
                 &self.bytes(0)?,
                 &self.json::<Candidate>(1)?,
