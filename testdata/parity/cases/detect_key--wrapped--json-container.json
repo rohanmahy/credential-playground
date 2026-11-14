@@ -1,9 +1,9 @@
 {
   "method": "detect_key",
-  "source": "constructed: json-container around RFC 7515 A.3 / RFC 8392 A.3",
+  "source": "constructed: json-container",
   "args": [
     {
-      "bytes": "eyJjcmVkZW50aWFsIjogImV5SmhiR2NpT2lKRlV6STFOaUo5LmV5SnBjM01pT2lKcWIyVWlMQTBLSUNKbGVIQWlPakV6TURBNE1Ua3pPREFzRFFvZ0ltaDBkSEE2THk5bGVHRnRjR3hsTG1OdmJTOXBjMTl5YjI5MElqcDBjblZsZlEuRHRFaFUzbGpiRWc4TDM4VldBZlVBcU95S0FNNi1YeC1GNEdhd3hhZXBtWEZDZ2ZUakR4dzVkanhMYThJU2xTQXBtV1F4ZktUVUpxUFAzLUtnNk5VMVEiLCAib3RoZXIiOiAxfQ"
+      "bytes": "eyJrZXkiOiAicHlOWUlHd1RnblphN0ZOWThSZHpQU2djSEh2Y09ZaE5CS1JhSG14bnlGaThJR3daSWxnZ1lQZnhwNERZcDRPX3Q2TGRheWVXNkJLTnU4NzUwOUZvMjVVcGx4bzI1N2toV0NBVU15bk01NGFPUVdrbldaejJXalR6emlfOXBWcC15bW50aVJtamxOUXZEeUFCQVFJQ1VrRnplVzF0WlhSeWFXTkZRMFJUUVRJMU5nTW0iLCAib3RoZXIiOiAxfQ"
     }
   ]
 }

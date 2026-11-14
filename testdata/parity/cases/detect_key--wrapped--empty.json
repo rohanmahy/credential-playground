@@ -1,6 +1,6 @@
 {
   "method": "detect_key",
-  "source": "constructed: empty around RFC 7515 A.3 / RFC 8392 A.3",
+  "source": "constructed: empty",
   "args": [
     {
       "bytes": ""
