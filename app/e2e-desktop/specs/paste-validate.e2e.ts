@@ -12,12 +12,13 @@ import {
   fixtureText,
   keyArea,
   keyFormat,
-  mainText,
+  mainPane,
   page,
   paste,
   pasteKey,
   tabs,
   rawPane,
+  readOnly,
   validate,
 } from '../helpers';
 
@@ -97,7 +98,9 @@ describe('paste and validate', () => {
     it(`${f.name}: detect, open, validate`, async () => {
       await paste(f.input());
       await expectThat(detectedType()).toHaveText(f.kind);
-      await expectThat(mainText()).toContainText(f.shows);
+      // Live edit renders only the visible lines; the read-only tree has them all.
+      await readOnly();
+      await expectThat(mainPane()).toContainText(f.shows);
       await expectThat(rawPane()).toBeVisible();
       await validate();
       await expectThat(page.getByTestId('report-overall')).toHaveText(/pass|fail|warn|skip/i);

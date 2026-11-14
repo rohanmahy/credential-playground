@@ -12,7 +12,6 @@ import {
   expectThat,
   fixtureText,
   mainPane,
-  mainText,
   page,
   paste,
   readOnly,
@@ -86,7 +85,8 @@ describe('issue, present, validate', () => {
 
     await presentTo();
     await expectThat(detectedType()).toHaveText('SD-KBT');
-    await expectThat(mainText()).toContainText('/ kcwt /');
+    await readOnly();
+    await expectThat(mainPane()).toContainText('/ kcwt /');
 
     const report = await validate();
     await expectThat(page.getByTestId('report-overall')).toHaveText(/pass|warn/i);
