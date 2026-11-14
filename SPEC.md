@@ -43,7 +43,19 @@ RS256, RS384, RS512; PS256, PS384, PS512; ML-DSA-44, ML-DSA-65, ML-DSA-87
 
 Inputs: paste, drag-and-drop, file open, clipboard read, and URL fetch.
 
-Detection runs a chain of *unwrapping layers*. Each layer it peels off is
+There are two separate detectors. **Token detection** runs on credential tabs
+and never returns a key. **Key detection** runs on the key areas (§4.2) and
+never returns a token. Nothing is routed from one to the other: a JWK pasted
+into a tab decodes as an unsigned JSON claim set, and a token pasted into a key
+area is rejected with "Not a recognized key".
+
+Autodetect runs only when text or a file is **pasted or dropped into an empty
+text area**. Typing into an empty area doesn't autodetect; the area's type
+picker supplies the type. Pasting or typing into an area that already has text
+never re-runs detection. The type stays whatever the first fill (or the
+user's manual choice) set.
+
+Both detectors run a chain of *unwrapping layers*. Each layer it peels off is
 recorded and shown as a breadcrumb (e.g. `Authorization header › base64url ›
 CWT tag 61 › COSE_Sign1`):
 
@@ -62,15 +74,33 @@ CWT tag 61 › COSE_Sign1`):
      key-binding header is present.
    - Valid EDN or JSON text that isn't a token → **unsigned claim set**
      (a draft, ready for Issue/Redact).
-   - JWK / JWK Set / COSE_Key / COSE_KeySet / PEM → routed to the Key panel.
+   - Key detection only: JWK / JWK Set / COSE_Key / COSE_KeySet (binary CBOR
+     or EDN) / PEM.
 
 Detection returns ranked candidates with confidence. The UI opens the top one
-and lets the user pick another through a "Detected as…" menu.
+and lets the user pick another through a "Detected as…" menu. That covers
+ambiguous input, e.g. reading a JSON claim set as EDN instead.
 
 ## 4. Workspace UI
 
-- **Layout:** a key panel docked on the left and credential **tabs** on the
-  right. Any two tabs can be split side by side.
+- **Layout:** a slim header (Date/time, Settings, About), a key panel docked
+  on the left, and credential **tabs** on the right. Any two tabs can be split
+  side by side. There's no global input box. Input goes into a specific tab or
+  key area.
+- **Key panel:** split vertically into an **Issuer key** area and a **Holder
+  key** area (§4.2).
+- **Tabs:** the app starts with one empty tab open. A **+** button in the tab
+  bar opens another empty tab.
+- **Drag and drop:** a drop is accepted only on an *empty* text area (a tab's or
+  a key area's). Non-empty areas show a no-drop cursor and ignore the drop, and
+  drops anywhere else in the window are ignored too.
+- **Clear:** every tab and key area has a **Clear** button that returns it to
+  empty, so the next paste or drop autodetects again.
+- **Menus and shortcuts (desktop app only):** a native menu bar with File →
+  New Tab (⌘T / Ctrl+T), Open File… (⌘O / Ctrl+O), From Clipboard, and Close
+  Tab (⌘W / Ctrl+W), plus View, Tools (Date/time), and Help (About). The web
+  build has no menu bar, because browsers reserve these shortcuts; it uses the
+  on-screen buttons.
 - **Provenance:** every key and credential shows where it came from: file name,
   clipboard, URL, pasted, generated, or *derived from tab N via action X*.
   Derived tabs show a breadcrumb back to their parent.
@@ -83,6 +113,17 @@ and lets the user pick another through a "Detected as…" menu.
 
 ### 4.1 Credential tab
 
+- **Empty tab:** every tab starts as an editable text area, so a credential
+  can be written from scratch. An empty tab shows a **type picker** (JSON
+  claims by default, EDN claims, …), which applies if the user types rather
+  than pastes. It also offers **Open file…** and **From clipboard**, which fill
+  the tab and run token detection.
+- **First fill:** pasting or dropping into the empty tab runs token detection
+  (§3). The tab becomes the decoded view (header, main pane, raw pane), and its
+  text stays editable as Live edit. Later edits re-parse as the tab's type, and
+  that type changes only through the "Detected as…" / type menu.
+- **Clear** resets the tab's text, type, decoded view, and title back to an
+  empty tab. It doesn't touch the keys.
 - **Header bar:** detected type, unwrapping breadcrumb, provenance, validation
   badge, a **Read-only / Live edit** toggle, and action buttons (§5). Each
   action is enabled only when the required keys or inputs are available, and a
@@ -117,9 +158,27 @@ and lets the user pick another through a "Detected as…" menu.
 
 ### 4.2 Key panel
 
-Each key card shows: algorithm or key type, role (**Issuer / Holder /
-Verifier**), kid, public/private status, provenance, and its JWK and COSE
-thumbprints.
+The key panel is split vertically into two **key areas**: **Issuer key** and
+**Holder key**. Each area holds **exactly one key**, and the area decides its
+role. (There is no separate Verifier role: verification uses the Issuer key's
+public part.) Each area has:
+
+- The three buttons **Create**, **Import**, and **Fetch from URL**, all of
+  which fill the area.
+- An **editable text area** showing the key, with a **JWK / COSE_Key (EDN)**
+  format toggle that re-renders it in either format. Pasting or dropping into
+  the *empty* area runs key detection (§3), and the toggle follows the detected
+  format. A PEM key is shown as JWK, but export still offers PEM. Typed text is
+  parsed in the toggle's format. If the text doesn't parse, an error is shown
+  and the area counts as having no key.
+- A **Clear** button that removes the area's key, so actions that need it
+  disable.
+- Below the text area: algorithm or key type, kid, public/private status,
+  provenance, the JWK and COSE thumbprints, and the operations below.
+
+If a JWK Set or COSE_KeySet is pasted, dropped, imported, or fetched into an
+area, a chooser lists its keys (kid, algorithm, key type), and the one picked
+fills the area.
 
 Operations:
 
@@ -128,14 +187,13 @@ Operations:
   seed** (user-supplied or a fixed well-known test seed).
 - **Import** from file, clipboard, paste, or URL: PEM (SPKI, PKCS#8, SEC1,
   PKCS#1, and the LAMPS ML-DSA forms with seed, expanded, or both), JWK, JWK
-  Set, COSE_Key, and COSE_KeySet (binary CBOR or EDN). A set imports as several
-  keys.
-- **Convert:** view any key as a JWK or as a CWK (COSE_Key, shown in EDN and
-  hex), public or private, side by side.
+  Set, COSE_Key, and COSE_KeySet (binary CBOR or EDN). A set goes through the
+  chooser above.
+- **Convert:** the format toggle; a CWK is also shown as hex.
 - **Export** to file or clipboard in any of those formats, public or private.
   Exporting a private key needs an explicit choice, and its clipboard copy is
   labeled.
-- **Derive public key** from a private key, as a new card linked to the original.
+- **Make public:** replace the area's private key with its public part.
 - **Thumbprints:** JWK (RFC 7638, plus the RFC 9278 URI form) and COSE
   (RFC 9679), with a selectable hash.
 - **Auto kid:** set kid to the JWK thumbprint, the COSE thumbprint, or a user string.
@@ -202,7 +260,8 @@ skew (default 60 s), and expected `aud` / `nonce` for key binding.
 
 **Key selection, in order:**
 
-1. A key in the panel whose kid or thumbprint matches the header.
+1. The Issuer key area's key (its public part) for the credential, and the
+   Holder key area's key for key binding.
 2. Keys embedded in the credential: the `x5c`/`x5chain` leaf, and `cnf` (used
    for key binding). These are labeled *untrusted embedded key*. Chain
    validation is out of scope for v1.
