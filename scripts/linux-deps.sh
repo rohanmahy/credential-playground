@@ -23,6 +23,7 @@ if [ "${1:-}" = --e2e ]; then
     webkit2gtk-driver # WebKitWebDriver, which tauri-driver runs
     xvfb
     xauth # xvfb-run needs it
+    xdotool # real X key events for the native menu shortcuts (menu.e2e.ts)
     fonts-dejavu-core
   )
 fi
