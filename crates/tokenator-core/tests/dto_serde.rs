@@ -237,6 +237,26 @@ fn unit_enums_are_snake_case_strings() {
 }
 
 #[test]
+fn not_a_key_error_code() {
+    assert_eq!(rt(&ErrorCode::NotAKey), json!("not_a_key"));
+    let err = EngineError::new(ErrorCode::NotAKey, "Not a recognized key");
+    assert_eq!(
+        rt(&err),
+        json!({"code": "not_a_key", "message": "Not a recognized key", "node_id": null})
+    );
+}
+
+#[test]
+fn roles_are_issuer_and_holder_only() {
+    // SPEC §4.2: no Verifier role (verification uses the Issuer key).
+    assert_eq!(rt(&Role::Issuer), json!("issuer"));
+    assert_eq!(rt(&Role::Holder), json!("holder"));
+    assert!(serde_json::from_value::<Role>(json!("verifier")).is_err());
+    let r = serde_json::from_value::<KeyRef>(json!({"bytes": "", "role": "verifier"}));
+    assert!(r.is_err(), "{r:?}");
+}
+
+#[test]
 fn untagged_unions() {
     assert_eq!(rt(&AlgValue::Name("none".into())), json!("none"));
     assert_eq!(rt(&AlgValue::Label(-7)), json!(-7));

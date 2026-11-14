@@ -18,6 +18,7 @@ export function wasmBytes(): Uint8Array<ArrayBuffer> {
 export const METHODS = [
   'info',
   'detect',
+  'detect_key',
   'open',
   'render',
   'parse_edit',
