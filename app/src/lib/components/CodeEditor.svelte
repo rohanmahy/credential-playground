@@ -12,6 +12,7 @@
     language,
     onChange,
     highlight = null,
+    label = 'Credential text',
   }: {
     text: string;
     language: Language;
@@ -19,6 +20,8 @@
     /** A range of `text` to select and scroll to (e.g. a node a message
      *  points at). */
     highlight?: { start: number; end: number } | null;
+    /** The text area's accessible name. */
+    label?: string;
   } = $props();
 
   let host: HTMLDivElement | undefined = $state();
@@ -30,7 +33,7 @@
       parent: host,
       state: EditorState.create({
         doc: text,
-        extensions: editorExtensions(language, (t) => onChange(t), false, 'Live edit text'),
+        extensions: editorExtensions(language, (t) => onChange(t), false, label),
       }),
     });
     view = v;

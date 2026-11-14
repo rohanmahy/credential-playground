@@ -1,5 +1,7 @@
 <script lang="ts">
-  // One credential tab: header, main pane, raw pane, SD view, report.
+  // One credential tab: header, main pane, raw pane, SD view, report. An
+  // empty tab shows the Type picker, Open file…, and From clipboard
+  // instead of the header, above the same (empty) Live edit text.
   // The main pane and a hex raw pane share one vertical scroll container,
   // so each hex block stays beside its EDN line; long documents render
   // only the lines in view.
@@ -7,6 +9,7 @@
   import { hiddenLines, lineInfos } from '../logic/lines';
   import { LINE_HEIGHT, windowFor } from '../logic/viewport';
   import TabHeader from './TabHeader.svelte';
+  import EmptyTabBar from './EmptyTabBar.svelte';
   import MainPane from './MainPane.svelte';
   import RawPane from './RawPane.svelte';
   import DisclosuresView from './DisclosuresView.svelte';
@@ -66,8 +69,12 @@
 
 {#if tab}
   <div class="credential">
-    <TabHeader {tabId} />
-    <div class="toggles">
+    {#if tab.empty}
+      <EmptyTabBar {tabId} />
+    {:else}
+      <TabHeader {tabId} />
+    {/if}
+    <div class="toggles" hidden={tab.empty}>
       {#if hasRaw}
         <label><input type="checkbox" bind:checked={settings.showRaw} /> Show raw pane</label>
       {/if}
@@ -118,7 +125,12 @@
       />
     {/if}
     {#if fetchUrl}
-      <UrlFetch url={fetchUrl} onImported={revalidate} onClose={() => (fetchUrl = null)} />
+      <UrlFetch
+        role="issuer"
+        url={fetchUrl}
+        onDone={revalidate}
+        onClose={() => (fetchUrl = null)}
+      />
     {/if}
     {#if notice}<p class="error">{notice}</p>{/if}
   </div>

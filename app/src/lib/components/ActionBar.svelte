@@ -2,7 +2,7 @@
   // role=toolbar with every action; disabled ones stay focusable
   // (aria-disabled) and explain what is missing in their title.
   import type { TamperOp } from '../engine/types';
-  import { ACTION_IDS, type ActionId } from '../model';
+  import { ACTION_IDS, type ActionId, type KeyRole } from '../model';
   import { getAppContext } from '../context';
   import { ACTION_LABELS, actionTooltip, reencodeChoices } from '../logic/actions';
   import { kindFamily } from '../logic/kinds';
@@ -59,7 +59,7 @@
         break;
       case 'resign':
         if (privateKeys.length === 1 && privateKeys[0]) {
-          void run({ action: 'resign', keyId: privateKeys[0].id });
+          void run({ action: 'resign', key: privateKeys[0].id });
         } else open = 'resign';
         break;
       case 'reencode':
@@ -215,9 +215,9 @@
     <KeyChoiceDialog
       title="Re-sign"
       cards={privateKeys}
-      onChoose={(keyId) => {
+      onChoose={(key) => {
         open = null;
-        void run({ action: 'resign', keyId });
+        void run({ action: 'resign', key: key as KeyRole });
       }}
       onClose={() => (open = null)}
     />

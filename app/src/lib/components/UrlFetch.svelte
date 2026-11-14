@@ -1,16 +1,18 @@
 <script lang="ts">
-  // A user-confirmed key fetch: confirm, fetch, import. On a CORS failure on
-  // the web, explains why and offers pasting the content instead.
-  import type { KeyCard } from '../model';
+  // A user-confirmed key fetch into a key area: confirm, fetch, import (a
+  // set goes through "Choose a key"). On a CORS failure on the web,
+  // explains why and offers pasting the content instead.
+  import type { KeyRole } from '../model';
   import { getAppContext } from '../context';
   import { errorMessage } from '../ui';
   import FetchConfirm from './FetchConfirm.svelte';
 
   let {
+    role,
     url,
-    onImported,
+    onDone,
     onClose,
-  }: { url: string; onImported: (cards: KeyCard[]) => void; onClose: () => void } = $props();
+  }: { role: KeyRole; url: string; onDone: () => void; onClose: () => void } = $props();
 
   const { keys } = getAppContext();
 
@@ -37,13 +39,13 @@
       return confirmNext(u);
     };
     try {
-      const { outcome, cards } = await keys.fetchFromUrl(url, confirm);
+      const outcome = await keys.fetchFromUrl(role, url, confirm);
       if (outcome.type === 'error') {
         explanation = outcome.explanation;
         pasteFallback = outcome.pasteFallback;
         phase = 'error';
       } else if (outcome.type === 'cancelled') onClose();
-      else onImported(cards);
+      else onDone();
     } catch (e) {
       explanation = errorMessage(e);
       pasteFallback = true;
@@ -54,7 +56,8 @@
   async function importPasted(e: SubmitEvent) {
     e.preventDefault();
     try {
-      onImported(await keys.importText(pasted));
+      await keys.importText(role, pasted);
+      onDone();
     } catch (err) {
       explanation = errorMessage(err);
       phase = 'error';

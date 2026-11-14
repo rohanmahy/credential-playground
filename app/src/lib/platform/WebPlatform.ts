@@ -144,6 +144,11 @@ export class WebPlatform implements Platform {
     return -new Date(epoch * 1000).getTimezoneOffset();
   }
 
+  /** Browsers reserve the shortcuts; the web build has no menu bar. */
+  onMenu(_handler: (id: string) => void): () => void {
+    return () => undefined;
+  }
+
   randomBytes(n: number): Uint8Array {
     return crypto.getRandomValues(new Uint8Array(n));
   }

@@ -75,4 +75,8 @@ export interface Platform {
   localOffsetMinutes(epoch?: number): number;
   /** Cryptographically secure random bytes. */
   randomBytes(n: number): Uint8Array;
+  /** Desktop menu items as they are chosen, by id (`new_tab`,
+   *  `open_file`, … in app/src-tauri/src/menu.rs). Returns the
+   *  unsubscribe function. The web has no menu bar: a no-op there. */
+  onMenu?(handler: (id: string) => void): () => void;
 }

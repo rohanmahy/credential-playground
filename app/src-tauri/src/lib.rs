@@ -1,6 +1,7 @@
 //! The Tokenator desktop shell: `tokenator-core` as Tauri commands (the
 //! desktop `Engine`) plus the desktop `Platform` side effects (fetch, files,
-//! clipboard, registry cache). See `TEST-PLAN.md` for the contract.
+//! clipboard, registry cache), and the native menu bar ([`menu`]). See
+//! `TEST-PLAN.md` for the contract.
 //!
 //! [`register`] adds the commands to any `tauri::Builder` and [`manage`]
 //! adds their state, so the tests run the same command layer on Tauri's
@@ -13,6 +14,7 @@ pub mod engine;
 pub mod error;
 pub mod fetch;
 pub mod files;
+pub mod menu;
 
 pub use cache::RegistryCacheFile;
 pub use clipboard::{Clipboard, ClipboardState, TauriClipboard};
@@ -20,6 +22,7 @@ pub use engine::EngineState;
 pub use error::{PlatformError, PlatformErrorKind};
 pub use fetch::{FetchPolicy, FetchResponse, Fetcher};
 pub use files::{FileDialog, Files, OpenedFile, TauriFileDialog};
+pub use menu::MenuChannel;
 
 /// Every command, in `generate_handler!` order. `build.rs` and
 /// `capabilities/main.json` must list the same set (tests/config.rs).
@@ -62,6 +65,7 @@ pub const COMMANDS: &[&str] = &[
     "registry_cache_get",
     "registry_cache_put",
     "registry_cache_clear",
+    "menu_listen",
 ];
 
 /// The platform services behind the non-engine commands.
@@ -117,25 +121,29 @@ pub fn register<R: Runtime>(builder: Builder<R>) -> Builder<R> {
         cache::registry_cache_get,
         cache::registry_cache_put,
         cache::registry_cache_clear,
+        menu::menu_listen,
     ])
 }
 
-/// Adds the commands' state to the app.
+/// Adds the commands' state to the app (and an empty [`MenuChannel`]).
 pub fn manage<R: Runtime, M: Manager<R>>(manager: &M, engine: EngineState, services: Services) {
     manager.manage(engine);
     manager.manage(services.fetcher);
     manager.manage(services.files);
     manager.manage(services.clipboard);
     manager.manage(services.cache);
+    manager.manage(MenuChannel::default());
 }
 
-/// Runs the desktop app: the dialog and clipboard plugins, the commands,
-/// and their state (registry cache in the app data dir, the default
-/// [`FetchPolicy`]).
+/// Runs the desktop app: the dialog and clipboard plugins, the menu bar,
+/// the commands, and their state (registry cache in the app data dir, the
+/// default [`FetchPolicy`]).
 pub fn run() {
     let builder = tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_clipboard_manager::init())
+        .menu(menu::build)
+        .on_menu_event(|app, event| menu::on_event(app, event.id().as_ref()))
         .setup(|app| {
             let data_dir = app.path().app_data_dir()?;
             let handle = app.handle().clone();

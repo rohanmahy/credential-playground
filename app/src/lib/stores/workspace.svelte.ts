@@ -20,14 +20,16 @@ import type {
   ValidationReport,
   ViewOptions,
 } from '../engine/types';
-import type { ActionAvailability, ActionId, Crumb, KeyCard, Provenance } from '../model';
+import type { ActionAvailability, ActionId, Crumb, KeyRole, Provenance } from '../model';
 import {
-  DRAFT_TEMPLATES,
-  draftParseKind,
+  TAB_TYPES,
   effectiveDraftKind,
+  emptyDocument,
   isDraftKind,
+  tabTypeOf,
   type DiscardReason,
   type DraftFormat,
+  type TabType,
 } from '../logic/drafts';
 import type { Platform } from '../platform/Platform';
 import type { KeyStore } from './keys.svelte';
@@ -70,16 +72,20 @@ export interface Tab {
   manualDecode?: NodeId[];
   /** Decoded views the user turned off (ViewOptions.hide_decoded). */
   hideDecoded?: NodeId[];
-  /** Set for tabs started with New (#43); null/absent otherwise. */
+  /** Set for tabs written from scratch (#43); null/absent otherwise. */
   draft?: Draft | null;
+  /** An empty tab (SPEC §4.1): no text yet. The first fill (typing, or a
+   *  paste or drop that runs detection) ends it; only Clear brings it back. */
+  empty?: boolean;
 }
 
 /** A draft tab's format and type (#43). */
 export interface Draft {
   format: DraftFormat;
-  /** The top candidate of the last detection of the text (any kind). */
+  /** Unused since edits stopped re-detecting (SPEC §3); kept null. */
   detected: Kind | null;
-  /** The type the user set explicitly; kept across edits until changed. */
+  /** The type: the empty tab's Type picker, or the type menu. Kept across
+   *  edits until changed. */
   override: Kind | null;
 }
 
@@ -89,17 +95,14 @@ export interface ChitTarget {
   nodeId: NodeId | null;
 }
 
-export type OpenResult =
-  | { type: 'tab'; tabId: string }
-  /** Keys are routed to the key panel (SPEC §3). */
-  | { type: 'keys'; cardIds: string[] }
-  | { type: 'nothing' };
+/** Shown when token detection finds nothing. */
+export const NOTHING_DETECTED = 'Nothing recognizable was found in the input.';
 
 export type ActionRequest =
   | {
       action: 'issue' | 'redact';
-      issuerKeyId: string;
-      holderKeyId?: string | null;
+      /** Bind the Holder area's key (`cnf`). */
+      cnf?: boolean;
       alg?: string | null;
       header?: HeaderOptions;
       jose?: JoseSerialization;
@@ -109,11 +112,12 @@ export type ActionRequest =
   | {
       action: 'present';
       keep: number[];
-      holderKeyId: string;
       aud?: string | null;
       nonce?: string | null;
     }
-  | { action: 'resign'; keyId: string; alg?: string | null }
+  /** `key`: the area to sign with; by default the Issuer key when it
+   *  has a private part, else the Holder key. */
+  | { action: 'resign'; key?: KeyRole | null; alg?: string | null }
   | { action: 'tamper'; op: TamperOp }
   | {
       action: 'reencode';
@@ -141,8 +145,10 @@ export class Workspace {
 
   readonly deps: WorkspaceDeps;
 
+  /** Opens the one empty tab the app starts with (SPEC §4). */
   constructor(deps: WorkspaceDeps) {
     this.deps = deps;
+    this.newTab();
   }
 
   get active(): Tab | undefined {
@@ -193,38 +199,123 @@ export class Workspace {
     return this.#get(tab.id);
   }
 
-  /** Detects, opens the top candidate in a new active tab, or routes keys
-   *  to the key panel. */
-  async openInput(bytes: Uint8Array, provenance: Provenance): Promise<OpenResult> {
-    const { engine, keys, settings } = this.deps;
-    const candidates = await engine.detect(bytes);
+  /** "+": a new empty tab (Live edit, no text, type not yet committed),
+   *  active. */
+  newTab(): Tab {
+    const type = TAB_TYPES[0] as TabType;
+    const tab = this.#newTab(emptyDocument(type.kind, type.format), { type: 'new' });
+    this.#makeEmpty(tab, type);
+    return tab;
+  }
+
+  #makeEmpty(tab: Tab, type: TabType): void {
+    this.#cancelEdit(tab.id);
+    tab.doc = emptyDocument(type.kind, type.format);
+    tab.title = `Tab ${tab.number}`;
+    tab.input = null;
+    tab.candidates = [];
+    tab.candidateIndex = 0;
+    tab.provenance = { type: 'new' };
+    tab.collapsed.clear();
+    tab.sdMarks.clear();
+    tab.selected = null;
+    tab.liveEdit = true;
+    tab.editText = '';
+    tab.editDiagnostics = [];
+    tab.editBase = '';
+    tab.stale = false;
+    tab.tampered = false;
+    tab.report = null;
+    tab.manualDecode = [];
+    tab.hideDecoded = [];
+    tab.draft = { format: type.format, detected: null, override: null };
+    tab.empty = true;
+  }
+
+  /** Clear: the tab's text, type, decoded view, and title back to an
+   *  empty tab. Keys are untouched. */
+  clearTab(tabId: string): void {
+    this.#makeEmpty(this.#get(tabId), TAB_TYPES[0] as TabType);
+  }
+
+  /** The Type picker entry of an empty tab (or a draft). */
+  tabType(tab: Tab): TabType {
+    const d = tab.draft;
+    if (!d) return TAB_TYPES[0] as TabType;
+    return tabTypeOf(d.format, effectiveDraftKind(d.format, null, d.override));
+  }
+
+  /** The empty tab's Type picker: the type typing will use. */
+  setTabType(tabId: string, typeId: string): void {
+    const tab = this.#get(tabId);
+    const type = TAB_TYPES.find((t) => t.id === typeId);
+    if (!tab.empty || !type) return;
+    tab.draft = { format: type.format, detected: null, override: $state.snapshot(type.kind) };
+    tab.doc = emptyDocument(type.kind, type.format);
+  }
+
+  /** First fill of an empty tab by a paste, drop, file, or clipboard:
+   *  token detection (never keys, SPEC §3), and the top candidate opens
+   *  in this tab with its text editable in Live edit. Rejects when nothing
+   *  is detected (the tab stays empty). */
+  async fillTab(tabId: string, bytes: Uint8Array, provenance: Provenance): Promise<Tab> {
+    const { engine, settings } = this.deps;
+    // `detect` returns no keys; dropping any keeps a JWK a JSON claim set
+    // with an engine that still reports them.
+    const candidates = (await engine.detect(bytes)).filter((c) => !isKey(c.kind));
     const top = candidates[0];
-    if (!top) return { type: 'nothing' };
-    if (isKey(top.kind)) {
-      // The original input goes in with its candidate, so the engine imports
-      // the unwrapped payload; the cards keep the input's provenance.
-      const cards = await keys.importBytes(bytes, provenance, null, top);
-      return { type: 'keys', cardIds: cards.map((c) => c.id) };
-    }
+    if (!top) throw new Error(NOTHING_DETECTED);
     const doc = await engine.open(bytes, top, settings.viewOptions());
-    const tab = this.#newTab(doc, provenance, { input: bytes, candidates });
-    return { type: 'tab', tabId: tab.id };
+    const tab = this.#get(tabId);
+    this.#cancelEdit(tabId);
+    tab.doc = doc;
+    tab.title = tabTitle(tab.number, doc);
+    tab.input = bytes;
+    tab.candidates = candidates;
+    tab.candidateIndex = 0;
+    tab.provenance = provenance;
+    tab.collapsed.clear();
+    tab.sdMarks.clear();
+    tab.selected = null;
+    tab.liveEdit = true;
+    tab.editText = doc.main.text;
+    tab.editDiagnostics = [];
+    tab.editBase = doc.bytes;
+    tab.stale = false;
+    tab.tampered = false;
+    tab.report = null;
+    tab.draft = null;
+    tab.empty = false;
+    return tab;
   }
 
-  async openText(text: string, provenance: Provenance): Promise<OpenResult> {
-    return this.openInput(utf8(text), provenance);
+  /** Where input from outside a tab goes (Open File…, From Clipboard in
+   *  the menu): the given or active tab when empty, else a new tab. */
+  #target(tabId?: string | null): Tab {
+    const tab = tabId ? this.tab(tabId) : this.active;
+    return tab?.empty ? tab : this.newTab();
   }
 
-  async openFromClipboard(): Promise<OpenResult> {
+  async openInput(bytes: Uint8Array, provenance: Provenance, tabId?: string | null): Promise<Tab> {
+    return this.fillTab(this.#target(tabId).id, bytes, provenance);
+  }
+
+  async openText(text: string, provenance: Provenance, tabId?: string | null): Promise<Tab> {
+    return this.openInput(utf8(text), provenance, tabId);
+  }
+
+  /** Null when the clipboard is empty. */
+  async openFromClipboard(tabId?: string | null): Promise<Tab | null> {
     const text = await this.deps.platform.readClipboard();
-    if (text.trim() === '') return { type: 'nothing' };
-    return this.openInput(utf8(text), { type: 'clipboard' });
+    if (text.trim() === '') return null;
+    return this.openInput(utf8(text), { type: 'clipboard' }, tabId);
   }
 
-  async openFromFile(): Promise<OpenResult> {
+  /** Null when the user cancels the file dialog. */
+  async openFromFile(tabId?: string | null): Promise<Tab | null> {
     const file = await this.deps.platform.openFile();
-    if (!file) return { type: 'nothing' };
-    return this.openInput(file.bytes, { type: 'file', name: file.name });
+    if (!file) return null;
+    return this.openInput(file.bytes, { type: 'file', name: file.name }, tabId);
   }
 
   /** "Detected as…": re-open the tab's input as another candidate. */
@@ -243,10 +334,10 @@ export class Workspace {
     tab.collapsed.clear();
     tab.sdMarks.clear();
     tab.selected = null;
-    tab.liveEdit = false;
     tab.editText = doc.main.text;
     tab.editDiagnostics = [];
-    tab.editBase = null;
+    // A tab filled by a paste stays in Live edit.
+    tab.editBase = tab.liveEdit ? doc.bytes : null;
     tab.stale = false;
     tab.tampered = false;
     tab.report = null;
@@ -259,6 +350,7 @@ export class Workspace {
   close(id: string): void {
     const at = this.tabs.findIndex((t) => t.id === id);
     if (at < 0) return;
+    this.#cancelEdit(id);
     this.tabs.splice(at, 1);
     if (this.split?.includes(id)) this.split = null;
     if (this.activeId === id) {
@@ -384,6 +476,7 @@ export class Workspace {
    *  store the diagnostics. */
   async applyEdit(tabId: string, text: string): Promise<EditResult> {
     const tab = this.#get(tabId);
+    this.#commitType(tab, text);
     if (tab.draft) return this.#editDraft(tab, tab.draft, text);
     tab.editText = text;
     const result = await this.deps.engine.parseEdit({
@@ -413,13 +506,29 @@ export class Workspace {
   /** Live edit from the editor: `editText` follows at once, the parse after
    *  a short pause. Actions flush it first, so they see the latest text. */
   scheduleEdit(tabId: string, text: string, delay = 150): void {
-    this.#get(tabId).editText = text;
-    const pending = this.#scheduled[tabId];
-    if (pending) clearTimeout(pending.timer);
+    const tab = this.#get(tabId);
+    this.#commitType(tab, text);
+    tab.editText = text;
+    this.#cancelEdit(tabId);
     this.#scheduled[tabId] = {
       text,
       timer: setTimeout(() => void this.flushEdit(tabId).catch(() => undefined), delay),
     };
+  }
+
+  /** The first typed text ends an empty tab and commits the Type
+   *  picker's type. */
+  #commitType(tab: Tab, text: string): void {
+    if (!tab.empty || !tab.draft || text === '') return;
+    const d = tab.draft;
+    d.override = $state.snapshot(effectiveDraftKind(d.format, null, d.override));
+    tab.empty = false;
+  }
+
+  #cancelEdit(tabId: string): void {
+    const pending = this.#scheduled[tabId];
+    if (pending) clearTimeout(pending.timer);
+    this.#scheduled[tabId] = undefined;
   }
 
   /** Runs a scheduled edit now, unless the text was replaced since (a
@@ -442,7 +551,8 @@ export class Workspace {
     const tab = this.#get(tabId);
     return actionAvailability({
       doc: tab.doc,
-      keys: this.deps.keys.cards,
+      issuer: this.deps.keys.issuer,
+      holder: this.deps.keys.holder,
       sdMarks: [...tab.sdMarks],
     });
   }
@@ -465,11 +575,11 @@ export class Workspace {
       case 'redact': {
         const request = {
           claims: doc,
-          issuer: keys.ref(req.issuerKeyId),
+          issuer: keys.ref('issuer'),
           alg: req.alg ?? null,
           ...(req.header ? { header: $state.snapshot(req.header) } : {}),
           sd: { marks: [...tab.sdMarks] },
-          cnf: req.holderKeyId ? { type: 'key' as const, key: keys.ref(req.holderKeyId) } : null,
+          cnf: req.cnf ? { type: 'key' as const, key: keys.ref('holder') } : null,
           jose_serialization: req.jose ?? 'compact',
           cose_tags: req.coseTags ? [...req.coseTags] : null,
           randomness: this.#randomness(),
@@ -485,7 +595,7 @@ export class Workspace {
         out = await engine.present({
           doc,
           keep: [...req.keep],
-          holder: keys.ref(req.holderKeyId),
+          holder: keys.ref('holder'),
           alg: null,
           aud: req.aud || null,
           nonce: req.nonce ? { type: 'text', value: req.nonce } : null,
@@ -497,7 +607,7 @@ export class Workspace {
       case 'resign':
         out = await engine.resign({
           doc,
-          key: keys.ref(req.keyId),
+          key: keys.ref(req.key ?? (keys.issuer?.info.private ? 'issuer' : 'holder')),
           alg: req.alg ?? null,
           randomness: this.#randomness(),
           view,
@@ -538,29 +648,6 @@ export class Workspace {
 
   // ------------------------------------------------------------ drafts (#43)
 
-  /** New: a tab in Live edit holding DRAFT_TEMPLATES[format], parsed with
-   *  the format's default kind (base: empty), provenance `new`, active. */
-  async newDraft(format: DraftFormat = 'json'): Promise<Tab> {
-    const text = DRAFT_TEMPLATES[format];
-    const kind = effectiveDraftKind(format, null, null);
-    const result = await this.deps.engine.parseEdit({
-      kind,
-      base: '',
-      text,
-      view: this.deps.settings.viewOptions(),
-    });
-    if (!result.ok || !result.document) {
-      throw new Error(result.diagnostics[0]?.message ?? 'the draft template did not parse');
-    }
-    const tab = this.#newTab(result.document, { type: 'new' });
-    tab.liveEdit = true;
-    tab.editText = text;
-    tab.editBase = '';
-    tab.draft = { format, detected: null, override: null };
-    this.#retitle(tab);
-    return tab;
-  }
-
   #draftOf(tabId: string): { tab: Tab; draft: Draft } {
     const tab = this.#get(tabId);
     if (!tab.draft) throw new Error(`${tab.title} is not a draft`);
@@ -578,19 +665,17 @@ export class Workspace {
     tab.title = `Tab ${tab.number} · ${kindLabel(kind)}`;
   }
 
-  /** Re-detects a draft's text, then parses it as the draft's type. */
+  /** Parses a draft's text as its type. Edits never re-run detection
+   *  (SPEC §3): the type changes only through the type menu. */
   async #editDraft(tab: Tab, draft: Draft, text: string): Promise<EditResult> {
     tab.editText = text;
-    const candidates = await this.deps.engine.detect(utf8(text));
-    if (tab.editText !== text) return this.#parseDraft(tab, draft, text);
-    draft.detected = candidates[0] ? $state.snapshot(candidates[0].kind) : null;
     return this.#parseDraft(tab, draft, text);
   }
 
   /** Drafts have no original: the base is empty, and `signature_stale`
    *  (reported for signed kinds against that empty base) is ignored. */
   async #parseDraft(tab: Tab, draft: Draft, text: string): Promise<EditResult> {
-    const kind = draftParseKind(effectiveDraftKind(draft.format, draft.detected, draft.override));
+    const kind = effectiveDraftKind(draft.format, draft.detected, draft.override);
     const result = await this.deps.engine.parseEdit({
       kind: $state.snapshot(kind),
       base: '',
@@ -614,9 +699,9 @@ export class Workspace {
 
   /** Switches a draft's Format, converting the text with
    *  `engine.convertClaims`; when that is missing or fails, asks
-   *  `confirmDiscard` (with the reason) and, if allowed, starts over from
-   *  the template. An untouched draft (the template, no explicit type)
-   *  just takes the other template. Returns whether the format changed. */
+   *  `confirmDiscard` (with the reason) and, if allowed, starts over with
+   *  no text. A draft with no text just switches. Returns whether the
+   *  format changed. */
   async setDraftFormat(
     tabId: string,
     format: DraftFormat,
@@ -632,8 +717,8 @@ export class Workspace {
       message: `This engine cannot convert ${from.toUpperCase()} to ${format.toUpperCase()}.`,
       nodeId: null,
     };
-    if (text.trim() === DRAFT_TEMPLATES[from] && draft.override === null) {
-      next = DRAFT_TEMPLATES[format];
+    if (text.trim() === '') {
+      next = '';
     } else if (typeof this.deps.engine.convertClaims === 'function') {
       const result = await this.deps.engine.convertClaims({
         text,
@@ -654,10 +739,12 @@ export class Workspace {
     }
     if (next === null) {
       if (!(await confirmDiscard(reason))) return false;
-      next = DRAFT_TEMPLATES[format];
+      next = '';
     }
     draft.format = format;
-    if (draft.override && !isDraftKind(format, draft.override)) draft.override = null;
+    if (draft.override && !isDraftKind(format, draft.override)) {
+      draft.override = effectiveDraftKind(format, null, null);
+    }
     await this.#editDraft(tab, draft, next);
     return true;
   }
@@ -670,41 +757,9 @@ export class Workspace {
     await this.#parseDraft(tab, draft, tab.editText);
   }
 
-  /** A JWK / JWK Set / COSE_Key / COSE_KeySet draft into the key panel:
-   *  the JSON text, or the CBOR the EDN was parsed to. */
-  async importDraftKey(tabId: string): Promise<KeyCard[]> {
-    await this.flushEdit(tabId);
-    const { tab } = this.#draftOf(tabId);
-    const kind = this.draftKind(tab);
-    const provenance: Provenance = { type: 'new' };
-    switch (kind?.type) {
-      case 'jwk':
-      case 'jwk_set':
-        return this.deps.keys.importBytes(utf8(tab.editText), provenance, { type: kind.type });
-      case 'cose_key':
-      case 'cose_key_set':
-        return this.deps.keys.importBytes(fromB64u(tab.doc.bytes), provenance, {
-          type: kind.type,
-        });
-      default:
-        throw new Error(`${kind ? kindLabel(kind) : 'This draft'} is not a key`);
-    }
-  }
-
-  /** "Open as …" for a detected kind that is not a draft type (e.g. JWS
-   *  JSON): opens the text as that candidate in a new tab (provenance new). */
-  async openDraftAs(tabId: string): Promise<Tab> {
-    await this.flushEdit(tabId);
-    const { tab } = this.#draftOf(tabId);
-    const bytes = utf8(tab.editText);
-    const candidates = await this.deps.engine.detect(bytes);
-    const top = candidates[0];
-    if (!top) throw new Error('Nothing was detected in the draft');
-    const doc = await this.deps.engine.open(bytes, top, this.deps.settings.viewOptions());
-    return this.#newTab(doc, { type: 'new' }, { input: bytes, candidates });
-  }
-
-  /** Validates with the panel keys and settings; stores `tab.report`. */
+  /** Validates with the Issuer key (the engine verifies with its public
+   *  part), the Holder key for key binding, and the settings; stores
+   *  `tab.report`. */
   async validate(tabId: string): Promise<ValidationReport> {
     await this.flushEdit(tabId);
     const tab = this.#get(tabId);

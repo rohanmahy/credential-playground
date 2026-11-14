@@ -33,16 +33,20 @@ app/
 
 - **Engine** (`lib/engine/Engine.ts`): one async method per `Engine` method in
   `tokenator-core` (camelCase names, generated DTO types). Failures reject
-  with `EngineFailure` carrying the core `EngineError`. `detect` gives
-  token and claim-set candidates only; `detectKey` gives key candidates
-  only (for key import). `selectEngine()`
+  with `EngineFailure` carrying the core `EngineError`. There are two
+  detectors: `detect` (tabs) returns token and claim-set candidates only,
+  and `detectKey` (key areas) returns key candidates only (SPEC §3).
+  `selectEngine()`
   picks `TauriEngine` when `window.__TAURI__` exists, else `WasmEngine`,
   and hands it the cached registry snapshot (if any) that `main.ts` reads
   from `Platform.registryCache` at start-up. Both stay stubs until
   `tokenator-wasm` and `app/src-tauri` exist.
 - **Platform** (`lib/platform/Platform.ts`): `fetchUrl`, `openFile`,
   `saveFile`, `readClipboard`, `writeClipboard`, `registryCache`, `now`,
-  `localOffsetMinutes`, `randomBytes`. Web: `fetch`, File System Access API
+  `localOffsetMinutes`, `randomBytes`, and the optional `onMenu` (desktop
+  menu item ids: `TauriPlatform` subscribes through the `menu_listen`
+  command and a `Channel`; `WebPlatform` has no menu bar and returns a
+  no-op). Web: `fetch`, File System Access API
   with `<input type=file>`/download fallbacks, Clipboard API, IndexedDB for
   the registry cache (`WebPlatform` is implemented; `fetchUrl` refuses
   non-https URLs, sends no credentials or referrer, and reports a `TypeError`
@@ -55,12 +59,20 @@ app/
   - `Workspace`: tabs (document, candidates, provenance, collapse set,
     selection, live-edit text, stale flag, SD marks, last report, the
     per-tab `manual_decode`/`hide_decoded` lists) and the split, plus the
-    open date/time chit. Drafts started with New (#43) carry `Tab.draft`
-    (format, detected kind, explicit type; rules in `logic/drafts.ts` and
-    TEST-PLAN.md): every edit re-runs `detect` on the text and `parse_edit`
-    (empty base) with the draft's type, the stale flag never applies, and a
-    Format switch goes through `convertClaims` (#44) or, when that fails,
-    an alertdialog that names the reason and selects the node it reports.
+    open date/time chit. The constructor opens one empty tab, and `newTab`
+    ("+") opens more. An empty tab (`Tab.empty`) is in Live edit with no
+    text, a placeholder document, and a draft (`Tab.draft`: format and type,
+    rules in `logic/drafts.ts`) whose type comes from the Type picker
+    (`TAB_TYPES`). The first fill ends `empty`, and only `clearTab` brings
+    it back: typing commits the picker's type, and the text is parsed with
+    `parse_edit` (empty base, stale flag never applies). A paste or drop
+    (or Open file… / From clipboard) goes through `fillTab`, which runs
+    `detect` and opens the top candidate in that tab, still in Live edit,
+    with "Detected as…" for the others. Edits never re-run detection: a
+    draft's type changes only through its type menu, and a Format switch
+    goes through `convertClaims` (#44) or, when that fails, an alertdialog
+    that names the reason and selects the node it reports. Nothing from a
+    tab reaches the keys.
     Editor changes go through `scheduleEdit` (the text at once, the parse
     after 150 ms); actions and draft operations `flushEdit` first, so they
     always see what was typed. Every action opens a derived tab whose provenance
@@ -69,10 +81,33 @@ app/
     _tampered_. Live edits are parsed against the bytes the tab had when
     live edit started (`editBase`), so reverting an edit clears the stale
     flag.
-  - `KeyStore`: key cards (`KeyInfo` + role + label + provenance). Keys
-    cross into the engine as `KeyRef` bytes on every call.
+  - `KeyStore`: the two key areas, `issuer` and `holder`, each holding at
+    most one card (`KeyInfo` + role + label + provenance; the card's id is
+    its role), plus each area's text, "Key format" toggle (JWK or
+    COSE_Key EDN), error, and a waiting set (`choices`, picked in "Choose
+    a key"). `load` runs `detectKey` and imports the top candidate. It's
+    used for a paste or drop into an empty area, Import, and Fetch from
+    URL, and the toggle follows the detected format (PEM shows as JWK).
+    `edit` parses typed text with the toggle's format hint after a pause
+    and never runs detection; text that doesn't parse leaves the area
+    keyless with the error. Make public replaces the key with `keyPublic`.
+    Issue uses the Issuer key, Present the Holder key, and Validate sends
+    both. Keys cross into the engine as `KeyRef` bytes on every call.
   - `Settings`: clock override, skew, expected `aud`/`nonce`, view toggles,
     theme. `Settings.now()` is the override or `Platform.now()`.
+
+## Input
+
+There's no global input box (SPEC §3, §4). Input goes into a tab or a key
+area, and autodetect runs only on a paste or drop into an empty text area.
+The empty tab's editor (`MainPane`, capture-phase handlers so CodeMirror
+never sees the input) calls `fillTab`, and an empty key area's textarea
+calls `KeyStore.load`. A full area takes pastes as plain edits and refuses
+drags (`dropEffect = 'none'`, see `ui.ts` `refuseDrop`). `AppShell`
+prevents the default for any other drop, so the browser or webview never
+navigates to a dropped file. Accessible names: the key areas are regions,
+and their textareas are named "Issuer key" / "Holder key". The tab text is
+"Credential text".
 
 ## Panes and tree sync
 
@@ -114,9 +149,12 @@ path-based (core TEST-PLAN §4).
 
 ## Components
 
-`AppShell` (input area, tools, drop target) → `KeyPanel` (`KeyCard`,
-`KeyCreateDialog`, `KeyImportDialog`, `KeyExportDialog`, `KeyConvertView`,
-`UrlFetch`) and `TabArea` → `CredentialTab` → `TabHeader` (`DetectedAsMenu`,
+`AppShell` (slim header with the tools, desktop menu handling, and a
+window-level drop guard) → `KeyPanel` (two `KeyArea`s, Issuer and Holder,
+each with `KeyCreateDialog`, `KeyImportDialog`, `KeyExportDialog`,
+`KeySetChoiceDialog`, `UrlFetch`) and `TabArea` ("+" New tab) →
+`CredentialTab` → `EmptyTabBar` (empty tabs: Type, Open file…, From
+clipboard) or `TabHeader` (Clear, `DetectedAsMenu`,
 `ActionBar` with `IssueDialog`, `PresentDialog` for Present and Disclose,
 `EditDisclosuresDialog`, `KeyChoiceDialog`), `MainPane` (`CodeEditor` in
 live edit), `RawPane`, `DisclosuresView`, `ValidationReport`. Tools:

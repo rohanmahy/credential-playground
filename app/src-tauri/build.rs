@@ -42,6 +42,7 @@ const COMMANDS: &[&str] = &[
     "registry_cache_get",
     "registry_cache_put",
     "registry_cache_clear",
+    "menu_listen",
 ];
 
 fn main() {

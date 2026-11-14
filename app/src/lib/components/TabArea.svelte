@@ -1,23 +1,11 @@
 <script lang="ts">
   // Credential tabs (role=tablist) with an optional side-by-side split.
+  // "+" opens another empty tab (SPEC §4).
   import { tick } from 'svelte';
   import { getAppContext } from '../context';
   import CredentialTab from './CredentialTab.svelte';
-  import { DRAFT_FORMATS, type DraftFormat } from '../logic/drafts';
-  import { errorMessage } from '../ui';
 
   const { workspace } = getAppContext();
-
-  let draftError = $state<string | null>(null);
-
-  async function startDraft(format: DraftFormat) {
-    draftError = null;
-    try {
-      await workspace.newDraft(format);
-    } catch (e) {
-      draftError = errorMessage(e);
-    }
-  }
 
   const shown = $derived.by(() => {
     const split = workspace.split;
@@ -78,47 +66,53 @@
 </script>
 
 <section class="tabs" aria-label="Credentials area">
-  {#if workspace.tabs.length > 0}
-    <div class="bar">
-      <div
-        bind:this={list}
-        class="tablist"
-        role="tablist"
-        aria-label="Credentials"
-        tabindex="-1"
-        {onkeydown}
-      >
-        {#each workspace.tabs as t (t.id)}
-          {@const active = t.id === workspace.activeId}
-          <div class="tab-wrap" role="presentation" class:active>
-            <button
-              type="button"
-              role="tab"
-              id={`tab-${t.id}`}
-              aria-selected={active}
-              aria-controls={`panel-${t.id}`}
-              tabindex={active ? 0 : -1}
-              onclick={() => workspace.activate(t.id)}>{t.title}</button
-            >
-            <button
-              type="button"
-              class="close icon"
-              tabindex="-1"
-              aria-label={`Close ${t.title}`}
-              title="Close (Delete)"
-              onclick={() => workspace.close(t.id)}>×</button
-            >
-          </div>
-        {/each}
-      </div>
-      {@render draftButtons()}
-      <button
-        type="button"
-        aria-pressed={workspace.split !== null}
-        disabled={workspace.tabs.length < 2}
-        onclick={toggleSplit}>Split view</button
-      >
+  <div class="bar">
+    <div
+      bind:this={list}
+      class="tablist"
+      role="tablist"
+      aria-label="Credentials"
+      tabindex="-1"
+      {onkeydown}
+    >
+      {#each workspace.tabs as t (t.id)}
+        {@const active = t.id === workspace.activeId}
+        <div class="tab-wrap" role="presentation" class:active>
+          <button
+            type="button"
+            role="tab"
+            id={`tab-${t.id}`}
+            aria-selected={active}
+            aria-controls={`panel-${t.id}`}
+            tabindex={active ? 0 : -1}
+            onclick={() => workspace.activate(t.id)}>{t.title}</button
+          >
+          <button
+            type="button"
+            class="close icon"
+            tabindex="-1"
+            aria-label={`Close ${t.title}`}
+            title="Close (Delete)"
+            onclick={() => workspace.close(t.id)}>×</button
+          >
+        </div>
+      {/each}
     </div>
+    <button
+      type="button"
+      class="new icon"
+      aria-label="New tab"
+      title="New tab"
+      onclick={() => workspace.newTab()}>+</button
+    >
+    <button
+      type="button"
+      aria-pressed={workspace.split !== null}
+      disabled={workspace.tabs.length < 2}
+      onclick={toggleSplit}>Split view</button
+    >
+  </div>
+  {#if shown.length > 0}
     <div class="panels" class:split={shown.length > 1}>
       {#each shown as id (id)}
         <div class="panel" role="tabpanel" id={`panel-${id}`} aria-labelledby={`tab-${id}`}>
@@ -128,22 +122,11 @@
     </div>
   {:else}
     <div class="empty">
-      <p>Paste, drop, or open a credential (JWT, SD-JWT, CWT, SD-CWT) or a key.</p>
-      <p>Or start writing one in Live edit: {@render draftButtons()}</p>
+      <p>No tabs open. Use + to open an empty tab.</p>
       <p class="muted">Everything stays in this page's memory. Nothing is uploaded or stored.</p>
     </div>
   {/if}
-  {#if draftError}<p class="error">{draftError}</p>{/if}
 </section>
-
-<!-- Shown once: in the empty state, or in the tab bar once there are tabs. -->
-{#snippet draftButtons()}
-  <span class="drafts">
-    {#each DRAFT_FORMATS as f (f.format)}
-      <button type="button" onclick={() => void startDraft(f.format)}>New {f.label} draft</button>
-    {/each}
-  </span>
-{/snippet}
 
 <style>
   .tabs {
@@ -163,7 +146,7 @@
     display: flex;
     gap: 0.15rem;
     overflow-x: auto;
-    flex: 1;
+    flex: 0 1 auto;
   }
   .tab-wrap {
     display: flex;
@@ -200,12 +183,12 @@
   .panels.split .panel + .panel {
     border-left: 2px solid var(--border);
   }
-  .drafts {
-    display: inline-flex;
-    gap: 0.25rem;
+  .new {
+    font-size: 1.1rem;
+    line-height: 1;
   }
-  .bar .drafts {
-    margin-bottom: 0.25rem;
+  .new + button {
+    margin-left: auto;
   }
   .empty {
     padding: 2rem;

@@ -1,7 +1,8 @@
-// Drafts started from nothing (#43): the main pane opens in Live edit with
-// a Format (JSON or EDN); the type is detected from the text, or set
-// explicitly. Rules: app/TEST-PLAN.md "New drafts and explicit type".
-import type { Kind } from '../engine/types';
+// Tabs written from scratch (#43, SPEC §4.1): every tab starts empty, in
+// Live edit, with a Type picker that applies when the user types. Once
+// committed, the type sticks; edits never re-run detection. Rules:
+// app/TEST-PLAN.md "New drafts and explicit type".
+import type { Document, Kind } from '../engine/types';
 
 export type DraftFormat = 'json' | 'edn';
 
@@ -10,26 +11,36 @@ export const DRAFT_FORMATS: readonly { format: DraftFormat; label: string }[] = 
   { format: 'edn', label: 'EDN' },
 ];
 
-/** The starter text of a new draft. */
-export const DRAFT_TEMPLATES: Readonly<Record<DraftFormat, string>> = {
-  json: '{}',
-  edn: '{}',
-};
-
 /** The types a draft can be set to, per format, in menu order. The first
- *  is the default when detection finds nothing that fits the format. */
+ *  is the format's default. Keys are not credentials: they go into the
+ *  key areas, never into a tab. */
 export const DRAFT_KINDS: Readonly<Record<DraftFormat, readonly Kind[]>> = {
-  json: [{ type: 'json_claims' }, { type: 'jwk' }, { type: 'jwk_set' }],
+  json: [{ type: 'json_claims' }],
   edn: [
     { type: 'edn_claims' },
     { type: 'cose_sign1' },
     { type: 'cwt' },
     { type: 'sd_cwt' },
     { type: 'sd_kbt' },
-    { type: 'cose_key' },
-    { type: 'cose_key_set' },
   ],
 };
+
+/** An empty tab's Type picker, in menu order (the first is the default). */
+export interface TabType {
+  id: string;
+  label: string;
+  format: DraftFormat;
+  kind: Kind;
+}
+
+export const TAB_TYPES: readonly TabType[] = [
+  { id: 'json_claims', label: 'JSON claims', format: 'json', kind: { type: 'json_claims' } },
+  { id: 'edn_claims', label: 'EDN claims', format: 'edn', kind: { type: 'edn_claims' } },
+  { id: 'cose_sign1', label: 'COSE_Sign1 (EDN)', format: 'edn', kind: { type: 'cose_sign1' } },
+  { id: 'cwt', label: 'CWT (EDN)', format: 'edn', kind: { type: 'cwt' } },
+  { id: 'sd_cwt', label: 'SD-CWT (EDN)', format: 'edn', kind: { type: 'sd_cwt' } },
+  { id: 'sd_kbt', label: 'SD-KBT (EDN)', format: 'edn', kind: { type: 'sd_kbt' } },
+];
 
 function sameType(a: Kind, b: Kind): boolean {
   return a.type === b.type;
@@ -48,27 +59,19 @@ export function effectiveDraftKind(
   return kinds[0] ?? { type: 'json_claims' };
 }
 
-/** The kind `parse_edit` is called with for a draft type: JWK and JWK Set
- *  drafts are parsed (and shown) as JSON claim sets; the rest as is. */
-export function draftParseKind(kind: Kind): Kind {
-  return kind.type === 'jwk' || kind.type === 'jwk_set' ? { type: 'json_claims' } : kind;
-}
-
 /** Whether `kind` is one of the format's draft types. */
 export function isDraftKind(format: DraftFormat, kind: Kind): boolean {
   return DRAFT_KINDS[format].some((k) => sameType(k, kind));
 }
 
-/** Draft types that belong in the key panel ("Add to key panel"). */
-export function isDraftKeyKind(kind: Kind): boolean {
-  return ['jwk', 'jwk_set', 'cose_key', 'cose_key_set'].includes(kind.type);
-}
-
-/** A detected kind no draft format has (e.g. JWS JSON, a JWT): offered as
- *  "Open as …" in a regular tab. */
-export function openableAs(detected: Kind | null): Kind | null {
-  if (!detected) return null;
-  return isDraftKind('json', detected) || isDraftKind('edn', detected) ? null : detected;
+/** The Type picker entry for a format and kind (the format's default
+ *  when the kind has none). */
+export function tabTypeOf(format: DraftFormat, kind: Kind): TabType {
+  return (
+    TAB_TYPES.find((t) => t.format === format && sameType(t.kind, kind)) ??
+    TAB_TYPES.find((t) => t.format === format) ??
+    (TAB_TYPES[0] as TabType)
+  );
 }
 
 /** Why a Format switch would discard the draft (shown before asking). */
@@ -76,4 +79,32 @@ export interface DiscardReason {
   message: string;
   /** The node the engine pointed at, if any. */
   nodeId: string | null;
+}
+
+/** The placeholder document of an empty tab: no text, no nodes. */
+export function emptyDocument(kind: Kind, format: DraftFormat): Document {
+  return {
+    kind,
+    layers: [],
+    bytes: '',
+    signed: false,
+    signature_stale: false,
+    tree: {
+      id: '',
+      kind: 'document',
+      label: '',
+      annotation: null,
+      main: null,
+      raw: null,
+      key: null,
+      time: null,
+      sd: null,
+      children: [],
+    },
+    main: { language: format, text: '', line_count: 1 },
+    raw: { type: 'none' },
+    disclosures: [],
+    undisclosed: [],
+    diagnostics: [],
+  };
 }

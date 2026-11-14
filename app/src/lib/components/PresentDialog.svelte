@@ -1,8 +1,9 @@
 <script lang="ts">
   // Disclose and Present: choose disclosures (all kept by default); Present
-  // adds the holder key, audience, and nonce (iat comes from the clock).
+  // adds key binding with the Holder area's key, audience, and nonce (iat
+  // comes from the clock).
   import { getAppContext } from '../context';
-  import { ACTION_LABELS, canHoldWith } from '../logic/actions';
+  import { ACTION_LABELS } from '../logic/actions';
   import { errorMessage } from '../ui';
   import Dialog from './Dialog.svelte';
 
@@ -15,12 +16,10 @@
   const { workspace, keys, settings } = getAppContext();
   const tab = $derived(workspace.tab(tabId));
   const disclosures = $derived(tab?.doc.disclosures ?? []);
-  const holders = $derived(keys.cards.filter((c) => c.info.private && canHoldWith(c)));
+  const holder = $derived(keys.holder);
 
   // svelte-ignore state_referenced_locally
   let keep = $state<boolean[]>(disclosures.map(() => true));
-  // svelte-ignore state_referenced_locally
-  let holderId = $state((holders.find((c) => c.role === 'holder') ?? holders[0])?.id ?? '');
   let aud = $state(settings.expectedAud ?? '');
   let nonce = $state(settings.expectedNonce ?? '');
   let error = $state<string | null>(null);
@@ -38,11 +37,10 @@
     error = null;
     try {
       if (action === 'present') {
-        if (!holderId) return;
+        if (!holder) return;
         await workspace.runAction(tabId, {
           action: 'present',
           keep: kept,
-          holderKeyId: holderId,
           aud: aud || null,
           nonce: nonce || null,
         });
@@ -74,12 +72,9 @@
       <p class="muted">No disclosures: the credential is presented as is.</p>
     {/if}
     {#if action === 'present'}
-      <label class="field">
-        <span>Holder key</span>
-        <select bind:value={holderId}>
-          {#each holders as c (c.id)}<option value={c.id}>{c.label}</option>{/each}
-        </select>
-      </label>
+      <p class="muted">
+        Key binding with the Holder key{holder ? `: ${holder.info.description}` : ' (none)'}.
+      </p>
       <label class="field">
         <span>Audience</span>
         <input type="text" bind:value={aud} placeholder="https://verifier.example" />
@@ -92,7 +87,7 @@
     {/if}
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     <div class="buttons">
-      <button type="submit" class="primary" disabled={busy || (action === 'present' && !holderId)}
+      <button type="submit" class="primary" disabled={busy || (action === 'present' && !holder)}
         >{ACTION_LABELS[action]}</button
       >
       <button type="button" onclick={onClose}>Cancel</button>

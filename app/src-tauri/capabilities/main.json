@@ -1,7 +1,7 @@
 {
   "$schema": "../gen/schemas/desktop-schema.json",
   "identifier": "main",
-  "description": "The main window: the engine and platform commands, nothing else. No core, dialog, clipboard, fs, shell, or http permissions: dialogs and the clipboard are driven from Rust.",
+  "description": "The main window: the engine and platform commands and menu_listen, nothing else. No core, dialog, clipboard, fs, shell, or http permissions: dialogs and the clipboard are driven from Rust.",
   "local": true,
   "windows": ["main"],
   "permissions": [
@@ -42,6 +42,7 @@
     "allow-write-clipboard",
     "allow-registry-cache-get",
     "allow-registry-cache-put",
-    "allow-registry-cache-clear"
+    "allow-registry-cache-clear",
+    "allow-menu-listen"
   ]
 }
