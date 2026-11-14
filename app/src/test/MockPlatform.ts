@@ -48,6 +48,20 @@ export class MockPlatform implements Platform {
   });
   now = vi.fn(() => this.clock);
   localOffsetMinutes = vi.fn((_epoch?: number) => this.offsetMinutes);
+  /** Desktop menu (SPEC §4): the app subscribes with `onMenu`; tests fire
+   *  menu items with `emitMenu(id)`. Ids: new_tab, open_file,
+   *  from_clipboard, close_tab, split_view, raw_pane, datetime, settings,
+   *  about. */
+  menuHandlers: ((id: string) => void)[] = [];
+  onMenu = vi.fn((handler: (id: string) => void) => {
+    this.menuHandlers.push(handler);
+    return () => {
+      this.menuHandlers = this.menuHandlers.filter((h) => h !== handler);
+    };
+  });
+  emitMenu(id: string): void {
+    for (const h of this.menuHandlers) h(id);
+  }
   /** Bytes 0, 1, 2, … so requests are predictable. */
   randomBytes = vi.fn((n: number) => Uint8Array.from({ length: n }, (_, i) => i % 256));
 }

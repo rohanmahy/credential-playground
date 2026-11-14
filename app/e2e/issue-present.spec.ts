@@ -1,15 +1,26 @@
-// Issue → Present → Validate, JOSE and COSE, with created keys, through
-// the real WasmEngine.
+// Issue → Present → Validate, JOSE and COSE, with keys created in the
+// Issuer and Holder key areas, through the real WasmEngine. Issue signs
+// with the Issuer area key, Present with the Holder area key, and
+// validation uses both (SPEC §4.2, §5, §6).
 import { expect, test, type Page } from '@playwright/test';
-import { actions, createKey, fixtureText, paste, validate } from './helpers';
+import {
+  NAMES,
+  actions,
+  createKey,
+  fixtureText,
+  keyArea,
+  mainPane,
+  paste,
+  readOnly,
+  validate,
+} from './helpers';
 
 // Key binding validates against `cnf` (SPEC §6), so credentials that are
 // presented later are issued with the holder key as `cnf`, and the
 // presentation carries an audience and nonce.
 async function issueWithHolder(page: Page, action: 'Issue' | 'Redact'): Promise<void> {
   const dialog = page.getByRole('dialog', { name: action });
-  const holder = dialog.getByRole('combobox', { name: 'Holder key (cnf)' });
-  await holder.selectOption({ label: 'Holder Ed25519' });
+  await dialog.getByRole('checkbox', { name: NAMES.cnf }).check();
   await dialog.getByRole('button', { name: action }).click();
 }
 
@@ -35,6 +46,7 @@ test.beforeEach(async ({ page }) => {
 test('SD-JWT: issue with marked claims, present, validate', async ({ page }) => {
   await paste(page, fixtureText('tokens/rfc9901-a1-input-claims.json'));
   await expect(page.getByTestId('detected-type')).toHaveText('JSON claim set');
+  await readOnly(page);
   const main = page.getByRole('tree', { name: 'Main pane' });
   await main.locator('[data-node-id="given_name"]').click({ button: 'right' });
   await page.getByRole('menuitemcheckbox', { name: /selectively disclosable/i }).click();
@@ -97,16 +109,37 @@ test('CWT: issue from EDN, present in an SD-KBT, validate', async ({ page }) => 
 });
 
 test('ML-DSA-87: issue a JWT and validate it (post-quantum in the browser)', async ({ page }) => {
+  // Create replaces the Issuer area's P-256 key.
   await createKey(page, 'ML-DSA-87', 'issuer');
+  await expect(keyArea(page, 'issuer')).toContainText('ML-DSA-87');
   await paste(page, fixtureText('tokens/rfc9901-s5.1-input-claims.json'));
   await actions(page).getByRole('button', { name: 'Issue' }).click();
   const dialog = page.getByRole('dialog', { name: 'Issue' });
-  const issuer = dialog.getByRole('combobox', { name: 'Issuer key' });
-  const option = await issuer.locator('option', { hasText: 'ML-DSA-87' }).textContent();
-  await issuer.selectOption({ label: option ?? 'ML-DSA-87' });
   await dialog.getByRole('button', { name: 'Issue' }).click();
   await expect(page.getByTestId('detected-type')).toHaveText('JWT');
-  await expect(page.getByRole('tree', { name: 'Main pane' })).toContainText('"ML-DSA-87"');
+  await expect(mainPane(page)).toContainText('"ML-DSA-87"');
   const report = await validate(page);
   await expect(report.locator('[data-status]').first()).toHaveAttribute('data-status', 'pass');
+});
+
+test('Issue needs the Issuer area key and Present the Holder area key', async ({ page }) => {
+  await paste(page, '{1: "https://issuer.example", 2: "alice", 4: 1900000000}');
+  const issue = actions(page).getByRole('button', { name: 'Issue' });
+  await expect(issue).toHaveAttribute('aria-disabled', 'false');
+  await issue.click();
+  await issueWithHolder(page, 'Issue');
+  await expect(page.getByTestId('detected-type')).toHaveText('CWT');
+  const present = actions(page).getByRole('button', { name: 'Present' });
+  await expect(present).toHaveAttribute('aria-disabled', 'false');
+
+  await keyArea(page, 'holder').getByRole('button', { name: NAMES.clear }).click();
+  await expect(present).toHaveAttribute('aria-disabled', 'true');
+  await expect(present).toHaveAttribute('title', /holder key/i);
+
+  await page.getByRole('tablist', { name: 'Credentials' }).getByRole('tab').first().click();
+  await keyArea(page, 'issuer').getByRole('button', { name: NAMES.clear }).click();
+  await expect(actions(page).getByRole('button', { name: 'Issue' })).toHaveAttribute(
+    'aria-disabled',
+    'true',
+  );
 });

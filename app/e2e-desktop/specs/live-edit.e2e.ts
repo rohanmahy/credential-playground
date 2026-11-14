@@ -29,7 +29,7 @@ describe('live edit and tamper', () => {
     await expectSignature('pass');
 
     const live = page.getByRole('switch', 'Live edit');
-    await live.click();
+    if ((await live.attr('aria-checked')) !== 'true') await live.click();
     await expectThat(live).toHaveAttribute('aria-checked', 'true');
     const editor = page.getByTestId('live-editor').locator('.cm-content');
     await expectThat(editor).toContainText('alice');

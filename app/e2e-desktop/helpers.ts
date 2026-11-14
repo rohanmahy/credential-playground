@@ -1,5 +1,5 @@
 // Locators and assertions for the desktop specs, by ARIA role and
-// accessible name as in the UI contract (app/TEST-PLAN.md), so the specs
+// accessible name as in the UI contract (app/e2e/helpers.ts NAMES), so the specs
 // read like the Playwright web specs (app/e2e) they mirror.
 //
 // WebDriver has no role locator, so a locator is a chain of steps that one
@@ -121,6 +121,39 @@ const proto = el instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype 
 Object.getOwnPropertyDescriptor(proto, 'value').set.call(el, value);
 el.dispatchEvent(new Event('input', { bubbles: true }));
 el.dispatchEvent(new Event('change', { bubbles: true }));
+`;
+
+// A real paste as far as the page can tell (SPEC §3: only a paste or drop
+// into an empty text area autodetects): a `paste` event carrying
+// text/plain. If the app lets it through, the text is inserted as the
+// browser would (CodeMirror handles the event itself).
+const PASTE_EVENT = String.raw`
+const [el, value] = arguments;
+el.focus();
+let data;
+try {
+  data = new DataTransfer();
+  data.setData('text/plain', value);
+} catch (e) {
+  data = { types: ['text/plain'], files: [], items: [], getData: (t) => (t === 'text/plain' || t === 'text' ? value : '') };
+}
+let ev;
+try {
+  ev = new ClipboardEvent('paste', { clipboardData: data, bubbles: true, cancelable: true });
+} catch (e) {
+  ev = null;
+}
+if (!ev || !ev.clipboardData) {
+  ev = new Event('paste', { bubbles: true, cancelable: true });
+  Object.defineProperty(ev, 'clipboardData', { value: data });
+}
+if (!el.dispatchEvent(ev)) return;
+if (el instanceof HTMLTextAreaElement || el instanceof HTMLInputElement) {
+  el.setRangeText(value, el.selectionStart || 0, el.selectionEnd || 0, 'end');
+  el.dispatchEvent(new InputEvent('input', { bubbles: true, inputType: 'insertFromPaste', data: value }));
+} else {
+  document.execCommand('insertText', false, value);
+}
 `;
 
 // Selects the first occurrence of arguments[1] inside arguments[0] (a
@@ -273,6 +306,16 @@ export class Locator {
     const ok = await browser.execute(SELECT_TEXT, await this.element(), text);
     if (!ok) throw new Error(`"${text}" not found in ${this.label}`);
   }
+  /** Pastes `text` into this text area with a `paste` event (see PASTE_EVENT). */
+  async paste(text: string): Promise<void> {
+    await browser.execute(PASTE_EVENT, await this.element(), text);
+  }
+  /** A textarea's value, or a contenteditable's text. */
+  async fieldText(): Promise<string> {
+    const [d] = await this.describe();
+    if (!d) throw new Error(`no ${this.label}`);
+    return d.value ?? d.text;
+  }
   async text(): Promise<string> {
     const [d] = await this.describe();
     if (!d) throw new Error(`no ${this.label}`);
@@ -383,22 +426,77 @@ export const expectThat = (loc: Locator) => ({
   },
 });
 
-// The app's shared actions, as in app/e2e/helpers.ts.
+// The app's shared actions and the UI names, as in app/e2e/helpers.ts
+// (SPEC §3, §4, §4.1, §4.2): no global input; key areas "Issuer key" and
+// "Holder key" (region + textbox, buttons Create / Import / Fetch from URL
+// / Clear / Export / Make public / Auto kid, radiogroup "Key format");
+// tabs with a "Credential text" textbox, "Clear", and "New tab" (+);
+// the key chooser dialog "Choose a key".
+
+export type AreaRole = 'issuer' | 'holder';
+const AREA: Record<AreaRole, string> = { issuer: 'Issuer key', holder: 'Holder key' };
 
 export const actions = () => page.getByRole('toolbar', 'Actions');
+/** The read-only tree (see readOnly()). */
 export const mainPane = () => page.getByRole('tree', 'Main pane');
+/** The main pane whichever mode it is in: the tree, or the Live edit editor. */
+export const mainText = () =>
+  page.locator('[role="tree"][aria-label="Main pane"], [data-testid="live-editor"]');
 export const rawPane = () => page.getByRole('tree', 'Raw pane');
 export const detectedType = () => page.getByTestId('detected-type');
-export const keyCards = () => page.getByRole('complementary', 'Keys').getByRole('article');
+export const tabs = () => page.getByRole('tablist', 'Credentials').getByRole('tab');
+export const activePanel = () => page.getByRole('tabpanel').first();
+export const tabBox = () => activePanel().getByRole('textbox', 'Credential text');
+export const keyArea = (role: AreaRole) => page.getByRole('region', AREA[role]);
+export const keyBox = (role: AreaRole) => keyArea(role).getByRole('textbox', AREA[role]);
+export const keyFormat = (role: AreaRole, format: 'JWK' | 'COSE_Key') =>
+  keyArea(role).getByRole('radiogroup', 'Key format').getByRole('radio', format);
 
-/** Waits for the shell to load and the TauriEngine to answer. */
+/** Waits for the shell to load: the startup tab's text area. */
 export async function appReady(): Promise<void> {
-  await expectThat(page.getByRole('textbox', 'Paste a credential or key')).toBeVisible();
+  await expectThat(tabBox()).toBeVisible();
 }
 
+/** Pastes into the active tab, which must be empty (runs token detection). */
 export async function paste(text: string): Promise<void> {
-  await page.getByRole('textbox', 'Paste a credential or key').fill(text);
-  await page.getByRole('button', 'Open').click();
+  await tabBox().paste(text);
+  await expectThat(detectedType()).toBeVisible();
+}
+
+/** Opens a new empty tab with "+" and pastes into it. */
+export async function pasteInNewTab(text: string): Promise<void> {
+  await page.getByRole('button', 'New tab').click();
+  await paste(text);
+}
+
+/** Switches the active tab to Read-only (the tree view) if it is in Live edit. */
+export async function readOnly(): Promise<void> {
+  const live = activePanel().getByRole('switch', 'Live edit');
+  if ((await live.attr('aria-checked')) === 'true') await live.click();
+  await expectThat(live).toHaveAttribute('aria-checked', 'false');
+  await expectThat(mainPane()).toBeVisible();
+}
+
+/** Pastes a key into an empty key area (runs key detection). */
+export async function pasteKey(role: AreaRole, text: string): Promise<void> {
+  await keyBox(role).paste(text);
+}
+
+/** Retries until the field's text (textarea value or editor text) satisfies `check`. */
+export async function expectFieldText(
+  loc: Locator,
+  check: (text: string) => boolean,
+  what: string,
+): Promise<void> {
+  let got = '';
+  await eventually(
+    `${loc} ${what}`,
+    async () => {
+      got = await loc.fieldText();
+      return check(got);
+    },
+    async () => JSON.stringify(got.slice(0, 200)),
+  );
 }
 
 export async function validate(): Promise<Locator> {
@@ -415,22 +513,20 @@ export async function expectSignature(want: 'pass' | 'fail' | 'skip' | RegExp): 
   ).toHaveAttribute('data-status', want);
 }
 
-export async function createKey(
-  algorithm: string,
-  role: 'issuer' | 'holder' | 'verifier',
-): Promise<void> {
-  await page.getByRole('button', 'Create key').click();
+/** The area's Create → algorithm, well-known test seed → Create. */
+export async function createKey(algorithm: string, role: AreaRole): Promise<void> {
+  await keyArea(role).getByRole('button', 'Create').click();
   const dialog = page.getByRole('dialog', 'Create key');
   await dialog.getByRole('combobox', 'Algorithm').selectOption(algorithm);
   await dialog.getByRole('radio', /well-known test seed/i).check();
-  await dialog.getByRole('combobox', 'Role').selectOption(role);
   await dialog.getByRole('button', 'Create').click();
   await expectThat(dialog).toBeHidden();
+  await expectFieldText(keyBox(role), (t) => t !== '', 'holds a key');
 }
 
-/** Import key dialog → paste → Import. */
-export async function importKey(text: string): Promise<void> {
-  await page.getByRole('button', 'Import key').click();
+/** The area's Import → paste into the dialog → Import. */
+export async function importKey(text: string, role: AreaRole): Promise<void> {
+  await keyArea(role).getByRole('button', 'Import').click();
   const dialog = page.getByRole('dialog', 'Import key');
   await dialog.getByRole('textbox', 'Key').fill(text);
   await dialog.getByRole('button', 'Import').click();

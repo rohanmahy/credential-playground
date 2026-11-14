@@ -30,7 +30,7 @@ describe('provenance', () => {
     expect(app.workspace.activeId).toBe(parent.id);
   });
 
-  it('Present from the toolbar opens a derived tab with the chosen disclosures', async () => {
+  it('Present from the toolbar uses the Holder area key and opens a derived tab', async () => {
     const app = setupApp();
     seedKeys(app, fx.issuerCard, fx.holderCard);
     const parent = seedTab(app.workspace, fx.sdJwt);
@@ -39,10 +39,8 @@ describe('provenance', () => {
     const dialog = screen.getByRole('dialog', { name: 'Present' });
     await userEvent.click(within(dialog).getByRole('checkbox', { name: /given_name/ }));
     expect(within(dialog).getByRole('checkbox', { name: /email/ })).toBeChecked();
-    await userEvent.selectOptions(
-      within(dialog).getByRole('combobox', { name: 'Holder key' }),
-      'Holder Ed25519',
-    );
+    // the Holder area's key: no key picker in the dialog
+    expect(within(dialog).queryByRole('combobox', { name: 'Holder key' })).toBeNull();
     await userEvent.type(
       within(dialog).getByRole('textbox', { name: 'Audience' }),
       'https://verifier.example',
@@ -56,6 +54,7 @@ describe('provenance', () => {
       nonce: { type: 'text', value: 'n-0S6' },
       iat: fx.NOW,
     });
+    expect(app.engine.present.mock.calls[0]?.[0].holder.bytes).toBe(fx.holderInfo.key.bytes);
     await waitFor(() => expect(app.workspace.tabs).toHaveLength(2));
     const nav = screen.getByRole('navigation', { name: 'Provenance' });
     expect(within(nav).getByRole('button', { name: parent.title })).toBeInTheDocument();

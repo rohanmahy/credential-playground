@@ -1,7 +1,21 @@
-// Paste each token family → detect → open → Validate, with the real
-// WasmEngine. Binary fixtures are pasted as hex.
+// Paste each token family into the startup tab → detect → open →
+// Validate, with the real WasmEngine. Binary fixtures are pasted as hex.
+// Keys go into the key areas (key detection).
 import { expect, test } from '@playwright/test';
-import { fixtureHex, fixtureText, importKey, paste, validate } from './helpers';
+import {
+  NAMES,
+  fixtureHex,
+  fixtureText,
+  keyArea,
+  mainPane,
+  paste,
+  pasteKey,
+  readOnly,
+  tabBox,
+  tabs,
+  textOf,
+  validate,
+} from './helpers';
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -100,7 +114,9 @@ for (const f of families) {
   test(`${f.name}: detect, open, validate`, async ({ page }) => {
     await paste(page, f.input());
     await expect(page.getByTestId('detected-type')).toHaveText(f.kind);
-    await expect(page.getByRole('tree', { name: 'Main pane' })).toContainText(f.shows);
+    // Live edit renders only the visible lines; the read-only tree has them all.
+    await readOnly(page);
+    await expect(mainPane(page)).toContainText(f.shows);
     if (f.raw) await expect(page.getByRole('tree', { name: f.raw })).toBeVisible();
     const report = await validate(page);
     await expect(page.getByTestId('report-overall')).toHaveText(/pass|fail|warn|skip/i);
@@ -127,14 +143,16 @@ test('JWT with its published key: the signature passes', async ({ page }) => {
     x: 'f83OJ3D2xF1Bg8vub9tLe1gHMzV76e8Tus9uPHvRVEU',
     y: 'x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0',
   });
-  await importKey(page, jwk);
+  await pasteKey(page, 'issuer', jwk);
+  await expect(keyArea(page, 'issuer')).toContainText('P-256');
   await paste(page, fixtureText('tokens/rfc7515-a3-jws-es256.txt'));
   const report = await validate(page);
   await expect(report.locator('[data-status]').first()).toHaveAttribute('data-status', 'pass');
 });
 
 test('SD-JWT+KB with the RFC 9901 issuer key: signature and disclosures pass', async ({ page }) => {
-  await importKey(page, fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
+  await pasteKey(page, 'issuer', fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
+  await expect(keyArea(page, 'issuer')).toContainText('P-256');
   await paste(page, fixtureText('tokens/rfc9901-s5.2-sd-jwt-kb.txt'));
   await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
   const report = await validate(page);
@@ -162,25 +180,33 @@ for (const [name, input, kind] of [
   });
 }
 
-test('a key pasted into the input goes to the key panel', async ({ page }) => {
+test('a JWK pasted into a tab opens as a JSON claim set and adds no key', async ({ page }) => {
   await paste(page, fixtureText('keys/sd-cwt-08-c1-holder-private.jwk.json'));
-  await expect(page.getByRole('complementary', { name: 'Keys' }).getByRole('article')).toHaveCount(
-    1,
-  );
+  await expect(page.getByTestId('detected-type')).toHaveText('JSON claim set');
+  for (const role of ['issuer', 'holder'] as const) {
+    await expect(keyArea(page, role)).not.toContainText('P-256');
+  }
 });
 
-test('a hex COSE_Key (xxd -p) pasted into the input goes to the key panel (#42)', async ({
-  page,
-}) => {
+test('a hex COSE_Key (xxd -p) pasted into the Holder key area fills it (#42)', async ({ page }) => {
   // `xxd -p` wraps at 60 hex characters per line.
   const hex = fixtureHex('keys/rfc8392-a2.3-ec-p256.cosekey.cbor')
     .match(/.{1,60}/g)
     ?.join('\n');
-  await paste(page, `${hex}\n`);
-  const cards = page.getByRole('complementary', { name: 'Keys' }).getByRole('article');
-  await expect(cards).toHaveCount(1);
-  await expect(cards.first()).toContainText('P-256');
-  await expect(cards.first()).toContainText('Pasted');
-  await expect(page.getByRole('tab')).toHaveCount(0);
+  await pasteKey(page, 'holder', `${hex}\n`);
+  const holder = keyArea(page, 'holder');
+  await expect(holder).toContainText('P-256');
+  await expect(holder).toContainText('Pasted');
+  await expect(holder.getByRole('radio', { name: 'COSE_Key', exact: true })).toBeChecked();
   await expect(page.getByText(/TrailingBytes/)).toHaveCount(0);
+  // the tab side is untouched
+  await expect(tabs(page)).toHaveCount(1);
+  expect(await textOf(tabBox(page))).toBe('');
+  await expect(keyArea(page, 'issuer')).not.toContainText('P-256');
+});
+
+test('a token pasted into a key area is not a key', async ({ page }) => {
+  await pasteKey(page, 'issuer', fixtureText('tokens/rfc7515-a3-jws-es256.txt'));
+  await expect(keyArea(page, 'issuer').getByRole('alert')).toContainText(NAMES.notAKey);
+  await expect(tabs(page)).toHaveCount(1);
 });

@@ -7,7 +7,8 @@ export const ISSUER_JWK =
   '{"kty":"EC","crv":"P-256","kid":"issuer-1","x":"WKn-ZIGevcwGIyyrzFoZNBdaq9_TsqzGl96oc0CWuis","y":"y77t-RvAHRKTsSGdIYUfweuOvwrvDD-Q3Hv5J0fSKbE","d":"Hndv7ZZjs_ke8o9zXYo3iq-Yr8SewI5vrqd0pAvEPqg"}';
 export const HOLDER_JWK =
   '{"kty":"OKP","crv":"Ed25519","x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo","d":"nWGxne_9WmC6hEr0kuwsxERJxWl7MmkZcDusAxyuf2A"}';
-export const VERIFIER_JWK =
+/** The issuer key without `d`. */
+export const ISSUER_PUBLIC_JWK =
   '{"kty":"EC","crv":"P-256","kid":"issuer-1","x":"WKn-ZIGevcwGIyyrzFoZNBdaq9_TsqzGl96oc0CWuis","y":"y77t-RvAHRKTsSGdIYUfweuOvwrvDD-Q3Hv5J0fSKbE"}';
 
 function info(jwk: string, overrides: Partial<KeyInfo>): KeyInfo {
@@ -52,10 +53,11 @@ export const holderInfo: KeyInfo = info(HOLDER_JWK, {
     'urn:ietf:params:oauth:ckt:sha-256:q2w6Th86T3uNDiwfmntsXU4_KhsMnY5_alq0w9Lh8Kk',
 });
 
-export const verifierInfo: KeyInfo = info(VERIFIER_JWK, {
+/** The issuer key's public part (what Make public leaves in the area). */
+export const issuerPublicInfo: KeyInfo = info(ISSUER_PUBLIC_JWK, {
   private: false,
   kid: { type: 'text', value: 'issuer-1' },
-  role: 'verifier',
+  role: 'issuer',
 });
 
 /** A freshly generated ML-DSA-44 key (no kid). */
@@ -71,8 +73,10 @@ export const mlDsaInfo: KeyInfo = info(
   },
 );
 
+// A key area holds one card, and the card's id is the area's role (SPEC §4.2).
+
 export const issuerCard: KeyCard = {
-  id: 'key-1',
+  id: 'issuer',
   label: 'Issuer P-256',
   role: 'issuer',
   info: issuerInfo,
@@ -80,32 +84,47 @@ export const issuerCard: KeyCard = {
 };
 
 export const holderCard: KeyCard = {
-  id: 'key-2',
+  id: 'holder',
   label: 'Holder Ed25519',
   role: 'holder',
   info: holderInfo,
   provenance: { type: 'file', name: 'holder.jwk.json' },
 };
 
-export const verifierCard: KeyCard = {
-  id: 'key-3',
-  label: 'Verifier P-256',
-  role: 'verifier',
-  info: verifierInfo,
+/** An Issuer area card that only has the public key. */
+export const publicIssuerCard: KeyCard = {
+  id: 'issuer',
+  label: 'Issuer (public only)',
+  role: 'issuer',
+  info: issuerPublicInfo,
   provenance: { type: 'pasted' },
 };
 
-/** An issuer-role card that only has the public key. */
-export const publicIssuerCard: KeyCard = {
-  ...verifierCard,
-  id: 'key-4',
-  label: 'Issuer (public only)',
-  role: 'issuer',
+/** The two keys of a JWK Set (keyImport of a set returns one KeyInfo per
+ *  key); the chooser lists them by kid, alg, and kty. */
+export const setKeyA: KeyInfo = {
+  ...issuerInfo,
+  alg: 'ES256',
+  role: null,
+  kid: { type: 'text', value: 'set-key-a' },
 };
+export const setKeyB: KeyInfo = {
+  ...holderInfo,
+  alg: 'EdDSA',
+  role: null,
+  kid: { type: 'text', value: 'set-key-b' },
+};
+export const JWK_SET = `{"keys":[${ISSUER_JWK},${HOLDER_JWK}]}`;
+
+/** A PEM public key (key detection finds a `pem` candidate). */
+export const ISSUER_PEM = `-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEWKn+ZIGevcwGIyyrzFoZNBdaq9/T
+sqzGl96oc0CWuivLvu35G8AdEpOxIZ0hhR/B646/Cu8MP5Dce/knR9IpsQ==
+-----END PUBLIC KEY-----`;
 
 export const publicExport: KeyExport = {
-  bytes: textToB64u(VERIFIER_JWK),
-  text: VERIFIER_JWK,
+  bytes: textToB64u(ISSUER_PUBLIC_JWK),
+  text: ISSUER_PUBLIC_JWK,
   private: false,
 };
 export const privateExport: KeyExport = {

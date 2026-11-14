@@ -4,10 +4,9 @@ import 'fake-indexeddb/auto';
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative } from 'node:path';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { utf8 } from '../../lib/engine/bytes';
 import { IndexedDbRegistryCache, REGISTRY_DB } from '../../lib/platform/registryCache';
 import * as fx from '../fixtures';
-import { seedKeys, setupApp } from '../render';
+import { seedKeys, seedTab, setupApp } from '../render';
 
 const srcDir = join(import.meta.dirname, '../..');
 
@@ -62,13 +61,13 @@ describe('runtime', () => {
   it('writes nothing during open, edit, validate, key create/export, and settings changes', async () => {
     const app = setupApp();
     seedKeys(app, fx.issuerCard);
-    const opened = await app.workspace.openInput(utf8(fx.jwtToken), { type: 'pasted' });
-    if (opened.type !== 'tab') throw new Error(opened.type);
-    app.workspace.setLiveEdit(opened.tabId, true);
-    await app.workspace.applyEdit(opened.tabId, fx.jwtEdited.main.text);
-    await app.workspace.validate(opened.tabId);
-    const card = await app.keys.generate({ type: 'p256' }, { seed: { type: 'random' } });
-    await app.keys.copyToClipboard(card.id, { type: 'jwk' }, 'private');
+    const startup = app.workspace.tabs[0];
+    if (startup) await app.workspace.applyEdit(startup.id, '{"iss":"x"}');
+    const opened = seedTab(app.workspace, fx.jwt);
+    app.workspace.setLiveEdit(opened.id, true);
+    await app.workspace.applyEdit(opened.id, fx.jwtEdited.main.text);
+    await app.workspace.validate(opened.id);
+    await app.keys.copyToClipboard('issuer', { type: 'jwk' }, 'private');
     app.settings.clockOverride = 1;
     app.settings.theme = 'dark';
     app.settings.skew = 5;

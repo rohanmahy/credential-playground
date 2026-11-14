@@ -11,8 +11,14 @@ import {
   fixtureHex,
   fixtureText,
   guardNetwork,
-  importKey,
+  keyArea,
+  keyBox,
+  keyFormat,
   paste,
+  pasteInNewTab,
+  pasteKey,
+  readOnly,
+  textOf,
   validate,
 } from './helpers';
 
@@ -25,19 +31,19 @@ test('paste, validate, issue, present, and key flows stay on the app origin', as
   await context.grantPermissions(['clipboard-read', 'clipboard-write']);
   await page.goto('/');
 
-  for (const input of [
-    fixtureText('tokens/rfc9901-s5.2-sd-jwt-kb.txt'),
-    fixtureHex('tokens/sd-cwt-08-sd-kbt.cbor'),
-  ]) {
-    await paste(page, input);
-    await validate(page);
-  }
+  await paste(page, fixtureText('tokens/rfc9901-s5.2-sd-jwt-kb.txt'));
+  await validate(page);
+  await pasteInNewTab(page, fixtureHex('tokens/sd-cwt-08-sd-kbt.cbor'));
+  await validate(page);
 
+  // A pasted key (key detection), then keys created in both areas.
+  await pasteKey(page, 'issuer', fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
+  await expect(keyArea(page, 'issuer')).toContainText(/public/i);
   await createKey(page, 'EC P-256', 'issuer');
   await createKey(page, 'Ed25519', 'holder');
-  await importKey(page, fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
-  await paste(page, fixtureText('tokens/rfc9901-a1-input-claims.json'));
+  await pasteInNewTab(page, fixtureText('tokens/rfc9901-a1-input-claims.json'));
   // Present needs an SD-JWT (SPEC §5), so one claim is marked first.
+  await readOnly(page);
   await page
     .getByRole('tree', { name: 'Main pane' })
     .locator('[data-node-id="given_name"]')
@@ -54,9 +60,8 @@ test('paste, validate, issue, present, and key flows stay on the app origin', as
   await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT+KB');
   await validate(page);
 
-  const card = page.getByRole('complementary', { name: 'Keys' }).getByRole('article').first();
-  await card.getByRole('button', { name: 'Convert' }).click();
-  await expect(page.getByRole('region', { name: 'COSE_Key' })).toBeVisible();
+  await keyFormat(page, 'issuer', 'COSE_Key').check();
+  await expect.poll(() => textOf(keyBox(page, 'issuer'))).toContain('/ kty /');
 
   expect(net.foreign).toEqual([]);
   // The app did load its own assets, including the wasm module.
@@ -67,7 +72,7 @@ test('paste, validate, issue, present, and key flows stay on the app origin', as
 test('a key URL is fetched only after the user confirms it', async ({ page, context }) => {
   const net = await guardNetwork(context);
   await page.goto('/');
-  await page.getByRole('button', { name: 'Fetch from URL' }).click();
+  await keyArea(page, 'issuer').getByRole('button', { name: 'Fetch from URL' }).click();
   await page.getByRole('textbox', { name: 'URL' }).fill('https://issuer.example/jwks.json');
   await page.getByRole('button', { name: 'Fetch', exact: true }).click();
   const confirm = page.getByRole('alertdialog');

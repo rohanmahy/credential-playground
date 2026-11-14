@@ -25,6 +25,17 @@ describe('engine and platform selection', () => {
   });
 });
 
+describe('menus (SPEC §4: desktop only)', () => {
+  it('the web platform has no menu: onMenu, if present, never calls back', () => {
+    const web = new WebPlatform();
+    let called = false;
+    const unsubscribe = web.onMenu?.(() => (called = true));
+    if (unsubscribe) expect(typeof unsubscribe).toBe('function');
+    unsubscribe?.();
+    expect(called).toBe(false);
+  });
+});
+
 describe('base64url (core wire convention)', () => {
   it('round-trips unpadded base64url', () => {
     expect(toB64u(Uint8Array.of(0xd2, 0x84))).toBe('0oQ');

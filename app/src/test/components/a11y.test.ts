@@ -5,7 +5,8 @@ import { describe, expect, it } from 'vitest';
 import AppShell from '../../lib/components/AppShell.svelte';
 import MainPane from '../../lib/components/MainPane.svelte';
 import * as fx from '../fixtures';
-import { renderWithApp, seedKeys, seedTab, setupApp } from '../render';
+import { renderWithApp, seedTab, setupApp } from '../render';
+import { NAMES, keyArea, keyButton } from '../ui';
 
 function mainTree(doc = fx.cwt) {
   const app = setupApp();
@@ -72,6 +73,16 @@ describe('tabs', () => {
     expect(app.workspace.activeId).toBe(a.id);
   });
 
+  it('the "+" button is reachable by keyboard and opens an empty tab', async () => {
+    const app = setupApp();
+    renderWithApp(AppShell, {}, app);
+    const plus = screen.getByRole('button', { name: NAMES.newTab });
+    plus.focus();
+    await userEvent.keyboard('{Enter}');
+    expect(screen.getAllByRole('tab')).toHaveLength(2);
+    expect(app.workspace.tabs).toHaveLength(2);
+  });
+
   it('two tabs can be shown side by side', async () => {
     const app = setupApp();
     seedTab(app.workspace, fx.jwt);
@@ -84,11 +95,12 @@ describe('tabs', () => {
 });
 
 describe('landmarks and dialogs', () => {
-  it('the key panel is a labelled landmark and disabled actions stay focusable', () => {
+  it('the key areas are labelled regions and disabled actions stay focusable', () => {
     const app = setupApp();
     seedTab(app.workspace, fx.jsonClaims);
     renderWithApp(AppShell, {}, app);
-    expect(screen.getByRole('complementary', { name: 'Keys' })).toBeInTheDocument();
+    expect(keyArea('issuer')).toBeInTheDocument();
+    expect(keyArea('holder')).toBeInTheDocument();
     const issue = screen.getByRole('button', { name: 'Issue' });
     issue.focus();
     expect(document.activeElement).toBe(issue);
@@ -96,9 +108,8 @@ describe('landmarks and dialogs', () => {
 
   it('dialogs take focus and close with Escape', async () => {
     const app = setupApp();
-    seedKeys(app);
     renderWithApp(AppShell, {}, app);
-    await userEvent.click(screen.getByRole('button', { name: 'Create key' }));
+    await userEvent.click(keyButton('issuer', NAMES.create));
     const dialog = screen.getByRole('dialog', { name: 'Create key' });
     expect(dialog.contains(document.activeElement)).toBe(true);
     await userEvent.keyboard('{Escape}');

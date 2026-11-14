@@ -68,6 +68,7 @@ export const config: WebdriverIO.Config = {
     './specs/live-edit.e2e.ts',
     './specs/tree-sync.e2e.ts',
     './specs/drafts.e2e.ts',
+    './specs/menu.e2e.ts',
     './specs/never-persist.e2e.ts',
   ],
   // One app at a time: they share HOME, and tauri-driver binds one port.

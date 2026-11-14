@@ -1,93 +1,81 @@
-// New drafts and explicit type in the UI (#43; app/TEST-PLAN.md UI
-// contract: Input area, Empty state, Draft header).
+// Writing a credential from scratch in an empty tab (#43 under SPEC §4.1):
+// the Type picker sets what typed text parses as; the type then changes
+// only through "Detected as…" and sticks across edits; typed tabs have no
+// original signature, so they never go stale; claim sets can be issued
+// with the Issuer area's key. Names: ../ui.ts.
 import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
-import { EditorView } from '@codemirror/view';
 import { describe, expect, it } from 'vitest';
 import AppShell from '../../lib/components/AppShell.svelte';
-import { DRAFT_TEMPLATES } from '../../lib/logic/drafts';
 import * as fx from '../fixtures';
+import { parseAsKind } from '../MockEngine';
 import { renderWithApp, seedKeys, setupApp, type TestApp } from '../render';
+import { NAMES, activePanel, tabBox, typeInto } from '../ui';
 
-function app(format: 'json' | 'edn' = 'json'): TestApp {
-  const a = setupApp();
-  a.engine.parseEdit.mockResolvedValue(
-    fx.edited(format === 'json' ? fx.emptyJsonDraft : fx.emptyEdnDraft),
+function shell(setup: (app: TestApp) => void = () => undefined): TestApp {
+  const app = setupApp();
+  app.engine.parseEdit.mockImplementation(parseAsKind);
+  setup(app);
+  renderWithApp(AppShell, {}, app);
+  return app;
+}
+
+const detectedType = () => within(activePanel()).getByTestId('detected-type');
+
+async function writeEdn(text: string) {
+  await userEvent.selectOptions(
+    within(activePanel()).getByRole('combobox', { name: NAMES.type }),
+    NAMES.ednClaims,
   );
-  a.engine.detect.mockResolvedValue(
-    format === 'json' ? fx.jsonClaimsDetected : fx.ednClaimsDetected,
-  );
-  return a;
+  await typeInto(tabBox(), text);
+  await waitFor(() => expect(detectedType()).toHaveTextContent(/./));
 }
 
-function editor(): EditorView {
-  const view = EditorView.findFromDOM(screen.getByTestId('live-editor'));
-  if (!view) throw new Error('no CodeMirror view');
-  return view;
-}
-
-function editTo(text: string) {
-  const view = editor();
-  view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
-}
-
-async function newDraft(a: TestApp, format: 'json' | 'edn' = 'json') {
-  renderWithApp(AppShell, {}, a);
-  await userEvent.click(screen.getByRole('button', { name: 'New' }));
-  await screen.findByTestId('live-editor');
-  if (format === 'edn') {
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'edn');
-    await waitFor(() => expect(editor().state.doc.toString()).toBe(DRAFT_TEMPLATES.edn));
-  }
-}
-
-describe('starting a draft', () => {
-  it('New opens a tab in Live edit with the JSON template and provenance "New"', async () => {
-    const a = app();
-    await newDraft(a);
-    expect(screen.getAllByRole('tab')).toHaveLength(1);
-    expect(screen.getByRole('switch', { name: 'Live edit' })).toHaveAttribute(
-      'aria-checked',
-      'true',
+describe('type of a typed tab', () => {
+  it('"Detected as…" sets the type explicitly, and the choice survives edits', async () => {
+    const app = shell();
+    await writeEdn(fx.CWT_EDN);
+    expect(detectedType()).toHaveTextContent('EDN claim set');
+    await userEvent.click(within(activePanel()).getByRole('button', { name: /detected as/i }));
+    app.engine.parseEdit.mockResolvedValue(fx.cwtDraftEdit);
+    await userEvent.click(
+      within(screen.getByRole('menu')).getByRole('menuitemradio', { name: /^CWT/ }),
     );
-    expect(editor().state.doc.toString()).toBe(DRAFT_TEMPLATES.json);
-    expect(screen.getByRole('combobox', { name: 'Format' })).toHaveValue('json');
-    expect(screen.getByRole('navigation', { name: 'Provenance' })).toHaveTextContent('New');
-    expect(screen.getByTestId('detected-type')).toHaveTextContent('JSON claim set');
-  });
-
-  it('the empty state offers New JSON draft and New EDN draft', async () => {
-    const a = app('edn');
-    renderWithApp(AppShell, {}, a);
-    await userEvent.click(screen.getByRole('button', { name: 'New EDN draft' }));
-    await screen.findByTestId('live-editor');
-    expect(screen.getByRole('combobox', { name: 'Format' })).toHaveValue('edn');
-    expect(a.engine.parseEdit).toHaveBeenCalledWith(
-      expect.objectContaining({ kind: { type: 'edn_claims' }, text: DRAFT_TEMPLATES.edn }),
+    await waitFor(() => expect(detectedType()).toHaveTextContent('CWT'));
+    expect(app.engine.parseEdit).toHaveBeenLastCalledWith(
+      expect.objectContaining({ kind: { type: 'cwt' } }),
     );
-    expect(screen.getByRole('button', { name: 'New JSON draft' })).toBeInTheDocument();
+
+    await typeInto(tabBox(), ' ');
+    await waitFor(() =>
+      expect(app.engine.parseEdit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: { type: 'cwt' }, text: `${fx.CWT_EDN} ` }),
+      ),
+    );
+    expect(detectedType()).toHaveTextContent('CWT');
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    await userEvent.click(within(activePanel()).getByRole('button', { name: /detected as/i }));
+    expect(
+      within(screen.getByRole('menu')).getByRole('menuitemradio', { name: /^CWT/ }),
+    ).toHaveAttribute('aria-checked', 'true');
   });
 
-  it('only draft tabs have a Format select', async () => {
-    const a = app();
-    renderWithApp(AppShell, {}, a);
-    await userEvent.click(screen.getByRole('textbox', { name: /paste a credential or key/i }));
-    await userEvent.paste(fx.jwtToken);
-    a.engine.detect.mockResolvedValueOnce(fx.jwtCandidates);
-    await userEvent.click(screen.getByRole('button', { name: 'Open' }));
-    await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(1));
-    expect(screen.queryByRole('combobox', { name: 'Format' })).toBeNull();
+  it('a typed COSE_Key stays in the tab: nothing is added to the key areas', async () => {
+    const app = shell();
+    await writeEdn(fx.ISSUER_CWK_EDN);
+    expect(screen.queryByRole('button', { name: 'Add to key panel' })).toBeNull();
+    expect(app.keys.forRole('issuer')).toBeNull();
+    expect(app.keys.forRole('holder')).toBeNull();
+    expect(app.engine.keyImport).not.toHaveBeenCalled();
   });
-});
 
-describe('type', () => {
-  it('the header shows the type detected from the text as it is edited', async () => {
-    const a = app('edn');
-    await newDraft(a, 'edn');
-    a.engine.detect.mockResolvedValue(fx.cwtEdnDetected);
-    a.engine.parseEdit.mockResolvedValue(fx.cwtDraftEdit);
-    editTo(fx.CWT_EDN);
-    await waitFor(() => expect(screen.getByTestId('detected-type')).toHaveTextContent('CWT'));
+  it('a typed COSE_Sign1 set to CWT is never marked stale (no original signature)', async () => {
+    const app = shell();
+    await writeEdn(fx.CWT_EDN);
+    app.engine.parseEdit.mockResolvedValue(fx.cwtDraftEdit);
+    await userEvent.click(within(activePanel()).getByRole('button', { name: /detected as/i }));
+    await userEvent.click(screen.getByRole('menuitemradio', { name: /^CWT/ }));
+    await waitFor(() => expect(detectedType()).toHaveTextContent('CWT'));
     expect(screen.queryByText('modified – signature stale')).toBeNull();
     expect(
       within(screen.getByRole('toolbar', { name: 'Actions' })).getByRole('button', {
@@ -95,123 +83,13 @@ describe('type', () => {
       }),
     ).toHaveAttribute('aria-disabled', 'false');
   });
-
-  it('"Detected as…" sets the type explicitly, and the choice survives edits', async () => {
-    const a = app('edn');
-    await newDraft(a, 'edn');
-    await userEvent.click(screen.getByRole('button', { name: /detected as/i }));
-    const menu = screen.getByRole('menu');
-    const items = within(menu).getAllByRole('menuitemradio');
-    expect(items.map((i) => i.textContent?.replace(/\s*\(detected\)/, '').trim())).toEqual([
-      'Auto-detect',
-      'EDN claim set',
-      'COSE_Sign1',
-      'CWT',
-      'SD-CWT',
-      'SD-KBT',
-      'COSE_Key',
-      'COSE_KeySet',
-    ]);
-    expect(items[0]).toHaveAttribute('aria-checked', 'true');
-    expect(within(menu).getByRole('menuitemradio', { name: /EDN claim set/ })).toHaveTextContent(
-      '(detected)',
-    );
-
-    a.engine.parseEdit.mockResolvedValue(fx.edited(fx.coseKeyDraft));
-    await userEvent.click(within(menu).getByRole('menuitemradio', { name: /COSE_Key$/ }));
-    await waitFor(() => expect(screen.getByTestId('detected-type')).toHaveTextContent('COSE_Key'));
-    expect(a.engine.parseEdit).toHaveBeenLastCalledWith(
-      expect.objectContaining({ kind: { type: 'cose_key' } }),
-    );
-
-    editTo(fx.ISSUER_CWK_EDN);
-    await waitFor(() =>
-      expect(a.engine.parseEdit).toHaveBeenLastCalledWith(
-        expect.objectContaining({ kind: { type: 'cose_key' }, text: fx.ISSUER_CWK_EDN }),
-      ),
-    );
-    expect(screen.getByTestId('detected-type')).toHaveTextContent('COSE_Key');
-    await userEvent.click(screen.getByRole('button', { name: /detected as/i }));
-    expect(
-      within(screen.getByRole('menu')).getByRole('menuitemradio', { name: /COSE_Key$/ }),
-    ).toHaveAttribute('aria-checked', 'true');
-  });
-
-  it('key types offer "Add to key panel"', async () => {
-    const a = app();
-    await newDraft(a);
-    a.engine.detect.mockResolvedValue(fx.jwkDetected);
-    editTo(fx.VERIFIER_JWK);
-    await waitFor(() => expect(screen.getByTestId('detected-type')).toHaveTextContent('JWK'));
-    await userEvent.click(screen.getByRole('button', { name: 'Add to key panel' }));
-    const keys = screen.getByRole('complementary', { name: 'Keys' });
-    await waitFor(() => expect(within(keys).getAllByRole('article')).toHaveLength(1));
-    expect(within(keys).getByRole('article')).toHaveTextContent('New');
-  });
-
-  it('a detected token that is not a draft type can be opened as such', async () => {
-    const a = app();
-    await newDraft(a);
-    a.engine.detect.mockResolvedValue(fx.jwsJsonDetected);
-    a.engine.parseEdit.mockResolvedValue(fx.edited(fx.jsonDraft));
-    editTo('{"payload":"e30","protected":"e30","signature":""}');
-    await userEvent.click(await screen.findByRole('button', { name: 'Open as JWS JSON' }));
-    await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(2));
-    expect(a.engine.open).toHaveBeenCalled();
-  });
-});
-
-describe('Format', () => {
-  it('switching JSON → EDN converts the draft', async () => {
-    const a = app();
-    await newDraft(a);
-    a.engine.parseEdit.mockResolvedValue(fx.edited(fx.jsonDraft));
-    editTo(fx.DRAFT_JSON_TEXT);
-    await waitFor(() =>
-      expect(a.engine.parseEdit).toHaveBeenCalledWith(
-        expect.objectContaining({ text: fx.DRAFT_JSON_TEXT }),
-      ),
-    );
-    a.engine.parseEdit.mockResolvedValue(fx.edited(fx.convertedToEdn.document ?? fx.emptyEdnDraft));
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'edn');
-    await waitFor(() => expect(editor().state.doc.toString()).toBe(fx.DRAFT_EDN_TEXT));
-    expect(screen.queryByRole('alertdialog')).toBeNull();
-    expect(screen.getByTestId('detected-type')).toHaveTextContent('EDN claim set');
-  });
-
-  it('EDN → JSON that has no JSON form asks before discarding', async () => {
-    const a = app('edn');
-    await newDraft(a, 'edn');
-    editTo("{1: h'00'}");
-    a.engine.convertClaims.mockResolvedValue(fx.notRepresentable);
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'json');
-    const ask = await screen.findByRole('alertdialog');
-    expect(ask).toHaveTextContent('a byte string has no JSON form');
-    await userEvent.click(within(ask).getByRole('button', { name: 'Cancel' }));
-    expect(screen.getByRole('combobox', { name: 'Format' })).toHaveValue('edn');
-    expect(editor().state.doc.toString()).toBe("{1: h'00'}");
-
-    a.engine.parseEdit.mockResolvedValue(fx.edited(fx.emptyJsonDraft));
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Format' }), 'json');
-    await userEvent.click(
-      within(await screen.findByRole('alertdialog')).getByRole('button', {
-        name: 'Discard and switch',
-      }),
-    );
-    await waitFor(() =>
-      expect(screen.getByRole('combobox', { name: 'Format' })).toHaveValue('json'),
-    );
-    expect(editor().state.doc.toString()).toBe(DRAFT_TEMPLATES.json);
-  });
 });
 
 describe('actions', () => {
-  it('a claim-set draft can be issued from the toolbar', async () => {
-    const a = app();
-    seedKeys(a, fx.issuerCard);
-    await newDraft(a);
-    a.engine.parseEdit.mockResolvedValue(fx.edited(fx.jsonDraft));
-    editTo(fx.DRAFT_JSON_TEXT);
+  it('a typed JSON claim set is issued with the Issuer area key', async () => {
+    const app = shell((a) => seedKeys(a, fx.issuerCard));
+    await typeInto(tabBox(), fx.DRAFT_JSON_TEXT);
+    await waitFor(() => expect(detectedType()).toHaveTextContent('JSON claim set'));
     const issue = within(screen.getByRole('toolbar', { name: 'Actions' })).getByRole('button', {
       name: 'Issue',
     });
@@ -220,8 +98,19 @@ describe('actions', () => {
     await userEvent.click(
       within(screen.getByRole('dialog', { name: 'Issue' })).getByRole('button', { name: 'Issue' }),
     );
-    await waitFor(() => expect(a.engine.issue).toHaveBeenCalled());
-    expect(a.engine.issue.mock.calls[0]?.[0].claims.bytes).toBe(fx.jsonDraft.bytes);
+    await waitFor(() => expect(app.engine.issue).toHaveBeenCalled());
+    expect(app.engine.issue.mock.calls[0]?.[0].issuer.bytes).toBe(fx.issuerInfo.key.bytes);
     await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(2));
+  });
+
+  it('without an Issuer key, Issue is disabled and says so', async () => {
+    shell((a) => seedKeys(a, fx.holderCard));
+    await typeInto(tabBox(), fx.DRAFT_JSON_TEXT);
+    await waitFor(() => expect(detectedType()).toHaveTextContent('JSON claim set'));
+    const issue = within(screen.getByRole('toolbar', { name: 'Actions' })).getByRole('button', {
+      name: 'Issue',
+    });
+    expect(issue).toHaveAttribute('aria-disabled', 'true');
+    expect(issue.getAttribute('title')).toMatch(/issuer key/i);
   });
 });
