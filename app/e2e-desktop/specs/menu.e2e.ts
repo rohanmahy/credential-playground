@@ -1,8 +1,10 @@
 // SPEC §4 (desktop only): the native menu bar's shortcuts reach the
 // frontend: File → New Tab (Ctrl+T), Close Tab (Ctrl+W), Open File…
-// (Ctrl+O). Linux, so Ctrl rather than ⌘. The keys go to the webview
-// through WebKitWebDriver; the native accelerators must handle them (the
-// web build has no such shortcuts, browsers reserve them).
+// (Ctrl+O). Linux, so Ctrl rather than ⌘. The keys are real X events sent
+// with xdotool, which exercise GTK's native accelerators; WebDriver key
+// actions would not reach them. (The web build has no such shortcuts:
+// browsers reserve them.)
+import { execFileSync } from 'node:child_process';
 import { browser } from '@wdio/globals';
 import {
   appReady,
@@ -16,10 +18,22 @@ import {
   tabs,
 } from '../helpers';
 
+/** Ctrl+`key` as a real X keyboard event, so GTK's native accelerators
+ *  see it: WebKitWebDriver's key actions are synthesized inside the web
+ *  view and never reach them. Needs xdotool (scripts/linux-deps.sh --e2e). */
 async function shortcut(key: string): Promise<void> {
   // Focus something inside the window first (the tab list).
   await page.getByRole('tablist', 'Credentials').click();
-  await browser.keys(['Control', key]);
+  execFileSync('xdotool', [
+    'search',
+    '--name',
+    '^The Tokenator$',
+    'windowfocus',
+    '--sync',
+    'key',
+    '--clearmodifiers',
+    `ctrl+${key}`,
+  ]);
 }
 
 describe('desktop menu shortcuts', () => {
