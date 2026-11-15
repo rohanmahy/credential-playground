@@ -128,6 +128,21 @@ test('paste a line-wrapped compact SD-JWT (as RFC 9901 prints it): still detecte
   await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
 });
 
+test('paste an SD-JWT missing its final ~: read leniently, with a visible warning', async ({
+  page,
+}) => {
+  await paste(page, SD_JWT().replace(/~$/, ''));
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT');
+  await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
+  // Document warnings are listed under the panel's "N diagnostic(s)" toggle.
+  const panel = activePanel(page);
+  await panel.getByText(/^\d+ diagnostics?$/).click();
+  const warning = panel.locator('[data-severity="warning"]').filter({ hasText: '~' });
+  await expect(warning).toHaveCount(1);
+  await expect(warning).toBeVisible();
+  await expect(panel.locator('[data-severity="error"]')).toHaveCount(0);
+});
+
 test('Type "JWT": a typed compact JWT decodes as a JWT, without detection', async ({ page }) => {
   await pickType(page, 'JWT');
   await tabBox(page).click();
@@ -146,6 +161,17 @@ test('Type "SD-JWT": a typed compact SD-JWT decodes with its disclosures', async
   await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT');
   await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
   await expect(tabs(page).first()).toContainText('SD-JWT');
+});
+
+test('Type "SD-JWT": a typed SD-JWT+KB shows as SD-JWT+KB (the parsed kb wins)', async ({
+  page,
+}) => {
+  await pickType(page, 'SD-JWT');
+  await tabBox(page).click();
+  await page.keyboard.insertText(SD_JWT_KB());
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT+KB');
+  await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
+  await expect(tabs(page).first()).toContainText('SD-JWT+KB');
 });
 
 test('Type "SD-JWT": a compact SD-JWT pasted into the typed tab parses as SD-JWT', async ({

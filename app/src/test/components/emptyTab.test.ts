@@ -287,6 +287,16 @@ describe('JWT and SD-JWT in the Type picker', () => {
     expect(within(activePanel()).getByRole('table', { name: 'Disclosures' })).toBeInTheDocument();
   });
 
+  it('SD-JWT: a typed SD-JWT+KB shows as SD-JWT+KB (the parsed kb wins)', async () => {
+    const app = shell();
+    app.engine.parseEdit.mockResolvedValue(fx.edited(fx.sdJwtKb));
+    await userEvent.selectOptions(typePicker(), NAMES.sdJwt);
+    await typeInto(tabBox(), b64uToText(fx.sdJwtKb.bytes));
+    await waitFor(() => expect(detectedType()).toHaveTextContent(/^SD-JWT\+KB$/));
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    expect(tabs()[0]).toHaveTextContent('SD-JWT+KB');
+  });
+
   it('a paste into the typed (non-empty) tab parses as the picked type, no detection', async () => {
     const app = shell();
     await userEvent.selectOptions(typePicker(), NAMES.sdJwt);

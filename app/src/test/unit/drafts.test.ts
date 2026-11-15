@@ -225,6 +225,25 @@ describe('JWT and SD-JWT tab types', () => {
     });
   }
 
+  it('under SD-JWT the parsed kb wins: a typed SD-JWT+KB is titled SD-JWT+KB', async () => {
+    const app = setupApp();
+    const tab = app.workspace.tabs[0];
+    const type = typeOf('SD-JWT');
+    if (!tab || !type) throw new Error('no startup tab or no SD-JWT type');
+    app.workspace.setTabType(tab.id, type.id);
+    app.engine.parseEdit.mockResolvedValue(fx.edited(fx.sdJwtKb));
+    const text = b64uToText(fx.sdJwtKb.bytes);
+    await app.workspace.applyEdit(tab.id, text);
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    expect(tab.doc.kind).toEqual({ type: 'sd_jwt', kb: true });
+    expect(tab.title).toBe(`Tab ${tab.number} · SD-JWT+KB`);
+    expect(app.workspace.draftKind(tab)).toEqual({ type: 'sd_jwt', kb: true });
+  });
+
+  it('there is no separate SD-JWT+KB entry in the Type picker', () => {
+    expect(TAB_TYPES.map((t) => t.label)).not.toContain('SD-JWT+KB');
+  });
+
   it('Clear puts a JWT-typed tab back to the default type', async () => {
     const app = setupApp();
     const tab = app.workspace.tabs[0];

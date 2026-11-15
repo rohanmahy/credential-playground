@@ -411,6 +411,47 @@ impl Builder<'_> {
                 );
             }
         }
+        // Lenient compact SD-JWT readings: line breaks inside the token (as
+        // RFC 9901 prints it), and a KB-less SD-JWT without its final `~`
+        // (opens with an `sd_jwt.missing_trailing_tilde` warning). A last
+        // segment that is neither a KB-JWT nor a disclosure stays undetected.
+        let sd =
+            String::from_utf8(self.token("rfc9901-s5.1-sd-jwt.txt")?).map_err(|e| e.to_string())?;
+        let sd = sd.trim();
+        let sd_body = sd
+            .strip_suffix('~')
+            .ok_or("s5.1 SD-JWT does not end with ~")?;
+        let lenient: Vec<(&str, Vec<u8>)> = vec![
+            (
+                "sd-jwt-line-wrapped",
+                sd.as_bytes().chunks(72).collect::<Vec<_>>().join(&b'\n'),
+            ),
+            ("sd-jwt-no-trailing-tilde", sd_body.as_bytes().to_vec()),
+            (
+                "sd-jwt-garbage-last-segment",
+                format!(
+                    "{sd_body}~{}",
+                    Base64UrlUnpadded::encode_string(b"not json")
+                )
+                .into_bytes(),
+            ),
+        ];
+        for (name, input) in lenient {
+            self.add(
+                format!("detect--lenient--{name}"),
+                format!("constructed: {name} from RFC 9901 §5.1"),
+                "detect",
+                vec![raw(&input)],
+            );
+            if let Some(c) = self.e.detect(&input).into_iter().next() {
+                self.add(
+                    format!("open--lenient--{name}"),
+                    format!("constructed: {name} from RFC 9901 §5.1"),
+                    "open",
+                    vec![raw(&input), json(&c)?, json(&view())?],
+                );
+            }
+        }
         self.detect_key()?;
         // A candidate that does not fit the input.
         let jwt_candidate = self

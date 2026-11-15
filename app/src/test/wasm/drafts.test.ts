@@ -121,4 +121,30 @@ describe('compact JOSE text: JWT and SD-JWT tab types, wrapped paste (fail until
     const top = (await engine.detect(utf8(wrapped)))[0];
     expect(top?.kind).toEqual({ type: 'sd_jwt', kb: false });
   });
+
+  it('an SD-JWT without its final ~ opens leniently, with a warning', async () => {
+    const input = utf8(token('rfc9901-s5.1-sd-jwt.txt').replace(/~$/, ''));
+    const top = (await engine.detect(input))[0];
+    expect(top?.kind).toEqual({ type: 'sd_jwt', kb: false });
+    if (!top) return;
+    const doc = await engine.open(input, top, view);
+    expect(doc.kind).toEqual({ type: 'sd_jwt', kb: false });
+    expect(doc.disclosures).toHaveLength(10);
+    expect(doc.diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'sd_jwt.missing_trailing_tilde', severity: 'warning' }),
+    );
+    expect(doc.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('a last segment that is neither a KB-JWT nor a disclosure is not an SD-JWT', async () => {
+    const body = token('rfc9901-s5.1-sd-jwt.txt').replace(/~$/, '');
+    const kinds = (await engine.detect(utf8(`${body}~AAAA`))).map((c) => c.kind.type);
+    expect(kinds).not.toContain('sd_jwt');
+  });
+
+  it('under the SD-JWT type the parsed kb wins: a typed SD-JWT+KB is SD-JWT+KB', async () => {
+    const r = await edit({ type: 'sd_jwt', kb: false }, token('rfc9901-s5.2-sd-jwt-kb.txt'));
+    expect(r.ok).toBe(true);
+    expect(r.document?.kind).toEqual({ type: 'sd_jwt', kb: true });
+  });
 });

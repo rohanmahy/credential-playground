@@ -14,7 +14,7 @@ mod common;
 use base64ct::{Base64UrlUnpadded, Encoding};
 use common::*;
 use tokenator_core::{
-    Candidate, Engine, ErrorCode, JsonPathSegment, KeyImportRequest, Kind, Layer,
+    Candidate, Engine, ErrorCode, JsonPathSegment, KeyImportRequest, Kind, Layer, Severity,
 };
 
 type LayerCheck = fn(&Layer) -> bool;
@@ -675,5 +675,94 @@ fn line_wrapped_compact_tokens_detect_and_open() {
             assert_eq!(&doc.bytes[..], compact.as_bytes(), "{name}: breaks removed");
             assert_eq!(doc.disclosures.len(), disclosures, "{name}");
         }
+    }
+}
+
+/// The Document diagnostic code for a compact SD-JWT read without its
+/// final `~` (no KB-JWT, last segment a disclosure).
+const MISSING_TILDE: &str = "sd_jwt.missing_trailing_tilde";
+
+#[test]
+fn an_sd_jwt_without_its_trailing_tilde_is_read_leniently_with_a_warning() {
+    // `<jwt>~<d1>~…~<dn>`: no KB-JWT and no final `~`. The last segment is
+    // not a JWT and decodes as a disclosure, so it is one: the SD-JWT opens
+    // with all n disclosures, and a Document warning (not an error) says
+    // the trailing `~` is missing.
+    let e = engine();
+    for (name, disclosures) in [
+        ("rfc9901-s5.1-sd-jwt.txt", 10),
+        ("rfc9901-a1-presentation.txt", 2),
+        ("rfc9901-a3-sd-jwt.txt", 27),
+    ] {
+        let full = token_text(name);
+        let input = full.strip_suffix('~').expect("fixture ends with ~");
+        let cands = e.detect(input.as_bytes());
+        let c = cands
+            .first()
+            .unwrap_or_else(|| panic!("{name} without its final ~: nothing detected"));
+        assert_eq!(c.kind, Kind::SdJwt { kb: false }, "{name}");
+        let doc = e.open(input.as_bytes(), c, &view()).unwrap();
+        assert_eq!(doc.kind, Kind::SdJwt { kb: false }, "{name}");
+        assert_eq!(doc.disclosures.len(), disclosures, "{name}");
+        let warning = doc
+            .diagnostics
+            .iter()
+            .find(|d| d.code == MISSING_TILDE)
+            .unwrap_or_else(|| panic!("{name}: no {MISSING_TILDE}: {:?}", doc.diagnostics));
+        assert_eq!(warning.severity, Severity::Warning, "{name}");
+        assert!(
+            warning.message.contains('~'),
+            "{name}: {:?}",
+            warning.message
+        );
+        assert!(
+            doc.diagnostics
+                .iter()
+                .all(|d| d.severity != Severity::Error),
+            "{name}: {:?}",
+            doc.diagnostics
+        );
+    }
+}
+
+#[test]
+fn a_well_formed_sd_jwt_has_no_missing_tilde_warning() {
+    let e = engine();
+    for name in ["rfc9901-s5.1-sd-jwt.txt", "rfc9901-s5.2-sd-jwt-kb.txt"] {
+        let doc = open_token(&e, name);
+        assert!(
+            doc.diagnostics.iter().all(|d| d.code != MISSING_TILDE),
+            "{name}: {:?}",
+            doc.diagnostics
+        );
+    }
+}
+
+#[test]
+fn a_real_kb_jwt_as_the_last_segment_is_still_sd_jwt_kb() {
+    let e = engine();
+    let doc = open_token(&e, "rfc9901-s5.2-sd-jwt-kb.txt");
+    assert_eq!(doc.kind, Kind::SdJwt { kb: true });
+    assert_eq!(doc.disclosures.len(), 4);
+    assert!(doc.diagnostics.iter().all(|d| d.code != MISSING_TILDE));
+}
+
+#[test]
+fn a_last_segment_that_is_neither_a_kb_jwt_nor_a_disclosure_is_not_an_sd_jwt() {
+    let e = engine();
+    let full = token_text("rfc9901-s5.1-sd-jwt.txt");
+    let body = full.strip_suffix('~').unwrap();
+    for last in [
+        Base64UrlUnpadded::encode_string(b"not json"),
+        Base64UrlUnpadded::encode_string(b"{\"not\": \"an array\"}"),
+        "AAAA".to_owned(),
+    ] {
+        let input = format!("{body}~{last}");
+        assert!(
+            e.detect(input.as_bytes())
+                .iter()
+                .all(|c| !matches!(c.kind, Kind::SdJwt { .. })),
+            "last segment {last:?}"
+        );
     }
 }

@@ -49,8 +49,8 @@ Accessible names are matched exactly unless a regex is shown in the test.
 | Element | Contract |
 |---|---|
 | Header | no global input box; `nav` _Tools_ with _Date/time_, _Settings_, _About_; no `menubar` in the page (the desktop menu is native) |
-| Empty tab | on startup one tab is open, empty (`Tab.empty`); a _New tab_ button (the +) in the tab bar opens another; every tab panel has a textbox _Credential text_ and a _Clear_ button; an empty tab also has a _Type_ select (_JSON claims_ default, _EDN claims_, …) used for typed text, and _Open file…_ / _From clipboard_ buttons that fill the tab and run token detection. Paste or drop into an empty tab: `engine.detect` → `open` of the top candidate in that tab (Live edit on); a paste or edit of a non-empty tab never re-runs detection; nothing detected shows a `role="alert"` in the panel. Drops: only on an empty text area (dragover prevented); a non-empty area sets `dropEffect = "none"` and ignores the drop; drops elsewhere are ignored |
-| Typed tabs (#43) | the empty tab is a draft (`Tab.draft`, provenance `new`) whose type comes from the _Type_ select; typed text parses as that type (empty `base`), never detected; _Detected as…_ sets the type explicitly and it sticks across edits; never the stale banner; no _Add to key panel_ (nothing is routed from tabs to keys) |
+| Empty tab | on startup one tab is open, empty (`Tab.empty`); a _New tab_ button (the +) in the tab bar opens another; every tab panel has a textbox _Credential text_ and a _Clear_ button; an empty tab also has a _Type_ select (_JSON claims_ default, _EDN claims_, _JWT_, _SD-JWT_, _COSE_Sign1 (EDN)_, _CWT (EDN)_, _SD-CWT (EDN)_, _SD-KBT (EDN)_; no separate _SD-JWT+KB_ entry) used for typed text, and _Open file…_ / _From clipboard_ buttons that fill the tab and run token detection. Paste or drop into an empty tab: `engine.detect` → `open` of the top candidate in that tab (Live edit on); a paste or edit of a non-empty tab never re-runs detection; nothing detected shows a `role="alert"` in the panel. Drops: only on an empty text area (dragover prevented); a non-empty area sets `dropEffect = "none"` and ignores the drop; drops elsewhere are ignored |
+| Typed tabs (#43) | the empty tab is a draft (`Tab.draft`, provenance `new`) whose type comes from the _Type_ select; typed text parses as that type (empty `base`), never detected; under _JWT_ / _SD-JWT_ the text is the compact serialization and decodes into the view, and under _SD-JWT_ the parsed `kb` wins (a typed SD-JWT+KB shows as SD-JWT+KB); _Detected as…_ sets the type explicitly and it sticks across edits; never the stale banner; no _Add to key panel_ (nothing is routed from tabs to keys) |
 | Key areas | two `region`s, _Issuer key_ and _Holder key_, each holding one key (`KeyStore.issuer` / `.holder`, `forRole(role)`; card id = role); no _Role_ select and no Verifier. Per area: buttons _Create_, _Import_, _Fetch from URL_, _Clear_, _Export_, _Make public_, _Auto kid_ (menu: _JWK thumbprint_, _COSE thumbprint_, _Text…_); a textbox named like the area showing the key; a `radiogroup` _Key format_ with radios _JWK_ (default) / _COSE_Key_ re-rendering it (`keyToJwk` / `keyToCwk`); details: description, `data-testid="kid"`, Private/Public, provenance label, both thumbprints, a _Thumbprint hash_ select. Paste or drop into an empty area: `engine.detectKey` → `keyImport` with that candidate (PEM shows as JWK; the toggle follows a detected COSE_Key); typed text parses in the toggle's format (`keyImport` with `format`); no candidate shows "Not a recognized key" in a `role="alert"` in the area; a parse error shows its message there and leaves no key; paste into a non-empty area never detects. Sets (from paste, drop, Import, or Fetch): `dialog` _Choose a key_ with a button per key (kid, alg, kty); the pick fills the area. Make public replaces the key with `keyPublic`; Clear empties the area and disables actions that need it |
 | Key dialogs | _Create key_ (from an area's _Create_, fills that area): _Algorithm_ select (`KEY_SPECS` labels in order), radios _Random_ / _Well-known test seed_ / _From a seed_ with a _Seed_ textbox, _Create_; no _Role_. _Import key_ (from an area's _Import_): _Key_ textbox, _Import_, _From clipboard_, _From file…_; closes after a successful import. _Export key_: _Format_ select (JWK, JWK Set, COSE_Key, COSE_KeySet, PEM …), radios _Public_ (default) / _Private_, checkbox _I understand this exports the private key_ gating _Copy private key_ and _Save…_, a `role="status"` announcing the copy |
 | Tabs | `role="tablist"` (_Credentials_), `role="tab"` per tab (title `Tab N · <kind label>`) with `aria-selected`, roving focus with ArrowLeft/Right/Home/End (moving also activates); `role="tabpanel"` with `aria-labelledby`; _Split view_ shows two panels; only the active (or split) panels are rendered |
@@ -76,7 +76,7 @@ Accessible names are matched exactly unless a regex is shown in the test.
 | Action enablement, "what's missing" tooltips, Re-encode's three CBOR serializations | `unit/actions`, `components/actions` | 13 + 6 |
 | Actions open derived tabs with a provenance breadcrumb; SD marks and Issue | `unit/workspace`, `components/provenance`, `components/issue` | 17 + 3 + 2 |
 | _Detected as…_ and the unwrapping breadcrumb | `components/detect` | 2 |
-| Per-area input: no global input, startup empty tab, +, paste/drop into an empty tab detects, no re-detection, Type picker, Clear, drops only on empty areas | `components/emptyTab`, `unit/workspace`, `e2e/tabs.spec.ts` | 22 + 3 + 8 e2e |
+| Per-area input: no global input, startup empty tab, +, paste/drop into an empty tab detects (compact SD-JWT and SD-JWT+KB too; line-wrapped tokens; an SD-JWT missing its final `~` with a visible warning), no re-detection, Type picker (JWT, SD-JWT), Clear, drops only on empty areas | `components/emptyTab`, `unit/workspace`, `e2e/tabs.spec.ts` | 28 + 3 + 16 e2e |
 | Desktop menu events and shortcuts | `components/menu`, `unit/tauriPlatform`, `scaffold/engine`, `e2e-desktop/specs/menu.e2e.ts` | 9 + 1 + 1 + 4 desktop |
 | Live edit → "modified – signature stale", Re-sign / Keep original signature | `components/liveEdit` | 5 |
 | Key areas: one key per area, paste/drop with key detection, PEM as JWK, JWK / COSE_Key toggle, typed text in the toggle's format, "Not a recognized key", chooser for sets, Create / Import / Fetch into the area, export with explicit private choice, thumbprints, Auto kid, Make public, Clear | `unit/keyStore`, `components/keyAreas`, `e2e/keys.spec.ts` | 9 + 33 + 14 e2e |
@@ -89,7 +89,7 @@ Accessible names are matched exactly unless a regex is shown in the test.
 | Settings and clock | `unit/settings` | 3 (1 passes now) |
 | About box with §9 notes | `components/about` | 2 (1 passes now) |
 | Scaffold: engine/platform selection, base64url, defaults, EDN mode, fixture consistency, production CSP | `scaffold/*` | 21 (pass now) |
-| Typed tabs and explicit type (#43): Type picker, no re-detection, explicit type kept across edits, never stale, Format conversion, actions by type | `unit/drafts`, `components/drafts`, `wasm/drafts` (`pnpm test:wasm`), `e2e/drafts.spec.ts` | 13 + 5 + wasm + 5 e2e |
+| Typed tabs and explicit type (#43): Type picker (incl. JWT and SD-JWT, parsed `kb` wins), no re-detection, explicit type kept across edits, never stale, Format conversion, actions by type | `unit/drafts`, `components/drafts`, `wasm/drafts` (`pnpm test:wasm`), `e2e/drafts.spec.ts` | 17 + 5 + wasm + 5 e2e |
 
 The per-area input redesign (SPEC §3, §4) replaced the input-box, role, and New-draft tests; until it lands, those files fail (and `pnpm typecheck` reports the missing `KeyStore.issuer`/`holder`/`forRole`, `Tab.empty`, `Platform.onMenu`, and the `not_a_key` error code).
 
@@ -190,6 +190,25 @@ and `convert_claims` (JSON ↔ EDN claim sets) is part of `Engine`
 `parse_edit` with an empty `base` and an explicit `kind` builds a draft's
 document, so an explicit type needs no `open`/`render` override. All pinned
 by `src/test/wasm/drafts.test.ts`.
+
+## Compact JOSE input (the SD-JWT paste fix)
+
+Lenient compact readings, pinned in `crates/tokenator-core/tests/detect.rs`,
+`src/test/wasm/drafts.test.ts`, the parity corpus (`detect--lenient--*`,
+`open--lenient--*`; regenerate goldens with `pnpm parity:regen`), and
+`e2e/tabs.spec.ts`:
+
+- A compact token with line breaks in it (as RFC 9901 prints it) is
+  detected; the document bytes are the token without the breaks.
+- A KB-less SD-JWT without its final `~` (`<jwt>~<d1>~…~<dn>`) is an
+  `sd_jwt { kb: false }` with all n disclosures and a Document diagnostic
+  of severity `warning`, code `sd_jwt.missing_trailing_tilde` (listed
+  under the panel's "N diagnostics" toggle). A real KB-JWT as the last
+  segment keeps `kb: true`; a last segment that is neither a KB-JWT nor a
+  disclosure stays undetected.
+- `parse_edit` with an empty `base` and kind `jwt` / `sd_jwt` reads the
+  compact serialization (`crates/tokenator-core/tests/resign_edit.rs`);
+  with `sd_jwt { kb: false }` a KB token comes back as `kb: true`.
 
 ## CSP
 
