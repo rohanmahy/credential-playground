@@ -118,8 +118,10 @@ ambiguous input, e.g. reading a JSON claim set as EDN instead.
 
 - **Empty tab:** every tab starts as an editable text area, so a credential
   can be written from scratch. An empty tab shows a **type picker** (JSON
-  claims by default, EDN claims, …), which applies if the user types rather
-  than pastes. It also offers **Open file…** and **From clipboard**, which fill
+  claims by default, EDN claims, JWT, SD-JWT, …), which applies if the user
+  types rather than pastes. JWT and SD-JWT take the compact serialization;
+  SD-JWT covers SD-JWT+KB too (a typed token with a KB-JWT shows as
+  SD-JWT+KB). It also offers **Open file…** and **From clipboard**, which fill
   the tab and run token detection.
 - **First fill:** pasting or dropping into the empty tab runs token detection
   (§3). The tab becomes the decoded view (header, main pane, raw pane), and its
