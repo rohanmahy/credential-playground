@@ -165,6 +165,12 @@ pub enum Layer {
         /// The exact text removed.
         prefix: String,
     },
+    /// Whitespace inside compact JOSE text (a token copied with line
+    /// breaks); the payload is the text without it.
+    LineBreaks {
+        /// Line length if wrapped.
+        wrap: Option<u32>,
+    },
     /// Percent-encoding.
     UrlEncoded,
     /// A string member of a JSON document.

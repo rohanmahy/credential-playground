@@ -51,7 +51,9 @@ under test), CBOR builders on top of `tokenator-cbor`, candidate lookups, and
 - The catch-alls: every JSON object also yields `JsonClaims`, and every CBOR
   map also yields `CborClaims`, at lower confidence than a more specific kind.
 - An SD-JWT is recognized by its `~` structure alone. `kb` is true when the
-  last part is non-empty.
+  last part is a JWS; a last part that decodes as a disclosure makes it a
+  KB-less SD-JWT missing its final `~` (core pins this in
+  `tokenator-core/tests/detect.rs`).
 - SD-CWT signals in draft-08: `sd_alg` (170) in the protected header,
   `sd_claims` (17) in the unprotected header, or a `simple(59)` key in the
   payload. SD-KBT: `kcwt` (13) in the protected header. SD-KBT wins over

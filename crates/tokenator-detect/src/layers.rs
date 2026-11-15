@@ -35,6 +35,10 @@ pub(crate) fn unwrap_one<'a>(
                 _ => return Err("prefix does not match"),
             }
         }
+        Layer::LineBreaks { .. } => {
+            let text = data.iter().filter(|c| !c.is_ascii_whitespace());
+            return Ok(Cow::Owned(text.copied().collect()));
+        }
         Layer::UrlEncoded => {
             let (bytes, _) = codec::percent_decode(&data).ok_or("invalid percent-encoding")?;
             return Ok(Cow::Owned(bytes));
@@ -113,6 +117,7 @@ pub(crate) fn wrap_one(payload: Vec<u8>, layer: &Layer) -> Vec<u8> {
         Layer::AuthorizationHeader { prefix } | Layer::BearerPrefix { prefix } => {
             [prefix.as_bytes(), &payload].concat()
         }
+        Layer::LineBreaks { wrap } => codec::wrap_lines(payload, *wrap),
         Layer::UrlEncoded => codec::percent_encode(&payload),
         Layer::JsonField { path } => {
             let mut out = Vec::with_capacity(payload.len() + 16 * path.len() + 2);

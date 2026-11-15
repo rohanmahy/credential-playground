@@ -55,8 +55,8 @@ pub struct Candidate {
     pub kind: Kind,
     /// 0 (wild guess) to 100 (certain). Only the relative order is meaningful.
     pub confidence: u8,
-    /// The bytes of the input that the first decoding layer (`UrlEncoded`,
-    /// `Base64Url`, `Base64Std`, or `Hex`) operates on. If every layer is
+    /// The bytes of the input that the first decoding layer (`LineBreaks`,
+    /// `UrlEncoded`, `Base64Url`, `Base64Std`, or `Hex`) operates on. If every layer is
     /// positional (`Trim`, `Quotes`, `AuthorizationHeader`, `BearerPrefix`,
     /// `JsonField` without escapes, and `CborTag`), this is exactly the
     /// payload.
@@ -90,6 +90,14 @@ pub enum Layer {
     BearerPrefix {
         /// The exact text removed, including trailing spaces, e.g. `"Bearer "`.
         prefix: String,
+    },
+    /// Whitespace inside compact JOSE text: a JWT or SD-JWT copied with line
+    /// breaks in it (as RFCs print long tokens). Only recorded when the text
+    /// without its whitespace is a compact token. Unwrapping removes every
+    /// ASCII whitespace byte; [`rewrap`] breaks lines with `\n`.
+    LineBreaks {
+        /// Line length in characters if the text is wrapped with `\n`.
+        wrap: Option<usize>,
     },
     /// Percent-encoding (`%XX`). `+` is a literal plus, not a space. Only
     /// recorded if the input contains at least one `%XX` escape. [`rewrap`]
@@ -151,7 +159,8 @@ pub enum Kind {
     Jwt,
     /// SD-JWT in compact (`~`-separated) form.
     SdJwt {
-        /// The last part is a non-empty KB-JWT (an SD-JWT+KB).
+        /// The last part is a KB-JWT (an SD-JWT+KB). A last part that is a
+        /// disclosure is read as an SD-JWT missing its final `~`.
         kb: bool,
     },
     /// JWS JSON Serialization without SD-JWT `disclosures`.

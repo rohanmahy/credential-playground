@@ -340,6 +340,10 @@ pub enum DiagnosticKind {
     },
     /// An empty disclosure between two `~`.
     EmptyDisclosure,
+    /// A compact SD-JWT without KB-JWT whose last part is a disclosure, not
+    /// followed by the `~` RFC 9901 §4 requires. Read leniently: the part
+    /// is the last disclosure.
+    MissingTrailingTilde,
     /// A required envelope member is missing (`payload`, `signature`, ...).
     MissingMember(&'static str),
     /// An envelope member has the wrong JSON type.
@@ -380,8 +384,10 @@ pub struct Parsed<'a> {
 /// to `input` itself. Input starting with `{` is a JSON serialization; it
 /// is an SD-JWT if the first signature's unprotected header has
 /// `disclosures` or `kb_jwt`. Compact input is an SD-JWT if it contains
-/// `~`. A part that fails to decode does not stop parsing: it is kept as
-/// is and reported in [`Parsed::diagnostics`].
+/// `~`; a last part that is a disclosure rather than a KB-JWT is read as
+/// one ([`DiagnosticKind::MissingTrailingTilde`]). A part that fails to
+/// decode does not stop parsing: it is kept as is and reported in
+/// [`Parsed::diagnostics`].
 pub fn parse(input: &str) -> Result<Parsed<'_>, ParseError> {
     let start = input.len() - input.trim_start_matches(JSON_WS).len();
     let end = input.trim_end_matches(JSON_WS).len();
@@ -545,8 +551,24 @@ fn parse_compact<'a>(text: &'a str, base: usize, diagnostics: &mut Vec<Diagnosti
         check_disclosure(&d, i, diagnostics);
         disclosures.push(d);
     }
-    let kb_jwt = (!last.1.is_empty())
-        .then(|| parse_compact_jws(Cow::Borrowed(last.1), base + last.0, true, diagnostics));
+    // `<jwt>~<D.1>~...~<D.N>` without the final `~`: a last part with no
+    // `.` that is a well-formed disclosure is one, not a KB-JWT.
+    let (start, piece) = *last;
+    let span = span_at(base, start, start + piece.len());
+    let lenient = Disclosure::from_part(B64Part::new(piece, span));
+    if !piece.is_empty() && !piece.contains('.') && lenient.view().is_ok() {
+        disclosures.push(lenient);
+        let index = disclosures.len() - 1;
+        let kind = DiagnosticKind::MissingTrailingTilde;
+        diag(diagnostics, PartRef::Disclosure(index), Some(span), kind);
+        return Token::SdJwt(SdJwt {
+            issuer,
+            disclosures,
+            kb_jwt: None,
+        });
+    }
+    let kb_jwt = (!piece.is_empty())
+        .then(|| parse_compact_jws(Cow::Borrowed(piece), base + start, true, diagnostics));
     Token::SdJwt(SdJwt {
         issuer,
         disclosures,

@@ -178,6 +178,7 @@ fn diag_code(kind: &tj::DiagnosticKind) -> &'static str {
         tj::DiagnosticKind::WrongType(_) => "jose.wrong_type",
         tj::DiagnosticKind::MixedSerialization => "jose.mixed_serialization",
         tj::DiagnosticKind::MisplacedSdMember(_) => "jose.misplaced_sd_member",
+        tj::DiagnosticKind::MissingTrailingTilde => "sd_jwt.missing_trailing_tilde",
         _ => "jose.diagnostic",
     }
 }
@@ -594,7 +595,12 @@ fn build_parsed(
         .map(|d| Diagnostic {
             severity: Severity::Warning,
             code: diag_code(&d.kind).to_owned(),
-            message: format!("{:?}", d.kind),
+            message: match d.kind {
+                tj::DiagnosticKind::MissingTrailingTilde => {
+                    "no `~` after the last disclosure (RFC 9901 §4): read as an SD-JWT without KB-JWT".to_owned()
+                }
+                _ => format!("{:?}", d.kind),
+            },
             node_id: Some(part_ref_id(d.part, general)),
             main: None,
             raw: d.span.map(|s| ByteRange {

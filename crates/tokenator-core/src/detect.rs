@@ -32,6 +32,9 @@ pub(crate) fn layer_dto(l: &td::Layer) -> Layer {
         td::Layer::BearerPrefix { prefix } => Layer::BearerPrefix {
             prefix: prefix.clone(),
         },
+        td::Layer::LineBreaks { wrap } => Layer::LineBreaks {
+            wrap: opt_u32(*wrap),
+        },
         td::Layer::UrlEncoded => Layer::UrlEncoded,
         td::Layer::JsonField { path } => Layer::JsonField {
             path: path
@@ -77,6 +80,9 @@ pub(crate) fn layer_td(l: &Layer) -> Option<td::Layer> {
         },
         Layer::BearerPrefix { prefix } => td::Layer::BearerPrefix {
             prefix: prefix.clone(),
+        },
+        Layer::LineBreaks { wrap } => td::Layer::LineBreaks {
+            wrap: opt_usize(*wrap),
         },
         Layer::UrlEncoded => td::Layer::UrlEncoded,
         Layer::JsonField { path } => td::Layer::JsonField {
@@ -146,6 +152,7 @@ fn crumb(l: &Layer) -> Option<String> {
         Layer::Quotes { .. } => "quotes".to_owned(),
         Layer::AuthorizationHeader { .. } => "Authorization header".to_owned(),
         Layer::BearerPrefix { .. } => "Bearer".to_owned(),
+        Layer::LineBreaks { .. } => "line breaks".to_owned(),
         Layer::UrlEncoded => "URL-encoded".to_owned(),
         Layer::JsonField { .. } => match layer_td(l) {
             Some(td::Layer::JsonField { path }) => {

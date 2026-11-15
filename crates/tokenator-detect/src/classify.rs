@@ -60,11 +60,30 @@ pub(crate) fn jose_compact(text: &[u8]) -> Option<(Kind, u8)> {
     {
         return None;
     }
-    let kb = !last.is_empty();
+    // A last part that is not a KB-JWT but a disclosure: a KB-less SD-JWT
+    // missing its final `~` (core opens it with a warning).
+    let kb = !last.is_empty() && !disclosure(last);
     if kb && jws_compact(last).is_none() {
         return None;
     }
     Some((Kind::SdJwt { kb }, conf::SD_JWT))
+}
+
+/// Whether `text` is a base64url disclosure: `[salt, name, value]` or
+/// `[salt, value]` with string salt and name (RFC 9901 §4.2).
+fn disclosure(text: &[u8]) -> bool {
+    let Some(decoded) = codec::base64_decode(text, Some(Alphabet::Url)) else {
+        return false;
+    };
+    let Ok(root) = tokenator_json::parse(&decoded.bytes) else {
+        return false;
+    };
+    let is_str = |i: usize| matches!(root.index(i).map(Node::value), Some(Json::String(_)));
+    match root.elements().map(<[_]>::len) {
+        Some(2) => is_str(0),
+        Some(3) => is_str(0) && is_str(1),
+        _ => false,
+    }
 }
 
 /// Classifies one `header.payload.signature` JWS.

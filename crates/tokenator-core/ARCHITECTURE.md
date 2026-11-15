@@ -44,6 +44,16 @@ NodeId scheme, document model, validation rules; issues #28–#32).
   unchanged parts keep their original encoded text (so unusual base64 and
   the pretty layout survive), changed parts are re-encoded. Text without
   `.` or `~` parses as a one-segment compact JWS (`jose.segment_count`).
+  With an empty base (a tab typed from scratch, SPEC §4.1) the text is the
+  token itself: compact text loses any whitespace inside it, and it must
+  parse as the requested kind's serialization, whose parsed `kb` wins
+  (`sd_jwt { kb: false }` reads an SD-JWT+KB as one). Nothing is stale
+  against an empty base.
+- **Lenient compact readings** (SPEC §3). A token with line breaks in it
+  is detected through a `line_breaks` layer, so `open` decodes the text
+  without them. A KB-less SD-JWT missing its final `~` (last part a
+  disclosure) opens with all disclosures and a Document warning
+  `sd_jwt.missing_trailing_tilde`.
 - **EDN text** is classified by the CBOR it encodes, through
   `tokenator_detect::detect` on the encoding (#44): claims maps stay
   `edn_claims` (bytes = the text); COSE_Sign1s and COSE_Keys get a

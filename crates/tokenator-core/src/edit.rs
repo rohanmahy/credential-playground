@@ -44,7 +44,8 @@ fn error(code: &str, message: impl Into<String>) -> Diagnostic {
 pub(crate) fn parse_edit(registry: &Registry, req: &EditRequest) -> EditResult {
     match edit(registry, req) {
         Ok((bytes, diagnostics)) => {
-            let stale = signed_changed(&req.kind, &req.base, &bytes);
+            // Text typed from scratch has no original to be stale against.
+            let stale = !req.base.is_empty() && signed_changed(&req.kind, &req.base, &bytes);
             match view::document(registry, &req.kind, &bytes, Vec::new(), &req.view) {
                 Ok(mut doc) => {
                     doc.signature_stale = stale;
@@ -139,8 +140,45 @@ fn locate<'n>(root: &'n JNode<'n>, id: &NodeId) -> Option<&'n JNode<'n>> {
     Some(node)
 }
 
+/// Token text typed from scratch (an empty base, SPEC §4.1): the compact
+/// serialization, with any whitespace inside it removed (a token pasted
+/// with line breaks), or a JSON serialization as is. It must parse as the
+/// requested kind's serialization; the parsed `kb` wins over the request.
+fn jose_text(req: &EditRequest) -> Edited {
+    let text = req.text.trim_matches(|c: char| c.is_ascii_whitespace());
+    let text = if text.starts_with('{') {
+        text.to_owned()
+    } else {
+        text.chars().filter(|c| !c.is_ascii_whitespace()).collect()
+    };
+    let parsed = tokenator_jose::parse(&text)
+        .map(|p| view::jose::kind_of(&p.token))
+        .map_err(|e| vec![error("jose.syntax", format!("not a JOSE token: {e}"))])?;
+    let fits = matches!(
+        (&req.kind, &parsed),
+        (Kind::Jwt | Kind::JwsCompact, Kind::Jwt | Kind::JwsCompact)
+            | (Kind::SdJwt { .. }, Kind::SdJwt { .. })
+            | (Kind::JwsJson { .. }, Kind::JwsJson { .. })
+            | (Kind::SdJwtJson { .. }, Kind::SdJwtJson { .. })
+    );
+    if !fits {
+        return Err(vec![error(
+            "jose.kind",
+            format!(
+                "not a {}: the text is a {}",
+                req.kind.label(),
+                parsed.label()
+            ),
+        )]);
+    }
+    Ok((text.into_bytes(), Vec::new()))
+}
+
 #[allow(clippy::too_many_lines)]
 fn jose(registry: &Registry, req: &EditRequest) -> Edited {
+    if req.base.is_empty() {
+        return jose_text(req);
+    }
     let Ok(base_text) = std::str::from_utf8(&req.base) else {
         return Err(vec![error("jose.base", "the base token is not UTF-8")]);
     };

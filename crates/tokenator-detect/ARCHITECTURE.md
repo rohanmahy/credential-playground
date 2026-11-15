@@ -25,7 +25,11 @@ or the frozen range that the first decoding layer consumed. At each node:
    array, or tag stops here: binary input is never trimmed or read as text.
 2. **Cleanup (exclusive).** `Trim` (root only), then `Quotes`,
    `AuthorizationHeader`, `BearerPrefix`, each at most once and only before
-   any other layer. When one applies, only the cleaned text is explored.
+   any other layer, and last `LineBreaks`: whitespace inside text that is a
+   compact JWS / SD-JWT without it (a token copied with line breaks). When
+   one applies, only the cleaned text is explored. `LineBreaks` decodes
+   (its child owns the joined text); the classifier never accepts
+   whitespace.
 3. **Text.** Classify JOSE compact, PEM, and JSON (whose string fields become
    `JsonField` children, first member per name, in document order). EDN is
    only considered for top-level text that is not JSON.
@@ -58,3 +62,7 @@ adversarial input takes well under a second in release.
   `CborClaims`, because CWT `iss` is also label 1.
 - JWS JSON, SD-JWT JSON, JWK, and JWK Set documents are not searched for
   token fields; other JSON is.
+- A compact SD-JWT's last part is a KB-JWT, or, when it decodes as a
+  disclosure (`[salt, name, value]` / `[salt, value]`), the last
+  disclosure of a KB-less SD-JWT missing its final `~` (`kb: false`).
+  Anything else there means no SD-JWT reading.

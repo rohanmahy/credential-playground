@@ -122,7 +122,7 @@ pub(crate) fn base64_decode(text: &[u8], alphabet: Option<Alphabet>) -> Option<B
 
 /// If `text` has more than one non-empty line, `measure` of the first line
 /// (without a trailing `\r`).
-fn line_wrap(text: &[u8], measure: impl Fn(&[u8]) -> usize) -> Option<usize> {
+pub(crate) fn line_wrap(text: &[u8], measure: impl Fn(&[u8]) -> usize) -> Option<usize> {
     let mut lines = text.split(|&c| c == b'\n');
     let first = lines.next()?;
     if !lines.any(|l| !l.is_empty()) {
@@ -160,7 +160,8 @@ pub(crate) fn base64_encode(
     wrap_lines(out, wrap)
 }
 
-fn wrap_lines(text: Vec<u8>, wrap: Option<usize>) -> Vec<u8> {
+/// Breaks `text` into lines of `wrap` characters joined with `\n`.
+pub(crate) fn wrap_lines(text: Vec<u8>, wrap: Option<usize>) -> Vec<u8> {
     match wrap {
         Some(w) if w > 0 && text.len() > w => text.chunks(w).collect::<Vec<_>>().join(&b'\n'),
         _ => text,
