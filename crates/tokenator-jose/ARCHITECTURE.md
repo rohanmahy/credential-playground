@@ -23,6 +23,10 @@ this fits and `TEST-PLAN.md` for the decisions the tests encode.
   the token and their spans are relative to the decoded part.
 - Signatures, digests, and `sd_hash` are always computed over the original
   encoded text, never re-serialized.
+- Compact SD-JWT parsing is lenient about one thing: a last part with no
+  `.` that is a well-formed disclosure is the last disclosure of an
+  SD-JWT missing its final `~` (`DiagnosticKind::MissingTrailingTilde`),
+  not a broken KB-JWT. `sd_hash_input` still ends with `~`.
 - Each `Jws` keeps its source: the compact text, or the parsed JSON
   envelope (boxed). Output that changes one thing copies the rest:
   `tamper` splices the new text into the target part's span; `resign`,

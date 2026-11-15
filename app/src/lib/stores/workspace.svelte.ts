@@ -654,10 +654,15 @@ export class Workspace {
     return { tab, draft: tab.draft };
   }
 
-  /** The draft's type, from its format, detection, and explicit choice. */
+  /** The draft's type, from its format, detection, and explicit choice.
+   *  Under SD-JWT the parsed document's `kb` wins (the Type picker has one
+   *  SD-JWT entry), so a typed SD-JWT+KB shows as one. */
   draftKind(tab: Tab): Kind | null {
     const d = tab.draft;
-    return d ? effectiveDraftKind(d.format, d.detected, d.override) : null;
+    if (!d) return null;
+    const kind = effectiveDraftKind(d.format, d.detected, d.override);
+    if (kind.type === 'sd_jwt' && tab.doc.kind.type === 'sd_jwt') return tab.doc.kind;
+    return kind;
   }
 
   #retitle(tab: Tab): void {

@@ -250,6 +250,97 @@ fn pretty_json_layout_still_keeps_unedited_bytes() {
     assert_eq!(segment_texts(&new)[2], segment_texts(&doc)[2]);
 }
 
+/// A tab typed from scratch has no original: `parse_edit` with an empty
+/// base, the kind from the empty tab's Type picker, and the typed text.
+fn edit_from_scratch(e: &Engine, kind: Kind, text: &str) -> tokenator_core::EditResult {
+    e.parse_edit(&tokenator_core::EditRequest {
+        kind,
+        base: tokenator_core::Bytes(Vec::new()),
+        text: text.to_owned(),
+        view: view(),
+    })
+}
+
+#[test]
+fn compact_jose_text_parses_as_the_typed_kind_with_an_empty_base() {
+    // The empty tab's Type picker offers JWT and SD-JWT (SPEC §4.1): typed
+    // (or pasted into a non-empty tab) compact serialization decodes as
+    // that kind, the same document `open` gives, never stale.
+    let e = engine();
+    let cases = [
+        ("rfc7515-a3-jws-es256.txt", Kind::Jwt, 0),
+        ("rfc9901-s5.1-sd-jwt.txt", Kind::SdJwt { kb: false }, 10),
+        ("rfc9901-s5.2-sd-jwt-kb.txt", Kind::SdJwt { kb: true }, 4),
+    ];
+    for (name, kind, disclosures) in cases {
+        let compact = token_text(name);
+        let r = edit_from_scratch(&e, kind.clone(), &compact);
+        assert!(r.ok, "{name}: {:?}", r.diagnostics);
+        assert!(!r.signature_stale, "{name}");
+        assert_eq!(
+            r.bytes.as_ref().map(|b| &b.0[..]),
+            Some(compact.as_bytes()),
+            "{name}"
+        );
+        let doc = r.document.unwrap();
+        let opened = open_token(&e, name);
+        assert_eq!(doc.kind, kind, "{name}");
+        assert_eq!(doc.disclosures.len(), disclosures, "{name}");
+        assert_eq!(doc.main.text, opened.main.text, "{name}");
+        assert!(!doc.signature_stale, "{name}");
+    }
+}
+
+#[test]
+fn under_the_sd_jwt_type_the_parsed_kb_wins() {
+    // The Type picker has one "SD-JWT" entry (kb: false). A typed SD-JWT+KB
+    // decodes as SD-JWT+KB; a typed SD-JWT without the final `~` decodes
+    // leniently as an SD-JWT, with the missing-`~` warning.
+    let e = engine();
+    let kb = token_text("rfc9901-s5.2-sd-jwt-kb.txt");
+    let r = edit_from_scratch(&e, Kind::SdJwt { kb: false }, &kb);
+    assert!(r.ok, "{:?}", r.diagnostics);
+    let doc = r.document.unwrap();
+    assert_eq!(doc.kind, Kind::SdJwt { kb: true });
+    assert_eq!(doc.disclosures.len(), 4);
+
+    let full = token_text("rfc9901-s5.1-sd-jwt.txt");
+    let no_tilde = full.strip_suffix('~').unwrap();
+    let r = edit_from_scratch(&e, Kind::SdJwt { kb: false }, no_tilde);
+    assert!(r.ok, "{:?}", r.diagnostics);
+    let doc = r.document.unwrap();
+    assert_eq!(doc.kind, Kind::SdJwt { kb: false });
+    assert_eq!(doc.disclosures.len(), 10);
+    assert!(
+        doc.diagnostics
+            .iter()
+            .any(|d| d.code == "sd_jwt.missing_trailing_tilde" && d.severity == Severity::Warning),
+        "{:?}",
+        doc.diagnostics
+    );
+}
+
+#[test]
+fn compact_text_that_is_not_the_typed_kind_is_a_diagnostic() {
+    let e = engine();
+    for (kind, text) in [
+        (Kind::Jwt, "not a token".to_owned()),
+        (
+            Kind::SdJwt { kb: false },
+            "eyJhbGciOiJFUzI1NiJ9.e30".to_owned(),
+        ),
+    ] {
+        let r = edit_from_scratch(&e, kind.clone(), &text);
+        assert!(!r.ok, "{kind:?}: {text}");
+        assert!(r.document.is_none());
+        assert!(
+            r.diagnostics.iter().any(|d| d.severity == Severity::Error),
+            "{kind:?}: {:?}",
+            r.diagnostics
+        );
+    }
+}
+
 // ---------------------------------------------------------------- resign
 
 #[test]

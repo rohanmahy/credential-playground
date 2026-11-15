@@ -170,6 +170,13 @@ export type Layer =
        */
       prefix: string;
     }
+  | {
+      type: 'line_breaks';
+      /**
+       * Line length if wrapped.
+       */
+      wrap: number | null;
+    }
   | { type: 'url_encoded' }
   | {
       type: 'json_field';

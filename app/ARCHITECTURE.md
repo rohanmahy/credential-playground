@@ -63,9 +63,14 @@ app/
     ("+") opens more. An empty tab (`Tab.empty`) is in Live edit with no
     text, a placeholder document, and a draft (`Tab.draft`: format and type,
     rules in `logic/drafts.ts`) whose type comes from the Type picker
-    (`TAB_TYPES`). The first fill ends `empty`, and only `clearTab` brings
-    it back: typing commits the picker's type, and the text is parsed with
-    `parse_edit` (empty base, stale flag never applies). A paste or drop
+    (`TAB_TYPES`: the claim types, JWT, SD-JWT, and the COSE types in EDN).
+    The first fill ends `empty`, and only `clearTab` brings it back: typing
+    commits the picker's type, and the text is parsed with `parse_edit`
+    (empty base, stale flag never applies). Under JWT and SD-JWT the text
+    is the compact serialization and the decoded view is its JSON; there is
+    one SD-JWT entry, and `draftKind` (so the header and the tab title)
+    follows the parsed document's `kb`, so a typed SD-JWT+KB shows as
+    SD-JWT+KB. A paste or drop
     (or Open file… / From clipboard) goes through `fillTab`, which runs
     `detect` and opens the top candidate in that tab, still in Live edit,
     with "Detected as…" for the others. Edits never re-run detection: a

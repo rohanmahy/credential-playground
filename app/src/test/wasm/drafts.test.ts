@@ -2,16 +2,20 @@
 // first group pins what core already does; the second pins the core
 // additions described in app/TEST-PLAN.md "Core additions needed" and
 // fails until they land.
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { WasmEngine } from '../../lib/engine/WasmEngine';
 import { utf8 } from '../../lib/engine/bytes';
 import { defaultViewOptions } from '../../lib/engine/defaults';
 import type { Kind } from '../../lib/engine/types';
-import { wasmBytes } from './helpers';
+import { REPO, wasmBytes } from './helpers';
 
 const view = defaultViewOptions();
 const SIGN1 = `18([<< {1: -7} >>, {}, << {1: "issuer", 4: 1893456000} >>, h'00'])`;
 const COSE_KEY = `{1: 2, -1: 1, -2: h'58a9fe64819ebdcc06232cabcc5a1934175aabdfd3b2acc697dea8734096ba2b', -3: h'cbbeedf91bc01d1293b1219d21851fc1eb8ebf0aef0c3f90dc7bf92747d229b1'}`;
+
+const token = (name: string) => readFileSync(join(REPO, 'testdata/tokens', name), 'utf8').trim();
 
 let engine: WasmEngine;
 
@@ -87,5 +91,60 @@ describe('core additions for #43 (fail until implemented)', () => {
         'convert_claims'
       ],
     ).toBe('function');
+  });
+});
+
+describe('compact JOSE text: JWT and SD-JWT tab types, wrapped paste (fail until implemented)', () => {
+  // The empty tab's Type picker offers JWT and SD-JWT (SPEC §4.1); typed
+  // compact serialization parses as that kind with an empty base. Today
+  // parse_edit fails with "not a JOSE token: Empty" for every JOSE kind
+  // (core edit.rs builds the JOSE view from `base` first).
+  const cases: [string, Kind, number][] = [
+    ['rfc7515-a3-jws-es256.txt', { type: 'jwt' }, 0],
+    ['rfc9901-s5.1-sd-jwt.txt', { type: 'sd_jwt', kb: false }, 10],
+    ['rfc9901-s5.2-sd-jwt-kb.txt', { type: 'sd_jwt', kb: true }, 4],
+  ];
+  for (const [name, kind, disclosures] of cases) {
+    it(`parse_edit reads compact ${name} as ${kind.type} with an empty base`, async () => {
+      const r = await edit(kind, token(name));
+      expect(r.diagnostics).toEqual([]);
+      expect(r.ok).toBe(true);
+      expect(r.document?.kind).toEqual(kind);
+      expect(r.document?.disclosures).toHaveLength(disclosures);
+      expect(r.signature_stale).toBe(false);
+    });
+  }
+
+  it('a line-wrapped compact SD-JWT is still detected (SPEC §3 first paste)', async () => {
+    const compact = token('rfc9901-s5.1-sd-jwt.txt');
+    const wrapped = compact.match(/.{1,72}/g)?.join('\n') ?? compact;
+    const top = (await engine.detect(utf8(wrapped)))[0];
+    expect(top?.kind).toEqual({ type: 'sd_jwt', kb: false });
+  });
+
+  it('an SD-JWT without its final ~ opens leniently, with a warning', async () => {
+    const input = utf8(token('rfc9901-s5.1-sd-jwt.txt').replace(/~$/, ''));
+    const top = (await engine.detect(input))[0];
+    expect(top?.kind).toEqual({ type: 'sd_jwt', kb: false });
+    if (!top) return;
+    const doc = await engine.open(input, top, view);
+    expect(doc.kind).toEqual({ type: 'sd_jwt', kb: false });
+    expect(doc.disclosures).toHaveLength(10);
+    expect(doc.diagnostics).toContainEqual(
+      expect.objectContaining({ code: 'sd_jwt.missing_trailing_tilde', severity: 'warning' }),
+    );
+    expect(doc.diagnostics.filter((d) => d.severity === 'error')).toEqual([]);
+  });
+
+  it('a last segment that is neither a KB-JWT nor a disclosure is not an SD-JWT', async () => {
+    const body = token('rfc9901-s5.1-sd-jwt.txt').replace(/~$/, '');
+    const kinds = (await engine.detect(utf8(`${body}~AAAA`))).map((c) => c.kind.type);
+    expect(kinds).not.toContain('sd_jwt');
+  });
+
+  it('under the SD-JWT type the parsed kb wins: a typed SD-JWT+KB is SD-JWT+KB', async () => {
+    const r = await edit({ type: 'sd_jwt', kb: false }, token('rfc9901-s5.2-sd-jwt-kb.txt'));
+    expect(r.ok).toBe(true);
+    expect(r.document?.kind).toEqual({ type: 'sd_jwt', kb: true });
   });
 });

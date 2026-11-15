@@ -8,7 +8,7 @@ import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import AppShell from '../../lib/components/AppShell.svelte';
-import { utf8 } from '../../lib/engine/bytes';
+import { b64uToText, utf8 } from '../../lib/engine/bytes';
 import * as fx from '../fixtures';
 import { parseAsKind } from '../MockEngine';
 import { renderWithApp, seedKeys, setupApp, type TestApp } from '../render';
@@ -126,6 +126,37 @@ describe('first fill of an empty tab', () => {
     expect(app.workspace.tabs[0]?.empty).toBe(false);
   });
 
+  it('a pasted compact SD-JWT is detected; the tab is the SD-JWT view with its disclosures', async () => {
+    const sdJwtToken = b64uToText(fx.sdJwt.bytes);
+    const app = shell((a) =>
+      a.engine.detect.mockResolvedValueOnce([
+        {
+          kind: { type: 'sd_jwt', kb: false },
+          confidence: 95,
+          layers: [],
+          payload_range: { start: 0, end: sdJwtToken.length },
+          breadcrumb: ['SD-JWT'],
+        },
+      ]),
+    );
+    await pasteInto(tabBox(), sdJwtToken);
+    await waitFor(() => expect(detectedType()).toHaveTextContent(/^SD-JWT$/));
+    expect(app.engine.detect).toHaveBeenCalledWith(utf8(sdJwtToken));
+    expect(app.engine.open).toHaveBeenCalledWith(
+      utf8(sdJwtToken),
+      expect.objectContaining({ kind: { type: 'sd_jwt', kb: false } }),
+      expect.anything(),
+    );
+    const panel = activePanel();
+    expect(within(panel).getByRole('table', { name: 'Disclosures' })).toBeInTheDocument();
+    expect(within(panel).getByRole('switch', { name: 'Live edit' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    expect(tabs()).toHaveLength(1);
+    expect(tabs()[0]).toHaveTextContent('SD-JWT');
+  });
+
   it('a JWK pasted into a tab opens as a JSON claim set and adds no key', async () => {
     const app = shell((a) => a.engine.detect.mockResolvedValueOnce(fx.claimsCandidates));
     await pasteInto(tabBox(), fx.ISSUER_JWK);
@@ -208,6 +239,81 @@ describe('first fill of an empty tab', () => {
     await waitFor(() => expect(app.engine.detect).toHaveBeenCalled());
     expect(await within(activePanel()).findByRole('alert')).toHaveTextContent(/recogni/i);
     expect(app.engine.open).not.toHaveBeenCalled();
+  });
+});
+
+describe('JWT and SD-JWT in the Type picker', () => {
+  const sdJwtToken = b64uToText(fx.sdJwt.bytes);
+  const typePicker = () => within(activePanel()).getByRole('combobox', { name: NAMES.type });
+
+  it('the Type picker offers JWT and SD-JWT besides the claim and COSE types', () => {
+    shell();
+    const type = typePicker();
+    for (const name of [NAMES.jsonClaims, NAMES.ednClaims, NAMES.jwt, NAMES.sdJwt]) {
+      expect(within(type).getByRole('option', { name })).toBeInTheDocument();
+    }
+    expect(type).toHaveDisplayValue(NAMES.jsonClaims);
+  });
+
+  it('JWT: a typed compact JWT parses as a JWT, without detection', async () => {
+    const app = shell();
+    await userEvent.selectOptions(typePicker(), NAMES.jwt);
+    await typeInto(tabBox(), fx.jwtToken);
+    await waitFor(() =>
+      expect(app.engine.parseEdit).toHaveBeenLastCalledWith(
+        expect.objectContaining({ kind: { type: 'jwt' }, base: '', text: fx.jwtToken }),
+      ),
+    );
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    await waitFor(() => expect(detectedType()).toHaveTextContent(/^JWT$/));
+    expect(tabs()[0]).toHaveTextContent('JWT');
+  });
+
+  it('SD-JWT: a typed compact SD-JWT parses as an SD-JWT and lists its disclosures', async () => {
+    const app = shell();
+    await userEvent.selectOptions(typePicker(), NAMES.sdJwt);
+    await typeInto(tabBox(), sdJwtToken);
+    await waitFor(() =>
+      expect(app.engine.parseEdit).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: { type: 'sd_jwt', kb: false },
+          base: '',
+          text: sdJwtToken,
+        }),
+      ),
+    );
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    await waitFor(() => expect(detectedType()).toHaveTextContent(/^SD-JWT$/));
+    expect(within(activePanel()).getByRole('table', { name: 'Disclosures' })).toBeInTheDocument();
+  });
+
+  it('SD-JWT: a typed SD-JWT+KB shows as SD-JWT+KB (the parsed kb wins)', async () => {
+    const app = shell();
+    app.engine.parseEdit.mockResolvedValue(fx.edited(fx.sdJwtKb));
+    await userEvent.selectOptions(typePicker(), NAMES.sdJwt);
+    await typeInto(tabBox(), b64uToText(fx.sdJwtKb.bytes));
+    await waitFor(() => expect(detectedType()).toHaveTextContent(/^SD-JWT\+KB$/));
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    expect(tabs()[0]).toHaveTextContent('SD-JWT+KB');
+  });
+
+  it('a paste into the typed (non-empty) tab parses as the picked type, no detection', async () => {
+    const app = shell();
+    await userEvent.selectOptions(typePicker(), NAMES.sdJwt);
+    // a space typed first makes the tab non-empty, so the paste is an edit
+    await typeInto(tabBox(), ' ');
+    await pasteInto(tabBox(), sdJwtToken);
+    await waitFor(() =>
+      expect(app.engine.parseEdit).toHaveBeenLastCalledWith(
+        expect.objectContaining({
+          kind: { type: 'sd_jwt', kb: false },
+          text: expect.stringContaining(sdJwtToken),
+        }),
+      ),
+    );
+    await new Promise((r) => setTimeout(r, 300));
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    expect(detectedType()).toHaveTextContent(/^SD-JWT$/);
   });
 });
 

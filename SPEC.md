@@ -60,14 +60,17 @@ recorded and shown as a breadcrumb (e.g. `Authorization header › base64url ›
 CWT tag 61 › COSE_Sign1`):
 
 1. Text cleanup: trim, strip quotes, the `Bearer ` prefix, `Authorization:`
-   headers, and URL encoding.
+   headers, line breaks (and other whitespace) inside a compact JWT or
+   SD-JWT, and URL encoding.
 2. Container: a JSON object holding a token string (e.g. `{"credential": "…"}`).
    Every string field that looks like a token is offered as a candidate.
 3. Encoding: base64url, base64 classic (padded or not), hex (with or without
    whitespace or colons), or raw binary.
 4. Classification:
    - `ey…` with two dots → JWS compact / JWT.
-   - Compact with `~` separators → SD-JWT (with KB-JWT if the last part is non-empty).
+   - Compact with `~` separators → SD-JWT (with KB-JWT if the last part is a
+     JWT). A last part that is a disclosure is read leniently as an SD-JWT
+     missing its final `~`, with a warning (`sd_jwt.missing_trailing_tilde`).
    - JSON containing `payload` + `signature(s)` → JWS JSON / SD-JWT JSON.
    - CBOR tag 61 / tag 18 / a 4-element array with a bstr protected header →
      COSE_Sign1 → CWT. SD-CWT if SD headers are present. SD-KBT if the
@@ -115,8 +118,10 @@ ambiguous input, e.g. reading a JSON claim set as EDN instead.
 
 - **Empty tab:** every tab starts as an editable text area, so a credential
   can be written from scratch. An empty tab shows a **type picker** (JSON
-  claims by default, EDN claims, …), which applies if the user types rather
-  than pastes. It also offers **Open file…** and **From clipboard**, which fill
+  claims by default, EDN claims, JWT, SD-JWT, …), which applies if the user
+  types rather than pastes. JWT and SD-JWT take the compact serialization;
+  SD-JWT covers SD-JWT+KB too (a typed token with a KB-JWT shows as
+  SD-JWT+KB). It also offers **Open file…** and **From clipboard**, which fill
   the tab and run token detection.
 - **First fill:** pasting or dropping into the empty tab runs token detection
   (§3). The tab becomes the decoded view (header, main pane, raw pane), and its

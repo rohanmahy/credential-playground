@@ -13,9 +13,10 @@ export const DRAFT_FORMATS: readonly { format: DraftFormat; label: string }[] = 
 
 /** The types a draft can be set to, per format, in menu order. The first
  *  is the format's default. Keys are not credentials: they go into the
- *  key areas, never into a tab. */
+ *  key areas, never into a tab. JWT and SD-JWT drafts are typed as the
+ *  compact serialization and shown as JSON, so they sit with JSON. */
 export const DRAFT_KINDS: Readonly<Record<DraftFormat, readonly Kind[]>> = {
-  json: [{ type: 'json_claims' }],
+  json: [{ type: 'json_claims' }, { type: 'jwt' }, { type: 'sd_jwt', kb: false }],
   edn: [
     { type: 'edn_claims' },
     { type: 'cose_sign1' },
@@ -25,7 +26,8 @@ export const DRAFT_KINDS: Readonly<Record<DraftFormat, readonly Kind[]>> = {
   ],
 };
 
-/** An empty tab's Type picker, in menu order (the first is the default). */
+/** An empty tab's Type picker, in menu order (the first is the default).
+ *  One SD-JWT entry: the parsed `kb` decides SD-JWT or SD-JWT+KB. */
 export interface TabType {
   id: string;
   label: string;
@@ -36,6 +38,8 @@ export interface TabType {
 export const TAB_TYPES: readonly TabType[] = [
   { id: 'json_claims', label: 'JSON claims', format: 'json', kind: { type: 'json_claims' } },
   { id: 'edn_claims', label: 'EDN claims', format: 'edn', kind: { type: 'edn_claims' } },
+  { id: 'jwt', label: 'JWT', format: 'json', kind: { type: 'jwt' } },
+  { id: 'sd_jwt', label: 'SD-JWT', format: 'json', kind: { type: 'sd_jwt', kb: false } },
   { id: 'cose_sign1', label: 'COSE_Sign1 (EDN)', format: 'edn', kind: { type: 'cose_sign1' } },
   { id: 'cwt', label: 'CWT (EDN)', format: 'edn', kind: { type: 'cwt' } },
   { id: 'sd_cwt', label: 'SD-CWT (EDN)', format: 'edn', kind: { type: 'sd_cwt' } },

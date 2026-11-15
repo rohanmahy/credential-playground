@@ -3,9 +3,10 @@
 //! Each node is a candidate payload: the input itself, or what is left after
 //! peeling some layers. A node is classified, then every layer that applies
 //! to it is peeled and the result explored, depth first, up to
-//! [`MAX_LAYERS`]. Text cleanup (trim, quotes, prefixes) is exclusive: when
-//! it applies, only the cleaned text is explored. Every other layer adds a
-//! branch, so ambiguous text (hex that is also base64) is read both ways.
+//! [`MAX_LAYERS`]. Text cleanup (trim, quotes, prefixes, line breaks inside
+//! a compact token) is exclusive: when it applies, only the cleaned text is
+//! explored. Every other layer adds a branch, so ambiguous text (hex that
+//! is also base64) is read both ways.
 //! A node budget and a byte budget bound the work on adversarial input.
 
 use std::borrow::Cow;
@@ -290,8 +291,35 @@ impl Explorer {
                 }
                 true
             }
-            None => false,
+            None => self.line_breaks(data, origin),
         }
+    }
+
+    /// Peels the whitespace out of compact JOSE text with line breaks in it
+    /// (the last cleanup step), if the text without it is a compact token.
+    /// The classifier itself never accepts whitespace.
+    fn line_breaks(&mut self, data: &[u8], origin: &Origin) -> bool {
+        if self
+            .layers
+            .iter()
+            .any(|l| matches!(l, Layer::LineBreaks { .. }))
+            || !data.iter().any(u8::is_ascii_whitespace)
+        {
+            return false;
+        }
+        let joined: Vec<u8> = data
+            .iter()
+            .copied()
+            .filter(|c| !c.is_ascii_whitespace())
+            .collect();
+        if classify::jose_compact(&joined).is_none() {
+            return false;
+        }
+        let layer = Layer::LineBreaks {
+            wrap: codec::line_wrap(data, <[u8]>::len),
+        };
+        self.descend(layer, &joined, origin.decoded(&(0..data.len())));
+        true
     }
 
     /// Explores every string in a JSON document under a `JsonField` layer,

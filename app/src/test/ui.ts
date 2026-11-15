@@ -16,7 +16,7 @@
 // - Tabs: `tablist` "Credentials", button "New tab" (the +); each tab
 //   panel has a `textbox` "Credential text" and a button "Clear"; an empty
 //   tab also has a `combobox` "Type" (options "JSON claims", "EDN claims",
-//   …) and the buttons "Open file…" and "From clipboard".
+//   "JWT", "SD-JWT", …) and the buttons "Open file…" and "From clipboard".
 import { act, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { EditorView } from '@codemirror/view';
@@ -44,6 +44,8 @@ export const NAMES = {
   type: 'Type',
   jsonClaims: 'JSON claims',
   ednClaims: 'EDN claims',
+  jwt: 'JWT',
+  sdJwt: 'SD-JWT',
   openFile: 'Open file…',
   fromClipboard: 'From clipboard',
 } as const;

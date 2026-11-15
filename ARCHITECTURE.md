@@ -168,9 +168,11 @@ a refreshed fetch, which `Platform` performs and caches.
 ### tokenator-detect
 `detect(input: &[u8]) -> Vec<Candidate>`, where each candidate has
 `{ layers: Vec<Layer>, kind, confidence, payload_range }`. A `Layer` records
-each unwrapping step (`BearerPrefix`, `JsonField(path)`, `Base64Url`, `Hex`,
-`CborTag(61)`, …), so the UI can show the breadcrumb and Re-encode can rebuild
-any of the outer layers.
+each unwrapping step (`BearerPrefix`, `LineBreaks`, `JsonField(path)`,
+`Base64Url`, `Hex`, `CborTag(61)`, …), so the UI can show the breadcrumb and
+Re-encode can rebuild any of the outer layers. `LineBreaks` is how a compact
+token copied with line breaks is read: the classifier itself only accepts
+the token alphabet.
 
 ### tokenator-core: the Engine facade
 **Stateless.** The UI holds the bytes, and each call re-parses them. Tokens are

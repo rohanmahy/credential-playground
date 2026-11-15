@@ -28,7 +28,8 @@ export function fixtureHex(path: string): string {
 //   tabs       tablist "Credentials", button "New tab" (the +); per tab
 //              panel a textbox "Credential text" and a button "Clear"; an
 //              empty tab also has a combobox "Type" (JSON claims, EDN
-//              claims, …) and the buttons "Open file…" and "From clipboard"
+//              claims, JWT, SD-JWT, …) and the buttons "Open file…" and
+//              "From clipboard"
 //   Issue      dialog "Issue": checkbox "Holder key (cnf)", no key picker
 //   Present    dialog "Present": no key picker (the Holder area's key)
 export const NAMES = {
