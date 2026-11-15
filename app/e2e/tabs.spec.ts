@@ -12,12 +12,15 @@ import {
   keyBox,
   paste,
   pasteInto,
+  readOnly,
   tabBox,
   tabs,
   textOf,
 } from './helpers';
 
 const JWT = () => fixtureText('tokens/rfc7515-a3-jws-es256.txt');
+const SD_JWT = () => fixtureText('tokens/rfc9901-s5.1-sd-jwt.txt');
+const SD_JWT_KB = () => fixtureText('tokens/rfc9901-s5.2-sd-jwt-kb.txt');
 
 test.beforeEach(async ({ page }) => {
   await page.goto('/');
@@ -46,6 +49,13 @@ async function drop(page: Page, target: Locator, text: string): Promise<DragOutc
   }, data);
   await target.dispatchEvent('drop', { dataTransfer: data });
   return outcome;
+}
+
+/** Picks an empty tab's Type (failing fast if the option is missing). */
+async function pickType(page: Page, label: string): Promise<void> {
+  const type = activePanel(page).getByRole('combobox', { name: NAMES.type });
+  await expect(type.getByRole('option', { name: label, exact: true })).toHaveCount(1);
+  await type.selectOption({ label });
 }
 
 /** Refused: dragover not prevented, or prevented with dropEffect "none". */
@@ -86,6 +96,70 @@ test('paste a token into the startup tab: decoded, in Live edit, in the same tab
   await expect(page.getByRole('navigation', { name: 'Provenance' })).toContainText('Pasted');
 });
 
+for (const [name, input, kind, disclosed] of [
+  ['SD-JWT (RFC 9901 §5.1)', SD_JWT, 'SD-JWT', 'given_name'],
+  ['SD-JWT+KB (RFC 9901 §5.2)', SD_JWT_KB, 'SD-JWT+KB', 'given_name'],
+] as const) {
+  test(`paste a compact ${name} into the startup tab: the SD-JWT view, in Live edit`, async ({
+    page,
+  }) => {
+    await paste(page, input());
+    await expect(page.getByTestId('detected-type')).toHaveText(kind);
+    await expect(activePanel(page).getByRole('switch', { name: 'Live edit' })).toHaveAttribute(
+      'aria-checked',
+      'true',
+    );
+    await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText(disclosed);
+    await expect(tabs(page)).toHaveCount(1);
+    await expect(tabs(page).first()).toContainText(kind);
+  });
+}
+
+test('paste a line-wrapped compact SD-JWT (as RFC 9901 prints it): still detected', async ({
+  page,
+}) => {
+  // Long compact tokens are usually copied with line breaks in them.
+  const wrapped =
+    SD_JWT()
+      .match(/.{1,72}/g)
+      ?.join('\n') ?? '';
+  await paste(page, wrapped);
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT');
+  await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
+});
+
+test('Type "JWT": a typed compact JWT decodes as a JWT, without detection', async ({ page }) => {
+  await pickType(page, 'JWT');
+  await tabBox(page).click();
+  await page.keyboard.insertText(JWT());
+  await expect(page.getByTestId('detected-type')).toHaveText('JWT');
+  await expect(tabs(page).first()).toContainText('JWT');
+  await readOnly(page);
+  await expect(page.getByRole('tree', { name: 'Main pane' })).toContainText('"alg":"ES256"');
+  await expect(page.getByRole('tree', { name: 'Raw pane' })).toBeVisible();
+});
+
+test('Type "SD-JWT": a typed compact SD-JWT decodes with its disclosures', async ({ page }) => {
+  await pickType(page, 'SD-JWT');
+  await tabBox(page).click();
+  await page.keyboard.insertText(SD_JWT());
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT');
+  await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
+  await expect(tabs(page).first()).toContainText('SD-JWT');
+});
+
+test('Type "SD-JWT": a compact SD-JWT pasted into the typed tab parses as SD-JWT', async ({
+  page,
+}) => {
+  await pickType(page, 'SD-JWT');
+  await tabBox(page).click();
+  // the typed space makes the tab non-empty: the paste is an edit, not a first fill
+  await page.keyboard.insertText(' ');
+  await pasteInto(tabBox(page), SD_JWT());
+  await expect(page.getByTestId('detected-type')).toHaveText('SD-JWT');
+  await expect(page.getByRole('table', { name: 'Disclosures' })).toContainText('given_name');
+});
+
 test('a paste into a non-empty tab never re-runs detection', async ({ page }) => {
   await paste(page, '{"iss": "https://issuer.example", "sub": "alice"}');
   await expect(page.getByTestId('detected-type')).toHaveText('JSON claim set');
@@ -97,9 +171,7 @@ test('a paste into a non-empty tab never re-runs detection', async ({ page }) =>
 });
 
 test('typing into an empty tab uses the type picker, not detection', async ({ page }) => {
-  await activePanel(page)
-    .getByRole('combobox', { name: NAMES.type })
-    .selectOption({ label: 'EDN claims' });
+  await pickType(page, 'EDN claims');
   await tabBox(page).click();
   await page.keyboard.insertText('{1: "https://issuer.example"}');
   await expect(page.getByTestId('detected-type')).toHaveText('EDN claim set');

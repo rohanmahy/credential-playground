@@ -639,3 +639,41 @@ fn detect_is_deterministic_and_empty_on_nothing() {
         );
     }
 }
+
+/// `text` with a line break every `width` characters, the way RFC 9901 and
+/// RFC 7515 print long compact tokens.
+fn wrap_lines(text: &str, width: usize, eol: &str) -> String {
+    text.as_bytes()
+        .chunks(width)
+        .map(|c| std::str::from_utf8(c).unwrap())
+        .collect::<Vec<_>>()
+        .join(eol)
+}
+
+#[test]
+fn line_wrapped_compact_tokens_detect_and_open() {
+    // A compact token copied from a spec, a web page, or a terminal comes
+    // with line breaks in it. Token detection (SPEC §3) must still find it,
+    // and the opened document is the token without the breaks.
+    let e = engine();
+    let cases = [
+        ("rfc9901-s5.1-sd-jwt.txt", Kind::SdJwt { kb: false }, 10),
+        ("rfc9901-s5.2-sd-jwt-kb.txt", Kind::SdJwt { kb: true }, 4),
+        ("rfc7515-a3-jws-es256.txt", Kind::Jwt, 0),
+    ];
+    for (name, kind, disclosures) in cases {
+        let compact = token_text(name);
+        for eol in ["\n", "\r\n"] {
+            let input = wrap_lines(&compact, 72, eol);
+            let cands = e.detect(input.as_bytes());
+            let c = cands
+                .first()
+                .unwrap_or_else(|| panic!("{name} wrapped with {eol:?}: nothing detected"));
+            assert_eq!(c.kind, kind, "{name} wrapped with {eol:?}");
+            let doc = e.open(input.as_bytes(), c, &view()).unwrap();
+            assert_eq!(doc.kind, kind, "{name}");
+            assert_eq!(&doc.bytes[..], compact.as_bytes(), "{name}: breaks removed");
+            assert_eq!(doc.disclosures.len(), disclosures, "{name}");
+        }
+    }
+}
