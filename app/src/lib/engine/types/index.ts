@@ -1510,7 +1510,7 @@ export type PemEncoding =
   | 'sec1'
   | 'pkcs1';
 
-export type Role = 'issuer' | 'holder' | 'verifier';
+export type Role = 'issuer' | 'holder';
 
 export type Visibility = 'public' | 'private';
 
@@ -1582,8 +1582,8 @@ export type KeyInfo = {
 
 export type KeyImportRequest = {
   /**
-   * The bytes: the key itself, or (with `candidate`) the input `detect`
-   * was given.
+   * The bytes: the key itself, or (with `candidate`) the input
+   * `detect_key` was given.
    */
   bytes: Bytes;
   /**
@@ -1591,9 +1591,9 @@ export type KeyImportRequest = {
    */
   format?: KeyFormat | null;
   /**
-   * A key candidate from `detect(bytes)`: its layers (hex, base64,
+   * A key candidate from `detect_key(bytes)`: its layers (hex, base64,
    * quotes, a JSON field, ...) are unwrapped first, as `open` does for
-   * credentials.
+   * credentials. Any other kind fails with `not_a_key`.
    */
   candidate?: Candidate | null;
 };
@@ -2062,6 +2062,7 @@ export type ErrorCode =
   | 'invalid_candidate'
   | 'invalid_input'
   | 'key'
+  | 'not_a_key'
   | 'no_private_key'
   | 'unsupported_alg'
   | 'crypto'

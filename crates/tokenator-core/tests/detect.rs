@@ -1,5 +1,7 @@
 //! Detection through the Engine: classification of every fixture, layers
-//! kept outside `Document.bytes`, EDN confirmation, key routing.
+//! kept outside `Document.bytes`, EDN confirmation, and the token/key split
+//! (SPEC §3): `detect` never returns a key kind and `detect_key` returns
+//! nothing else.
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -11,12 +13,55 @@ mod common;
 
 use base64ct::{Base64UrlUnpadded, Encoding};
 use common::*;
-use tokenator_core::{ErrorCode, JsonPathSegment, Kind, Layer};
+use tokenator_core::{
+    Candidate, Engine, ErrorCode, JsonPathSegment, KeyImportRequest, Kind, Layer,
+};
 
-type KindCheck = fn(&Kind) -> bool;
+type LayerCheck = fn(&Layer) -> bool;
+
+/// Every top-level key fixture: each key kind at least once.
+const KEY_FIXTURES: [&str; 10] = [
+    "rfc7517-a1-public.jwks.json",
+    "rfc7517-a2-private.jwks.json",
+    "rfc9901-a5-ec-p256-public.jwk.json",
+    "sd-cwt-08-c1-holder-private.jwk.json",
+    "rfc8392-a2.3-ec-p256.cosekey.cbor",
+    "sd-cwt-08-c1-holder-private.cosekey.cbor",
+    "rfc8152-c7.1-public.cosekeyset.cbor",
+    "sd-cwt-08-c1-holder-public.pem",
+    "rfc8410-s10.3-ed25519-private.pem",
+    "derived-sd-cwt-08-c1-holder-private.sec1.pem",
+];
 
 fn top_kind(name: &str) -> Kind {
     top(&engine(), &token(name)).kind
+}
+
+/// The top `detect_key` candidate of `input`.
+fn top_key(e: &Engine, input: &[u8]) -> Candidate {
+    e.detect_key(input)
+        .into_iter()
+        .next()
+        .unwrap_or_else(|| panic!("no key in {:?}", String::from_utf8_lossy(input)))
+}
+
+fn no_key_kinds(cands: &[Candidate]) -> bool {
+    cands.iter().all(|c| !c.kind.is_key())
+}
+
+fn only_key_kinds(cands: &[Candidate]) -> bool {
+    cands.iter().all(|c| c.kind.is_key())
+}
+
+fn hex(bytes: &[u8]) -> String {
+    bytes.iter().map(|b| format!("{b:02x}")).collect()
+}
+
+/// The EDN text of a binary key fixture.
+fn edn_key(name: &str) -> String {
+    let bytes = key_file(name);
+    let item = tokenator_cbor::decode(&bytes).unwrap();
+    tokenator_edn::print(&item, &tokenator_edn::PrintOptions::default()).text
 }
 
 #[test]
@@ -132,31 +177,246 @@ fn claim_sets_classify_as_drafts() {
     }
 }
 
+// ---------------------------------------------------------------- detect: no keys
+
 #[test]
-fn keys_are_candidates_for_the_key_panel() {
+fn detect_never_returns_a_key_kind() {
     let e = engine();
-    let cases: [(&str, KindCheck); 6] = [
-        ("rfc7517-a1-public.jwks.json", |k| *k == Kind::JwkSet),
-        ("rfc9901-a5-ec-p256-public.jwk.json", |k| *k == Kind::Jwk),
-        ("rfc8392-a2.3-ec-p256.cosekey.cbor", |k| *k == Kind::CoseKey),
-        ("rfc8152-c7.1-public.cosekeyset.cbor", |k| {
-            *k == Kind::CoseKeySet
-        }),
-        ("sd-cwt-08-c1-holder-public.pem", |k| {
-            *k == Kind::Pem {
-                labels: vec!["PUBLIC KEY".into()],
-            }
-        }),
-        ("rfc8410-s10.3-ed25519-private.pem", |k| {
-            *k == Kind::Pem {
-                labels: vec!["PRIVATE KEY".into()],
-            }
-        }),
+    for name in KEY_FIXTURES {
+        let cands = e.detect(&key_file(name));
+        assert!(no_key_kinds(&cands), "{name}: {cands:?}");
+    }
+    for name in JOSE_FIXTURES.iter().chain(COSE_FIXTURES.iter()) {
+        let cands = e.detect(&token(name));
+        assert!(no_key_kinds(&cands), "{name}: {cands:?}");
+    }
+}
+
+#[test]
+fn a_jwk_detects_as_a_json_claim_set() {
+    // SPEC §3: a JWK pasted into a tab decodes as an unsigned JSON claim set.
+    let e = engine();
+    for name in [
+        "rfc9901-a5-ec-p256-public.jwk.json",
+        "sd-cwt-08-c1-holder-private.jwk.json",
+        "rfc7517-a1-public.jwks.json",
+    ] {
+        let input = key_file(name);
+        let c = top(&e, &input);
+        assert_eq!(c.kind, Kind::JsonClaims, "{name}");
+        let doc = e.open(&input, &c, &view()).unwrap();
+        assert_eq!(doc.kind, Kind::JsonClaims, "{name}");
+        assert!(!doc.signed, "{name}");
+    }
+}
+
+#[test]
+fn a_cose_key_detects_as_a_claim_set() {
+    // Binary CBOR → cbor_claims; EDN text → edn_claims.
+    let e = engine();
+    for name in [
+        "rfc8392-a2.3-ec-p256.cosekey.cbor",
+        "sd-cwt-08-c1-holder-private.cosekey.cbor",
+    ] {
+        assert_eq!(top(&e, &key_file(name)).kind, Kind::CborClaims, "{name}");
+    }
+    let text = edn_key("rfc9679/ec2-p256.cbor");
+    let cands = e.detect(text.as_bytes());
+    assert!(no_key_kinds(&cands), "{cands:?}");
+    assert_eq!(cands[0].kind, Kind::EdnClaims);
+}
+
+#[test]
+fn encoded_keys_give_no_key_candidate() {
+    let e = engine();
+    let cose_key = key_file("rfc8392-a2.3-ec-p256.cosekey.cbor");
+    let jwk = key_file("sd-cwt-08-c1-holder-private.jwk.json");
+    for input in [
+        hex(&cose_key),
+        Base64UrlUnpadded::encode_string(&cose_key),
+        base64ct::Base64::encode_string(&jwk),
+    ] {
+        let cands = e.detect(input.as_bytes());
+        assert!(no_key_kinds(&cands), "{input}: {cands:?}");
+    }
+}
+
+#[test]
+fn pem_gives_no_key_candidate() {
+    let e = engine();
+    for name in [
+        "sd-cwt-08-c1-holder-public.pem",
+        "rfc8410-s10.3-ed25519-private.pem",
+        "derived-sd-cwt-08-c1-holder-private.sec1.pem",
+    ] {
+        let cands = e.detect(&key_file(name));
+        assert!(no_key_kinds(&cands), "{name}: {cands:?}");
+    }
+}
+
+// ---------------------------------------------------------------- detect_key
+
+#[test]
+fn key_fixtures_classify_for_the_key_panel() {
+    let e = engine();
+    let pem = |label: &str| Kind::Pem {
+        labels: vec![label.into()],
+    };
+    let cases = [
+        ("rfc7517-a1-public.jwks.json", Kind::JwkSet),
+        ("rfc7517-a2-private.jwks.json", Kind::JwkSet),
+        ("rfc9901-a5-ec-p256-public.jwk.json", Kind::Jwk),
+        ("sd-cwt-08-c1-holder-private.jwk.json", Kind::Jwk),
+        ("rfc8392-a2.3-ec-p256.cosekey.cbor", Kind::CoseKey),
+        ("sd-cwt-08-c1-holder-private.cosekey.cbor", Kind::CoseKey),
+        ("rfc8152-c7.1-public.cosekeyset.cbor", Kind::CoseKeySet),
+        ("sd-cwt-08-c1-holder-public.pem", pem("PUBLIC KEY")),
+        ("rfc8410-s10.3-ed25519-private.pem", pem("PRIVATE KEY")),
+        (
+            "derived-sd-cwt-08-c1-holder-private.sec1.pem",
+            pem("EC PRIVATE KEY"),
+        ),
     ];
-    for (name, pred) in cases {
-        let t = top(&e, &key_file(name));
-        assert!(pred(&t.kind), "{name}: {:?}", t.kind);
-        assert!(t.kind.is_key(), "{name}");
+    for (name, kind) in cases {
+        let cands = e.detect_key(&key_file(name));
+        assert!(only_key_kinds(&cands), "{name}: {cands:?}");
+        assert_eq!(cands.first().map(|c| &c.kind), Some(&kind), "{name}");
+    }
+}
+
+#[test]
+fn detect_key_finds_nothing_in_tokens_or_claim_sets() {
+    // SPEC §3: a token pasted into a key area is not a key.
+    let e = engine();
+    for name in JOSE_FIXTURES.iter().chain(COSE_FIXTURES.iter()) {
+        let cands = e.detect_key(&token(name));
+        assert!(cands.is_empty(), "{name}: {cands:?}");
+    }
+    for name in [
+        "rfc7519-s3.1-claims.json",
+        "rfc9901-s5.1-input-claims.json",
+        "rfc8392-a1-claims.cbor",
+        "sd-cwt-08-fig4-claims.edn",
+        "rfc8392-a3-signed-cwt.hex",
+    ] {
+        let cands = e.detect_key(&token(name));
+        assert!(cands.is_empty(), "{name}: {cands:?}");
+    }
+    let jws = token_text("rfc7515-a3-jws-es256.txt");
+    for input in [
+        format!("Authorization: Bearer {jws}"),
+        format!(r#"{{"credential": "{jws}"}}"#),
+        r#"{"iss": "https://issuer.example", "exp": 1893456000}"#.to_owned(),
+    ] {
+        let cands = e.detect_key(input.as_bytes());
+        assert!(cands.is_empty(), "{input}: {cands:?}");
+    }
+}
+
+#[test]
+fn detect_key_is_deterministic_sorted_and_empty_on_nothing() {
+    let e = engine();
+    assert!(e.detect_key(b"").is_empty());
+    assert!(e.detect_key(b"   \n").is_empty());
+    assert!(e.detect_key(b"\x00\xff not a key \xfe").is_empty());
+    for name in KEY_FIXTURES {
+        let a = e.detect_key(&key_file(name));
+        let b = e.detect_key(&key_file(name));
+        assert_eq!(json(&a), json(&b), "{name}");
+        assert!(
+            a.windows(2).all(|w| w[0].confidence >= w[1].confidence),
+            "{name}: not sorted"
+        );
+    }
+}
+
+#[test]
+fn key_breadcrumbs_end_with_the_kind_label() {
+    let e = engine();
+    for name in KEY_FIXTURES {
+        for c in e.detect_key(&key_file(name)) {
+            assert_eq!(
+                c.breadcrumb.last().map(String::as_str),
+                Some(c.kind.label()),
+                "{name}"
+            );
+        }
+    }
+}
+
+#[test]
+fn detect_key_peels_the_same_layers_as_detect() {
+    let e = engine();
+    let cose_key = key_file("rfc8392-a2.3-ec-p256.cosekey.cbor");
+    let jwk = key_file("sd-cwt-08-c1-holder-private.jwk.json");
+    let jwk_text = String::from_utf8(jwk.clone()).unwrap();
+    let pem_text = String::from_utf8(key_file("sd-cwt-08-c1-holder-public.pem")).unwrap();
+    let b64 = Base64UrlUnpadded::encode_string(&cose_key);
+    let cases: [(String, Kind, LayerCheck); 6] = [
+        (hex(&cose_key), Kind::CoseKey, |l| {
+            matches!(l, Layer::Hex { .. })
+        }),
+        (b64.clone(), Kind::CoseKey, |l| {
+            matches!(l, Layer::Base64Url { .. })
+        }),
+        (base64ct::Base64::encode_string(&jwk), Kind::Jwk, |l| {
+            matches!(l, Layer::Base64Std { .. } | Layer::Base64Url { .. })
+        }),
+        (format!("'{}'", jwk_text.trim()), Kind::Jwk, |l| {
+            matches!(l, Layer::Quotes { .. })
+        }),
+        (
+            format!("\"{}\"", pem_text.trim()),
+            Kind::Pem {
+                labels: vec!["PUBLIC KEY".into()],
+            },
+            |l| matches!(l, Layer::Quotes { .. }),
+        ),
+        (
+            format!(r#"{{"key": "{b64}", "other": 1}}"#),
+            Kind::CoseKey,
+            |l| matches!(l, Layer::JsonField { .. }),
+        ),
+    ];
+    for (input, kind, layer) in cases {
+        let c = top_key(&e, input.as_bytes());
+        assert_eq!(c.kind, kind, "{input}");
+        assert!(c.layers.iter().any(layer), "{input}: {:?}", c.layers);
+    }
+}
+
+#[test]
+fn edn_cose_keys_are_keys() {
+    let e = engine();
+    let text = edn_key("rfc9679/ec2-p256.cbor");
+    let cands = e.detect_key(text.as_bytes());
+    assert!(only_key_kinds(&cands), "{cands:?}");
+    assert_eq!(cands.first().map(|c| &c.kind), Some(&Kind::CoseKey));
+    let set = format!("[{text}]");
+    assert_eq!(top_key(&e, set.as_bytes()).kind, Kind::CoseKeySet);
+}
+
+#[test]
+fn every_key_candidate_imports() {
+    // A `detect_key` candidate is what `key_import` takes: its layers are
+    // unwrapped first (#42).
+    let e = engine();
+    let cose_key = key_file("rfc8392-a2.3-ec-p256.cosekey.cbor");
+    let inputs = KEY_FIXTURES.iter().map(|n| key_file(n)).chain([
+        hex(&cose_key).into_bytes(),
+        Base64UrlUnpadded::encode_string(&cose_key).into_bytes(),
+        edn_key("rfc9679/ec2-p256.cbor").into_bytes(),
+    ]);
+    for input in inputs {
+        let c = top_key(&e, &input);
+        let keys = e
+            .key_import(&KeyImportRequest {
+                bytes: input.clone().into(),
+                format: None,
+                candidate: Some(c),
+            })
+            .unwrap_or_else(|err| panic!("{:?}: {err}", String::from_utf8_lossy(&input)));
+        assert!(!keys.is_empty());
     }
 }
 
@@ -164,7 +424,7 @@ fn keys_are_candidates_for_the_key_panel() {
 fn opening_a_key_kind_is_refused() {
     let e = engine();
     let input = key_file("rfc9901-a5-ec-p256-public.jwk.json");
-    let c = top(&e, &input);
+    let c = top_key(&e, &input);
     let err = e.open(&input, &c, &view()).unwrap_err();
     assert_eq!(err.code, ErrorCode::UnsupportedKind);
 }

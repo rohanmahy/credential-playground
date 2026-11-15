@@ -119,6 +119,34 @@ fn remote_origins_may_call_nothing() {
 }
 
 #[test]
+fn detect_key_is_allowed_exactly_like_detect() {
+    let (app, _dir) = real_acl_app();
+    let main = main_window(&app);
+    let other = WebviewWindowBuilder::new(&app, "other", WebviewUrl::default())
+        .build()
+        .unwrap();
+    assert!(tokenator_desktop::COMMANDS.contains(&"engine_detect_key"));
+    let args = json!({ "input": "" });
+    for cmd in ["engine_detect", "engine_detect_key"] {
+        assert_eq!(
+            invoke_in(&main, cmd, args.clone()),
+            Ok("[]".into()),
+            "{cmd}"
+        );
+        assert!(denied(&invoke_in(&other, cmd, args.clone())), "{cmd}");
+        assert!(
+            denied(&invoke_from(
+                &main,
+                cmd,
+                args.clone(),
+                "https://evil.example"
+            )),
+            "{cmd}"
+        );
+    }
+}
+
+#[test]
 fn plugin_commands_are_not_reachable() {
     // No dialog/clipboard/fs/shell/http permissions: their plugin commands
     // are denied even if the plugin were registered.

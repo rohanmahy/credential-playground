@@ -53,6 +53,11 @@ type Case = { call: (e: Engine) => Promise<unknown>; cmd: string; args: unknown 
 const CASES: Record<keyof Engine, Case> = {
   info: { call: (e) => e.info(), cmd: 'engine_info', args: {} },
   detect: { call: (e) => e.detect(bytes), cmd: 'engine_detect', args: { input: '0oT7_w' } },
+  detectKey: {
+    call: (e) => e.detectKey(bytes),
+    cmd: 'engine_detect_key',
+    args: { input: '0oT7_w' },
+  },
   open: {
     call: (e) => e.open(bytes, candidate, view),
     cmd: 'engine_open',
@@ -158,8 +163,8 @@ const CASES: Record<keyof Engine, Case> = {
 };
 
 describe('TauriEngine commands', () => {
-  it('covers all 28 Engine methods', () => {
-    expect(Object.keys(CASES)).toHaveLength(28);
+  it('covers all 29 Engine methods', () => {
+    expect(Object.keys(CASES)).toHaveLength(29);
   });
 
   it.each(Object.entries(CASES))('%s invokes its command', async (_name, c) => {
@@ -171,16 +176,38 @@ describe('TauriEngine commands', () => {
 });
 
 describe('raw input (#34 item 2)', () => {
-  it('sends detect/open input as unpadded base64url', async () => {
+  it('sends detect/detectKey/open input as unpadded base64url', async () => {
     const e = new TauriEngine();
     await e.detect(new Uint8Array());
     await e.detect(Uint8Array.of(0xfb, 0xff));
+    await e.detectKey(new Uint8Array());
+    await e.detectKey(Uint8Array.of(0xfb, 0xff));
     await e.open(hexToBytes('d28443a10126a0'), candidate, view);
     expect(engineCalls().map((c) => (c.args as { input: string }).input)).toEqual([
       '',
       '-_8',
+      '',
+      '-_8',
       toB64u(hexToBytes('d28443a10126a0')),
     ]);
+  });
+
+  it('detectKey sends only the bytes of a subarray view', async () => {
+    const backing = Uint8Array.of(1, 2, 0xd2, 0x84, 3);
+    await new TauriEngine().detectKey(backing.subarray(2, 4));
+    expect(engineCalls()).toEqual([{ cmd: 'engine_detect_key', args: { input: '0oQ' } }]);
+  });
+
+  it('detectKey resolves to the candidates engine_detect_key returns', async () => {
+    const keyCandidate: Candidate = {
+      kind: { type: 'jwk' },
+      confidence: 90,
+      layers: [],
+      payload_range: { start: 0, end: 2 },
+      breadcrumb: ['JWK'],
+    };
+    respond['engine_detect_key'] = () => [keyCandidate];
+    expect(await new TauriEngine().detectKey(Uint8Array.of(0x7b, 0x7d))).toEqual([keyCandidate]);
   });
 
   it('accepts a subarray view (only its bytes are sent)', async () => {
@@ -273,6 +300,17 @@ describe('errors', () => {
     expect(failure).toBeInstanceOf(EngineFailure);
     expect((failure as EngineFailure).error.code).toBe('invalid_input');
     expect((failure as EngineFailure).error.message).toContain('IPC down');
+  });
+
+  it('a key_import not_a_key error keeps its code and message', async () => {
+    const error = { code: 'not_a_key', message: 'Not a recognized key', node_id: null };
+    respond['engine_key_import'] = () => {
+      throw error;
+    };
+    const failure = await new TauriEngine().keyImport(req('k')).catch((x: unknown) => x);
+    expect(failure).toBeInstanceOf(EngineFailure);
+    expect((failure as EngineFailure).error).toEqual(error);
+    expect((failure as EngineFailure).message).toBe('Not a recognized key');
   });
 
   it('never rejects with a NotImplemented or raw value', async () => {

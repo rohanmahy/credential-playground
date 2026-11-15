@@ -12,13 +12,13 @@ NodeId scheme, document model, validation rules; issues #28–#32).
 | `view/cbor.rs` | the CBOR walk: NodeIds, kinds, annotations, decoded views, EDN main pane, hex rows |
 | `view/jose.rs` | the JOSE view object, segments, SD view; `with_parsed` |
 | `view/json.rs` | JSON trees (claim sets, decoded JOSE parts) |
-| `detect.rs` | `detect` (plus EDN confirmation), layer conversions, `open` |
+| `detect.rs` | `detect` (tokens, claim sets) and `detect_key` (keys) over one set of readings (plus EDN confirmation), layer conversions, `open` |
 | `validate.rs` | `validate` (key selection, time, SD, key binding) and `lint` |
 | `actions.rs` | `issue`, `redact`, `disclose`, `present`; error mapping; signing |
 | `manipulate.rs` | `resign`, `tamper`, `reencode`, `edit_disclosures`, `decode_embedded` |
 | `edit.rs` | `parse_edit` |
 | `convert.rs` | `convert_claims`: claim sets between JSON and EDN |
-| `keyring.rs` | `KeyRef` resolution (EDN COSE_Keys too), key cards, key panel calls |
+| `keyring.rs` | `KeyRef` resolution (EDN COSE_Keys too), key cards, key panel calls; `not_a_key` for import of non-keys |
 | `annotate.rs`, `reg.rs` | registry adapter; lookups, merge, `info` |
 | `datetime.rs` | the date/time chit, relative strings, time hints |
 | `cbor.rs`, `util.rs` | item helpers; hex, UTF-16 text index, randomness |
@@ -48,6 +48,14 @@ NodeId scheme, document model, validation rules; issues #28–#32).
   `tokenator_detect::detect` on the encoding (#44): claims maps stay
   `edn_claims` (bytes = the text); COSE_Sign1s and COSE_Keys get a
   `Layer::Edn` (innermost) that `open` applies and `reencode` writes.
+- **Tokens and keys are detected separately.** `detect` and `detect_key`
+  filter one ranked list of readings by `Kind::is_key`, so a JWK or
+  COSE_Key pasted as a credential opens as a claim set, and the key panel
+  never sees a token. `tokenator-detect` itself still reports every kind.
+- **JSON claim sets are EDN too.** `detect` adds an `edn_claims` reading
+  one point below each `json_claims` one (same layers, confirmed by the
+  EDN parser), so "Detected as…" can switch a draft to EDN; not for a JWS
+  JSON or a token container, where a token reading peels the same layers.
 - **JSON ↔ EDN** (`convert_claims`): integer lexemes that fit CBOR become
   ints, other numbers floats; EDN → JSON reports the first node with no
   JSON form (`convert.not_representable`, by NodeId of the EDN document).

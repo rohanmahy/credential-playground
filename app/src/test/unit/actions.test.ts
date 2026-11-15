@@ -11,12 +11,14 @@ import {
 import { ACTION_IDS, type KeyCard } from '../../lib/model';
 import * as fx from '../fixtures';
 
+/** The cards go into the area of their role (Issuer / Holder key). */
 const ctx = (doc: Document, keys: KeyCard[] = [], sdMarks: string[] = []): ActionContext => ({
   doc,
-  keys,
+  issuer: keys.find((k) => k.role === 'issuer') ?? null,
+  holder: keys.find((k) => k.role === 'holder') ?? null,
   sdMarks,
 });
-const all = [fx.issuerCard, fx.holderCard, fx.verifierCard];
+const all = [fx.issuerCard, fx.holderCard];
 
 describe('actionAvailability', () => {
   it('reports every action', () => {
@@ -36,6 +38,10 @@ describe('actionAvailability', () => {
     const publicOnly = actionAvailability(ctx(fx.jsonClaims, [fx.publicIssuerCard])).issue;
     expect(publicOnly.enabled).toBe(false);
     expect(publicOnly.missing.join(' ')).toMatch(/private/i);
+    // the area decides the role: a private Holder key does not issue
+    const holderOnly = actionAvailability(ctx(fx.jsonClaims, [fx.holderCard])).issue;
+    expect(holderOnly.enabled).toBe(false);
+    expect(holderOnly.missing.join(' ')).toMatch(/issuer key/i);
     const signed = actionAvailability(ctx(fx.jwt, all)).issue;
     expect(signed.enabled).toBe(false);
     expect(signed.missing.join(' ')).toMatch(/claim set/i);
@@ -87,7 +93,7 @@ describe('actionAvailability', () => {
   });
 
   it('Re-sign needs a signed credential and a private key', () => {
-    const none = actionAvailability(ctx(fx.jwt, [fx.verifierCard])).resign;
+    const none = actionAvailability(ctx(fx.jwt, [fx.publicIssuerCard])).resign;
     expect(none.enabled).toBe(false);
     expect(none.missing.join(' ')).toMatch(/private key/i);
     expect(actionAvailability(ctx(fx.jwt, all)).resign.enabled).toBe(true);

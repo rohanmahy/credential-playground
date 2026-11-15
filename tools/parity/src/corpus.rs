@@ -330,16 +330,22 @@ impl Builder<'_> {
                 );
             }
         }
+        // Key fixtures through both detectors: `detect` never offers a key
+        // kind, `detect_key` offers only key kinds (SPEC §3).
         for rel in self.key_files()? {
-            {
-                let input = self.read(&rel)?;
-                self.add(
-                    format!("detect--{}", slug(&rel)),
-                    &rel,
-                    "detect",
-                    vec![raw(&input)],
-                );
-            }
+            let input = self.read(&rel)?;
+            self.add(
+                format!("detect--{}", slug(&rel)),
+                &rel,
+                "detect",
+                vec![raw(&input)],
+            );
+            self.add(
+                format!("detect_key--{}", slug(&rel)),
+                &rel,
+                "detect_key",
+                vec![raw(&input)],
+            );
         }
         let jws = String::from_utf8(self.token("rfc7515-a3-jws-es256.txt")?)
             .map_err(|e| e.to_string())?;
@@ -389,6 +395,13 @@ impl Builder<'_> {
                 "detect",
                 vec![raw(&input)],
             );
+            // Tokens have no key reading; the COSE_Key in EDN has one.
+            self.add(
+                format!("detect_key--wrapped-token--{name}"),
+                format!("constructed: {name} around RFC 7515 A.3 / RFC 8392 A.3"),
+                "detect_key",
+                vec![raw(&input)],
+            );
             if let Some(c) = self.e.detect(&input).into_iter().next() {
                 self.add(
                     format!("open--wrapped--{name}"),
@@ -398,6 +411,7 @@ impl Builder<'_> {
                 );
             }
         }
+        self.detect_key()?;
         // A candidate that does not fit the input.
         let jwt_candidate = self
             .e
@@ -411,6 +425,51 @@ impl Builder<'_> {
             "open",
             vec![raw(&cwt), json(&jwt_candidate)?, json(&view())?],
         );
+        Ok(())
+    }
+
+    /// `detect_key` of wrapped keys (the same unwrapping layers as
+    /// `detect`) and of tokens and claim sets (no candidates).
+    fn detect_key(&mut self) -> Result<(), String> {
+        let cose_key = self.read("keys/rfc8392-a2.3-ec-p256.cosekey.cbor")?;
+        let jwk = self.read("keys/sd-cwt-08-c1-holder-private.jwk.json")?;
+        let jwk_text = String::from_utf8(jwk.clone()).map_err(|e| e.to_string())?;
+        let cose_key_b64 = Base64UrlUnpadded::encode_string(&cose_key);
+        let cases: Vec<(&str, Vec<u8>)> = vec![
+            (
+                "cose-key-hex",
+                cose_key
+                    .iter()
+                    .map(|b| format!("{b:02x}"))
+                    .collect::<String>()
+                    .into_bytes(),
+            ),
+            ("cose-key-base64url", cose_key_b64.clone().into_bytes()),
+            (
+                "jwk-base64url",
+                Base64UrlUnpadded::encode_string(&jwk).into_bytes(),
+            ),
+            ("jwk-quoted", format!("'{}'", jwk_text.trim()).into_bytes()),
+            (
+                "json-container",
+                format!(r#"{{"key": "{cose_key_b64}", "other": 1}}"#).into_bytes(),
+            ),
+            ("cose-key-edn", COSE_KEY_EDN.as_bytes().to_vec()),
+            ("jwt", self.token("rfc7515-a3-jws-es256.txt")?),
+            ("sd-jwt", self.token("rfc9901-s5.1-sd-jwt.txt")?),
+            ("cwt", self.token("rfc8392-a3-signed-cwt.cbor")?),
+            ("json-claims", self.token("rfc7519-s3.1-claims.json")?),
+            ("empty", Vec::new()),
+            ("garbage", b"\x00\xff not a key \xfe".to_vec()),
+        ];
+        for (name, input) in cases {
+            self.add(
+                format!("detect_key--wrapped--{name}"),
+                format!("constructed: {name}"),
+                "detect_key",
+                vec![raw(&input)],
+            );
+        }
         Ok(())
     }
 
@@ -720,6 +779,8 @@ impl Builder<'_> {
                 Some(KeyFormat::Jwk),
             ),
             ("error--garbage", b"not a key".to_vec(), None),
+            // A token in a key area: `not_a_key` (SPEC §3).
+            ("error--jwt", self.token("rfc7515-a3-jws-es256.txt")?, None),
         ] {
             let req = KeyImportRequest {
                 bytes: Bytes(bytes),
@@ -740,7 +801,7 @@ impl Builder<'_> {
         let hex_input = format!("{hex_text}\n").into_bytes();
         let candidate = self
             .e
-            .detect(&hex_input)
+            .detect_key(&hex_input)
             .into_iter()
             .next()
             .ok_or("no candidate for the hex COSE_Key")?;
@@ -752,6 +813,25 @@ impl Builder<'_> {
         self.add(
             "key_import--hex-cose-key-candidate".into(),
             "keys/rfc8392-a2.3-ec-p256.cosekey.cbor as hex",
+            "key_import",
+            vec![json(&req)?],
+        );
+        // A token candidate: `not_a_key`.
+        let jws = self.token("rfc7515-a3-jws-es256.txt")?;
+        let jwt_candidate = self
+            .e
+            .detect(&jws)
+            .into_iter()
+            .next()
+            .ok_or("no JWT candidate")?;
+        let req = KeyImportRequest {
+            bytes: Bytes(jws),
+            format: None,
+            candidate: Some(jwt_candidate),
+        };
+        self.add(
+            "key_import--error--token-candidate".into(),
+            "tokens/rfc7515-a3-jws-es256.txt with its JWT candidate",
             "key_import",
             vec![json(&req)?],
         );

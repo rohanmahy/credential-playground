@@ -1,5 +1,6 @@
-//! Wrong input never panics: `detect`, `open`, `render`, and `parse_edit`
-//! on random and mutated inputs (SPEC §11, "Parsers must never panic").
+//! Wrong input never panics: `detect`, `detect_key`, `open`, `key_import`,
+//! `render`, and `parse_edit` on random and mutated inputs (SPEC §11,
+//! "Parsers must never panic").
 #![allow(
     clippy::unwrap_used,
     clippy::expect_used,
@@ -11,7 +12,7 @@ mod common;
 
 use common::*;
 use proptest::prelude::*;
-use tokenator_core::{DocRef, EditRequest, Kind, RenderRequest, ViewOptions};
+use tokenator_core::{DocRef, EditRequest, KeyImportRequest, Kind, RenderRequest, ViewOptions};
 
 fn kinds() -> impl Strategy<Value = Kind> {
     prop_oneof![
@@ -33,6 +34,16 @@ fn kinds() -> impl Strategy<Value = Kind> {
     ]
 }
 
+/// Key fixtures for [`mutated_keys`]: one of each key kind.
+const KEY_FIXTURES: [&str; 6] = [
+    "rfc7517-a2-private.jwks.json",
+    "sd-cwt-08-c1-holder-private.jwk.json",
+    "rfc8392-a2.3-ec-p256.cosekey.cbor",
+    "rfc8152-c7.1-public.cosekeyset.cbor",
+    "sd-cwt-08-c1-holder-private.pem",
+    "rfc8410-s10.3-ed25519-private.pem",
+];
+
 /// Fixture bytes with a few random byte edits.
 fn mutated() -> impl Strategy<Value = Vec<u8>> {
     let names: Vec<&'static str> = JOSE_FIXTURES
@@ -40,12 +51,21 @@ fn mutated() -> impl Strategy<Value = Vec<u8>> {
         .chain(COSE_FIXTURES.iter())
         .copied()
         .collect();
+    mutate(names, token)
+}
+
+/// Key fixture bytes with a few random byte edits.
+fn mutated_keys() -> impl Strategy<Value = Vec<u8>> {
+    mutate(KEY_FIXTURES.to_vec(), key_file)
+}
+
+fn mutate(names: Vec<&'static str>, read: fn(&str) -> Vec<u8>) -> impl Strategy<Value = Vec<u8>> {
     (
         prop::sample::select(names),
         prop::collection::vec((any::<prop::sample::Index>(), any::<u8>()), 1..4),
     )
-        .prop_map(|(name, edits)| {
-            let mut b = token(name);
+        .prop_map(move |(name, edits)| {
+            let mut b = read(name);
             for (i, v) in edits {
                 let at = i.index(b.len());
                 b[at] = v;
@@ -79,6 +99,26 @@ proptest! {
         for c in e.detect(&input) {
             let _ = e.open(&input, &c, &ViewOptions::default());
         }
+    }
+
+    #[test]
+    fn detect_key_and_import_random_bytes(input in prop::collection::vec(any::<u8>(), 0..300)) {
+        detect_key_and_import(&input);
+    }
+
+    #[test]
+    fn detect_key_and_import_random_text(input in "[ -~\\n]{0,200}") {
+        detect_key_and_import(input.as_bytes());
+    }
+
+    #[test]
+    fn detect_key_and_import_mutated_keys(input in mutated_keys()) {
+        detect_key_and_import(&input);
+    }
+
+    #[test]
+    fn detect_key_on_mutated_tokens(input in mutated()) {
+        detect_key_and_import(&input);
     }
 
     #[test]
@@ -120,6 +160,20 @@ proptest! {
     }
 }
 
+/// `detect_key`, then `key_import` of each key candidate; every candidate
+/// is a key kind.
+fn detect_key_and_import(input: &[u8]) {
+    let e = engine();
+    for c in e.detect_key(input) {
+        assert!(c.kind.is_key(), "{:?}", c.kind);
+        let _ = e.key_import(&KeyImportRequest {
+            bytes: input.to_vec().into(),
+            format: None,
+            candidate: Some(c),
+        });
+    }
+}
+
 #[test]
 fn deep_nesting_does_not_overflow() {
     let e = engine();
@@ -129,6 +183,7 @@ fn deep_nesting_does_not_overflow() {
         for c in e.detect(&input) {
             let _ = e.open(&input, &c, &ViewOptions::default());
         }
+        detect_key_and_import(&input);
         for kind in [Kind::JsonClaims, Kind::CborClaims, Kind::EdnClaims] {
             let _ = e.render(&RenderRequest {
                 doc: DocRef::new(kind, input.clone()),

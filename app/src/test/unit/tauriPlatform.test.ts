@@ -190,6 +190,27 @@ describe('registry cache', () => {
   });
 });
 
+describe('menu (SPEC §4, desktop only)', () => {
+  it('onMenu invokes menu_listen with a channel and passes each item id to the handler', async () => {
+    const platform = new TauriPlatform();
+    if (!platform.onMenu) throw new Error('TauriPlatform has no onMenu');
+    const seen: string[] = [];
+    const unsubscribe = platform.onMenu((id) => seen.push(id));
+    await new Promise((r) => setTimeout(r, 0));
+    const call = calls.find((c) => c.cmd === 'menu_listen');
+    expect(call).toBeDefined();
+    const channel = (call?.args as { channel?: { onmessage: (m: string) => void } }).channel;
+    expect(typeof channel?.onmessage).toBe('function');
+    channel?.onmessage('new_tab');
+    channel?.onmessage('close_tab');
+    expect(seen).toEqual(['new_tab', 'close_tab']);
+    expect(typeof unsubscribe).toBe('function');
+    unsubscribe();
+    channel?.onmessage('about');
+    expect(seen).toEqual(['new_tab', 'close_tab']);
+  });
+});
+
 describe('local services', () => {
   it('now, localOffsetMinutes, and randomBytes do not invoke', () => {
     const p = new TauriPlatform();

@@ -1,102 +1,68 @@
-// The Workspace store: opening inputs, derived tabs and provenance, view
-// state across re-renders and edits (SPEC §3–§6).
+// The Workspace store: the startup empty tab, derived tabs and provenance,
+// view state across re-renders and edits (SPEC §3–§6). Filling tabs from a
+// paste, drop, file, or the clipboard is pinned through the UI in
+// components/emptyTab.test.ts.
 import { describe, expect, it } from 'vitest';
 import { toB64u, utf8 } from '../../lib/engine/bytes';
-import type { Candidate } from '../../lib/engine/types';
 import type { ActionRequest } from '../../lib/stores/workspace.svelte';
 import * as fx from '../fixtures';
 import { seedKeys, seedTab, setupApp } from '../render';
 
 const RANDOM_32 = toB64u(Uint8Array.from({ length: 32 }, (_, i) => i));
 
-describe('opening inputs', () => {
-  it('detects, opens the top candidate, and activates a new tab', async () => {
+describe('tabs', () => {
+  it('the workspace starts with one empty, editable tab (SPEC §4)', () => {
     const app = setupApp();
-    const input = utf8(fx.jwtToken);
-    const res = await app.workspace.openInput(input, { type: 'pasted' });
-    expect(res.type).toBe('tab');
-    expect(app.engine.detect).toHaveBeenCalledWith(input);
-    expect(app.engine.open).toHaveBeenCalledWith(
-      input,
-      fx.jwtCandidates[0],
-      expect.objectContaining({ now: fx.NOW, local_offset_minutes: 60 }),
-    );
-    const tab = app.workspace.active;
-    expect(tab?.doc.kind).toEqual({ type: 'jwt' });
-    expect(tab?.provenance).toEqual({ type: 'pasted' });
-    expect(tab?.title).toMatch(/JWT/);
-    expect(tab?.candidates).toEqual(fx.jwtCandidates);
+    expect(app.workspace.tabs).toHaveLength(1);
+    const tab = app.workspace.tabs[0];
+    expect(tab?.empty).toBe(true);
+    expect(tab?.liveEdit).toBe(true);
+    expect(tab?.editText).toBe('');
+    expect(app.workspace.activeId).toBe(tab?.id);
+    expect(app.engine.detect).not.toHaveBeenCalled();
   });
 
-  it('routes keys to the key panel instead of opening a tab', async () => {
+  it('typing into the empty tab parses as its type and never detects', async () => {
     const app = setupApp();
-    app.engine.detect.mockResolvedValueOnce(fx.jwkCandidates);
-    const res = await app.workspace.openInput(utf8(fx.VERIFIER_JWK), { type: 'clipboard' });
-    expect(res.type).toBe('keys');
-    expect(app.engine.keyImport).toHaveBeenCalled();
-    expect(app.engine.open).not.toHaveBeenCalled();
-    expect(app.workspace.tabs).toHaveLength(0);
-    expect(app.keys.cards[0]?.provenance).toEqual({ type: 'clipboard' });
-  });
-
-  it('imports a key through its detected candidate, so wrapped keys unwrap (#42)', async () => {
-    const app = setupApp();
-    const hex = Uint8Array.from('a4010220012158', (c) => c.charCodeAt(0));
-    const candidate: Candidate = {
-      kind: { type: 'cose_key' },
-      confidence: 90,
-      layers: [{ type: 'hex', upper: false, separator: null, wrap: null }],
-      payload_range: { start: 0, end: hex.length },
-      breadcrumb: ['hex', 'COSE_Key'],
-    };
-    const candidates = [candidate];
-    app.engine.detect.mockResolvedValueOnce(candidates);
-    await app.workspace.openInput(hex, { type: 'pasted' });
-    expect(app.engine.keyImport).toHaveBeenCalledWith(
-      expect.objectContaining({ bytes: toB64u(hex), candidate }),
+    const tab = app.workspace.tabs[0];
+    if (!tab) throw new Error('no startup tab');
+    await app.workspace.applyEdit(tab.id, '{"iss":"x"}');
+    expect(app.engine.detect).not.toHaveBeenCalled();
+    expect(app.engine.parseEdit).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: { type: 'json_claims' }, text: '{"iss":"x"}' }),
     );
-    expect(app.keys.cards[0]?.provenance).toEqual({ type: 'pasted' });
+    expect(app.workspace.tab(tab.id)?.empty).toBe(false);
   });
 
   it('re-opens the same input as another candidate ("Detected as…")', async () => {
     const app = setupApp();
-    app.engine.detect.mockResolvedValueOnce(fx.containerCandidates);
-    const res = await app.workspace.openInput(utf8('{"credential":"…"}'), { type: 'pasted' });
-    if (res.type !== 'tab') throw new Error(res.type);
-    await app.workspace.chooseCandidate(res.tabId, 1);
+    const tab = seedTab(app.workspace, fx.jwt, {
+      candidates: fx.containerCandidates,
+      input: utf8('{"credential":"…"}'),
+    });
+    await app.workspace.chooseCandidate(tab.id, 1);
     expect(app.engine.open).toHaveBeenLastCalledWith(
       expect.any(Uint8Array),
       fx.containerCandidates[1],
       expect.anything(),
     );
-    const tab = app.workspace.tab(res.tabId);
-    expect(tab?.candidateIndex).toBe(1);
-    expect(tab?.doc.kind).toEqual({ type: 'sd_jwt', kb: false });
+    const after = app.workspace.tab(tab.id);
+    expect(after?.candidateIndex).toBe(1);
+    expect(after?.doc.kind).toEqual({ type: 'sd_jwt', kb: false });
     expect(app.workspace.tabs).toHaveLength(1);
-  });
-
-  it('numbers tabs in creation order and never reuses numbers', async () => {
-    const app = setupApp();
-    await app.workspace.openInput(utf8('a'), { type: 'pasted' });
-    await app.workspace.openInput(utf8('b'), { type: 'pasted' });
-    const second = app.workspace.tabs[1];
-    app.workspace.close(second?.id ?? '');
-    await app.workspace.openInput(utf8('c'), { type: 'pasted' });
-    expect(app.workspace.tabs.map((t) => t.number)).toEqual([1, 3]);
+    expect(app.engine.detect).not.toHaveBeenCalled();
   });
 });
 
 describe('actions open derived tabs', () => {
-  it('Issue sends the claims, issuer key, SD marks, and platform randomness', async () => {
+  it('Issue sends the claims, the Issuer area key, SD marks, and platform randomness', async () => {
     const app = setupApp();
     seedKeys(app, fx.issuerCard, fx.holderCard);
     const parent = seedTab(app.workspace, fx.jsonClaims);
     app.workspace.toggleSdMark(parent.id, 'given_name');
-    const child = await app.workspace.runAction(parent.id, {
-      action: 'issue',
-      issuerKeyId: 'key-1',
-    });
+    const child = await app.workspace.runAction(parent.id, { action: 'issue' });
     const req = app.engine.issue.mock.calls[0]?.[0];
+    expect(req?.cnf ?? null).toBeNull();
     expect(req?.claims).toEqual({ kind: fx.jsonClaims.kind, bytes: fx.jsonClaims.bytes });
     expect(req?.issuer.bytes).toBe(fx.issuerInfo.key.bytes);
     expect(req?.issuer.label).toBe('Issuer P-256');
@@ -107,7 +73,20 @@ describe('actions open derived tabs', () => {
     expect(app.workspace.tabs).toHaveLength(2);
   });
 
-  it('Present uses the clock for iat, the holder key, aud, and nonce', async () => {
+  it('Issue with cnf binds the Holder area key', async () => {
+    const app = setupApp();
+    seedKeys(app, fx.issuerCard, fx.holderCard);
+    const parent = seedTab(app.workspace, fx.jsonClaims);
+    await app.workspace.runAction(parent.id, { action: 'issue', cnf: true });
+    const req = app.engine.issue.mock.calls[0]?.[0];
+    expect(req?.issuer.bytes).toBe(fx.issuerInfo.key.bytes);
+    expect(req?.cnf).toEqual({
+      type: 'key',
+      key: expect.objectContaining({ bytes: fx.holderInfo.key.bytes }),
+    });
+  });
+
+  it('Present uses the clock for iat, the Holder area key, aud, and nonce', async () => {
     const app = setupApp();
     seedKeys(app, fx.issuerCard, fx.holderCard);
     app.settings.clockOverride = 1_900_000_000;
@@ -115,7 +94,6 @@ describe('actions open derived tabs', () => {
     const child = await app.workspace.runAction(parent.id, {
       action: 'present',
       keep: [1],
-      holderKeyId: 'key-2',
       aud: 'https://verifier.example',
       nonce: 'n-0S6',
     });
@@ -144,7 +122,7 @@ describe('actions open derived tabs', () => {
       { action: 'edit_disclosures', ops: [{ type: 'remove', index: 0 }] },
       'editDisclosures',
     ],
-    ['resign', { action: 'resign', keyId: 'key-1' }, 'resign'],
+    ['resign', { action: 'resign', key: 'issuer' }, 'resign'],
   ])('%s opens a derived tab', async (action, req, method) => {
     const app = setupApp();
     seedKeys(app, fx.issuerCard);
@@ -160,15 +138,8 @@ describe('actions open derived tabs', () => {
     const app = setupApp();
     seedKeys(app, fx.issuerCard, fx.holderCard);
     const root = seedTab(app.workspace, fx.jsonClaims);
-    const issued = await app.workspace.runAction(root.id, {
-      action: 'issue',
-      issuerKeyId: 'key-1',
-    });
-    const presented = await app.workspace.runAction(issued.id, {
-      action: 'present',
-      keep: [],
-      holderKeyId: 'key-2',
-    });
+    const issued = await app.workspace.runAction(root.id, { action: 'issue' });
+    const presented = await app.workspace.runAction(issued.id, { action: 'present', keep: [] });
     expect(app.workspace.breadcrumb(presented.id)).toEqual([
       { tabId: root.id, title: root.title, action: null },
       { tabId: issued.id, title: issued.title, action: 'issue' },
@@ -178,9 +149,9 @@ describe('actions open derived tabs', () => {
 });
 
 describe('validate', () => {
-  it('passes the panel keys, the clock, skew, and expectations; stores the report', async () => {
+  it('passes the area keys, the clock, skew, and expectations; stores the report', async () => {
     const app = setupApp();
-    seedKeys(app, fx.issuerCard, fx.verifierCard);
+    seedKeys(app, fx.issuerCard, fx.holderCard);
     app.settings.skew = 120;
     app.settings.expectedAud = 'https://verifier.example';
     const tab = seedTab(app.workspace, fx.jwt);
@@ -189,7 +160,15 @@ describe('validate', () => {
     expect(req?.now).toBe(fx.NOW);
     expect(req?.skew).toBe(120);
     expect(req?.expected_aud).toBe('https://verifier.example');
-    expect(req?.keys?.map((k) => k.label)).toEqual(['Issuer P-256', 'Verifier P-256']);
+    // the Issuer area's key (or its public part) verifies the credential, the
+    // Holder area's key the key binding
+    const issuer = req?.keys?.filter((k) => k.role === 'issuer') ?? [];
+    const holder = req?.keys?.filter((k) => k.role === 'holder') ?? [];
+    expect(issuer).toHaveLength(1);
+    expect([fx.issuerInfo.key.bytes, fx.issuerPublicInfo.key.bytes]).toContain(issuer[0]?.bytes);
+    expect(holder).toHaveLength(1);
+    expect(holder[0]?.bytes).toBe(fx.holderInfo.key.bytes);
+    expect(req?.keys).toHaveLength(2);
     expect(report).toEqual(fx.jwtReport);
     expect(app.workspace.tab(tab.id)?.report).toEqual(fx.jwtReport);
   });

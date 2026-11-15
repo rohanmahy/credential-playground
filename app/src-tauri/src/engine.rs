@@ -84,6 +84,15 @@ pub async fn engine_detect(
     Ok(state.current().detect(&input))
 }
 
+/// `Engine::detect_key`; `input` is the raw input as base64url.
+#[tauri::command(rename_all = "snake_case")]
+pub async fn engine_detect_key(
+    state: State<'_, EngineState>,
+    input: Bytes,
+) -> Result<Vec<Candidate>, EngineError> {
+    Ok(state.current().detect_key(&input))
+}
+
 /// `Engine::open`; `input` is the raw input as base64url.
 #[tauri::command(rename_all = "snake_case")]
 pub async fn engine_open(

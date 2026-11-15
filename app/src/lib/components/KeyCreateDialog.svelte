@@ -1,23 +1,23 @@
 <script lang="ts">
-  // Create a key: algorithm (KEY_SPECS), randomness (random, well-known test
-  // seed, or a user seed), role, auto kid.
-  import type { KidSource, Role } from '../engine/types';
+  // Create a key into a key area: algorithm (KEY_SPECS), randomness
+  // (random, well-known test seed, or a user seed), auto kid. The area is
+  // the role.
+  import type { KidSource } from '../engine/types';
+  import { KEY_ROLE_LABELS, type KeyRole } from '../model';
   import { getAppContext } from '../context';
   import { KEY_SPECS } from '../logic/keys';
   import type { SeedChoice } from '../stores/keys.svelte';
   import { errorMessage } from '../ui';
   import Dialog from './Dialog.svelte';
 
-  let { onClose }: { onClose?: () => void } = $props();
+  let { role, onClose }: { role: KeyRole; onClose?: () => void } = $props();
 
   const { keys } = getAppContext();
 
   let specIndex = $state(0);
   let seedType = $state<SeedChoice['type']>('random');
   let seed = $state('');
-  let role = $state<Role | ''>('issuer');
   let kid = $state<'none' | 'jwk' | 'cose'>('none');
-  let label = $state('');
   let busy = $state(false);
   let error = $state<string | null>(null);
 
@@ -38,12 +38,7 @@
     busy = true;
     error = null;
     try {
-      await keys.generate(spec, {
-        seed: seedChoice,
-        role: role || null,
-        kid: kidSource,
-        ...(label.trim() ? { label: label.trim() } : {}),
-      });
+      await keys.generate(role, spec, { seed: seedChoice, kid: kidSource });
       close();
     } catch (err) {
       error = errorMessage(err);
@@ -54,6 +49,7 @@
 </script>
 
 <Dialog title="Create key" onClose={close}>
+  <p class="muted small">Fills the {KEY_ROLE_LABELS[role]} area.</p>
   <form onsubmit={submit}>
     <label class="field">
       <span>Algorithm</span>
@@ -83,25 +79,12 @@
       {/if}
     </fieldset>
     <label class="field">
-      <span>Role</span>
-      <select bind:value={role}>
-        <option value="">none</option>
-        <option value="issuer">issuer</option>
-        <option value="holder">holder</option>
-        <option value="verifier">verifier</option>
-      </select>
-    </label>
-    <label class="field">
       <span>kid</span>
       <select bind:value={kid}>
         <option value="none">None</option>
         <option value="jwk">JWK thumbprint</option>
         <option value="cose">COSE thumbprint</option>
       </select>
-    </label>
-    <label class="field">
-      <span>Label (optional)</span>
-      <input type="text" bind:value={label} />
     </label>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     <div class="buttons">

@@ -39,6 +39,7 @@ fn direct(engine: &Engine, cmd: &str, a: &Value) -> Result<String, Value> {
     match cmd {
         "engine_info" => core_json(Ok(engine.info())),
         "engine_detect" => core_json(Ok(engine.detect(&input()))),
+        "engine_detect_key" => core_json(Ok(engine.detect_key(&input()))),
         "engine_open" => core_json(engine.open(&input(), &arg(a, "candidate"), &arg(a, "view"))),
         "engine_render" => core_json(engine.render(&arg(a, "req"))),
         "engine_parse_edit" => core_json(Ok(engine.parse_edit(&arg(a, "req")))),
@@ -259,7 +260,40 @@ fn corpus(fx: &Fx) -> Vec<Case> {
             "engine_key_import",
             json!({ "req": { "bytes": b64u(&read_testdata(file)) } }),
         ));
+        cases.push(case(
+            format!("detect key {file}"),
+            "engine_detect_key",
+            json!({ "input": b64u(&read_testdata(file)) }),
+        ));
     }
+    // Key detection of a token (empty) and of a hex COSE_Key, imported
+    // through its candidate; a token handed to key_import is `not_a_key`.
+    let hex_key: String = read_testdata("keys/rfc8392-a2.3-ec-p256.cosekey.cbor")
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
+    cases.push(case(
+        "detect key of a JWT",
+        "engine_detect_key",
+        json!({ "input": b64u(&fx.jwt) }),
+    ));
+    cases.push(case(
+        "detect key of hex",
+        "engine_detect_key",
+        json!({ "input": b64u(hex_key.as_bytes()) }),
+    ));
+    if let Some(c) = e.detect_key(hex_key.as_bytes()).first() {
+        cases.push(case(
+            "import hex key candidate",
+            "engine_key_import",
+            json!({ "req": { "bytes": b64u(hex_key.as_bytes()), "candidate": v(c) } }),
+        ));
+    }
+    cases.push(case(
+        "error: import a JWT",
+        "engine_key_import",
+        json!({ "req": { "bytes": b64u(&fx.jwt) } }),
+    ));
     let key = v(&fx.issuer.key);
     cases.push(case(
         "key public",

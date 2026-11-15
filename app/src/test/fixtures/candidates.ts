@@ -58,3 +58,27 @@ export const jwkCandidates: Candidate[] = [candidate({ type: 'jwk' }, 95, ['JWK'
 export const claimsCandidates: Candidate[] = [
   candidate({ type: 'json_claims' }, 90, ['JSON claim set']),
 ];
+
+/** Token detection of JSON text that reads as either claim set. */
+export const jsonOrEdnCandidates: Candidate[] = [
+  candidate({ type: 'json_claims' }, 90, ['JSON claim set']),
+  candidate({ type: 'edn_claims' }, 60, ['EDN claim set']),
+];
+
+// Key detection (`Engine.detectKey`) returns only key kinds: jwk (above),
+// jwk_set, cose_key, cose_key_set, pem.
+
+export const jwkSetCandidates: Candidate[] = [candidate({ type: 'jwk_set' }, 95, ['JWK Set'])];
+
+export const coseKeyCandidates: Candidate[] = [
+  candidate(
+    { type: 'cose_key' },
+    90,
+    ['hex', 'COSE_Key'],
+    [{ type: 'hex', upper: false, separator: null, wrap: null }],
+  ),
+];
+
+export const pemCandidates: Candidate[] = [
+  candidate({ type: 'pem', labels: ['PUBLIC KEY'] }, 95, ['PEM']),
+];

@@ -1,0 +1,9 @@
+{
+  "method": "detect_key",
+  "source": "constructed: empty",
+  "args": [
+    {
+      "bytes": ""
+    }
+  ]
+}

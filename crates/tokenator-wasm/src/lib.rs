@@ -3,7 +3,7 @@
 //! One export per Engine method, on the [`TokenatorEngine`] class, with the
 //! core method's snake_case name. Requests and responses cross as JSON
 //! text in the core wire format (crates/tokenator-core/TEST-PLAN.md §2);
-//! raw `detect`/`open` input crosses as a `Uint8Array` (#34). Every method
+//! raw `detect`/`detect_key`/`open` input crosses as a `Uint8Array` (#34). Every method
 //! returns a JSON envelope string, never throws for engine errors:
 //!
 //! ```text
@@ -112,6 +112,11 @@ impl TokenatorEngine {
     /// `Engine::detect` on raw input bytes.
     pub fn detect(&self, input: &[u8]) -> String {
         envelope!(Ok::<_, EngineError>(self.engine.detect(input)))
+    }
+
+    /// `Engine::detect_key` on raw input bytes.
+    pub fn detect_key(&self, input: &[u8]) -> String {
+        envelope!(Ok::<_, EngineError>(self.engine.detect_key(input)))
     }
 
     /// `Engine::open` on raw input bytes; `candidate` and `view` are JSON.

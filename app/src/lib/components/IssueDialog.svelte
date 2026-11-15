@@ -1,9 +1,10 @@
 <script lang="ts">
-  // Issue / Redact: issuer key, alg, serialization (JOSE) or CBOR tags
-  // (COSE), header options, and an optional holder key for `cnf`.
+  // Issue / Redact with the Issuer area's key: alg, serialization (JOSE) or
+  // CBOR tags (COSE), header options, and optionally the Holder area's key
+  // as `cnf`.
   import type { HeaderOptions, JoseSerialization } from '../engine/types';
   import { getAppContext } from '../context';
-  import { ACTION_LABELS, canIssueWith } from '../logic/actions';
+  import { ACTION_LABELS } from '../logic/actions';
   import { kindFamily } from '../logic/kinds';
   import { errorMessage } from '../ui';
   import Dialog from './Dialog.svelte';
@@ -17,7 +18,7 @@
   const { workspace, keys } = getAppContext();
   const tab = $derived(workspace.tab(tabId));
   const cose = $derived(tab ? kindFamily(tab.doc.kind) === 'cose' : false);
-  const issuers = $derived(keys.cards.filter((c) => c.info.private && canIssueWith(c)));
+  const issuer = $derived(keys.issuer);
 
   const TAGS: Record<string, number[] | null> = {
     '18': [18],
@@ -25,22 +26,20 @@
     none: [],
   };
 
-  // svelte-ignore state_referenced_locally
-  let issuerId = $state((issuers.find((c) => c.role === 'issuer') ?? issuers[0])?.id ?? '');
   let alg = $state('');
   let serialization = $state<JoseSerialization>('compact');
   let tags = $state('18');
-  let holderId = $state('');
+  let cnf = $state(false);
   let typ = $state<'auto' | 'omit'>('auto');
   let kid = $state<'from_key' | 'none'>('from_key');
   let error = $state<string | null>(null);
   let busy = $state(false);
 
-  const algs = $derived(keys.get(issuerId)?.info.algs ?? []);
+  const algs = $derived(issuer?.info.algs ?? []);
 
   async function submit(e: SubmitEvent) {
     e.preventDefault();
-    if (!issuerId) return;
+    if (!issuer) return;
     const header: HeaderOptions = {
       typ: { type: typ },
       kid: { type: kid },
@@ -50,8 +49,7 @@
     try {
       await workspace.runAction(tabId, {
         action,
-        issuerKeyId: issuerId,
-        holderKeyId: holderId || null,
+        cnf: cnf && keys.holder !== null,
         alg: alg || null,
         header,
         jose: serialization,
@@ -68,12 +66,9 @@
 
 <Dialog title={ACTION_LABELS[action]} {onClose}>
   <form onsubmit={submit}>
-    <label class="field">
-      <span>Issuer key</span>
-      <select bind:value={issuerId}>
-        {#each issuers as c (c.id)}<option value={c.id}>{c.label}</option>{/each}
-      </select>
-    </label>
+    <p class="muted">
+      Signed with the Issuer key{issuer ? `: ${issuer.info.description}` : ' (none)'}.
+    </p>
     <label class="field">
       <span>Algorithm</span>
       <select bind:value={alg}>
@@ -100,12 +95,9 @@
         </select>
       </label>
     {/if}
-    <label class="field">
-      <span>Holder key (cnf)</span>
-      <select bind:value={holderId}>
-        <option value="">None</option>
-        {#each keys.cards as c (c.id)}<option value={c.id}>{c.label}</option>{/each}
-      </select>
+    <label class="check">
+      <input type="checkbox" bind:checked={cnf} disabled={!keys.holder} />
+      Holder key (cnf)
     </label>
     <label class="field">
       <span>typ</span>
@@ -123,7 +115,7 @@
     </label>
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     <div class="buttons">
-      <button type="submit" class="primary" disabled={busy || !issuerId}
+      <button type="submit" class="primary" disabled={busy || !issuer}
         >{ACTION_LABELS[action]}</button
       >
       <button type="button" onclick={onClose}>Cancel</button>

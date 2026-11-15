@@ -32,13 +32,13 @@ the stand-in (`vite.config.ts`).
 ## 1. tokenator-wasm
 
 **Surface.** One class, `TokenatorEngine`, with one method per Engine
-method under the core's snake_case name (`info`, `detect`, `open`,
-`render`, `parse_edit`, …, `registry_merge`: 27), plus the hidden test hook
+method under the core's snake_case name (`info`, `detect`, `detect_key`,
+`open`, `render`, `parse_edit`, …, `registry_merge`: 29), plus the hidden test hook
 `panic_for_tests(message)`. `app/src/lib/engine/tokenator-wasm.d.ts`
 declares the same surface for type-checking without the build.
 
 - Requests cross as **JSON text** in the core wire format; raw
-  `detect`/`open` input crosses as a **`Uint8Array`** (#34 item 2).
+  `detect`/`detect_key`/`open` input crosses as a **`Uint8Array`** (#34 item 2).
 - Every method returns a **JSON envelope string** and never throws for an
   engine error: `{"ok":<DTO>}` or `{"err":{"code","message","node_id"}}`,
   compact `serde_json` output. A request that does not deserialize is
@@ -142,7 +142,7 @@ self-contained:
 
 | Methods | Cases |
 |---|---|
-| `detect` | every token and key fixture, plus wrapped inputs (Bearer, Authorization header, quotes, JSON container, URL-encoded, base64url, hex with colons, empty, garbage) |
+| `detect`, `detect_key` | every token fixture (`detect`), every key fixture (both), plus wrapped inputs (Bearer, Authorization header, quotes, JSON container, URL-encoded, base64url, hex with colons, empty, garbage, EDN CWT and COSE_Key) |
 | `open` | the top candidate of every token fixture that detects, the wrapped inputs, a mismatched candidate |
 | `render`, `parse_edit` | view options (compact, indent, no decoded views, no annotations, base64 bytes, `dt''` + `now`, hide/manual decode, pretty JSON); claim sets; edits that keep, change, re-indicate, or break the text |
 | `issue`, `redact`, `disclose`, `present` | JWT ES256/RS256/PS256, SD-JWT (cnf, decoys, compact/flattened/general, SHA-512), CWT ES256/EdDSA with tag 61, SD-CWT from Figure 4 and from tags 58; SD-JWT+KB, SD-KBT, plain CWT in an SD-KBT; randomness/alg/cnf/nothing-to-redact/already-presented errors |

@@ -4,15 +4,16 @@ import { screen, waitFor, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
 import CredentialTab from '../../lib/components/CredentialTab.svelte';
-import KeyPanel from '../../lib/components/KeyPanel.svelte';
+import AppShell from '../../lib/components/AppShell.svelte';
 import { FetchError } from '../../lib/platform/Platform';
 import * as fx from '../fixtures';
 import { renderWithApp, seedTab, setupApp } from '../render';
+import { NAMES, keyArea, keyButton } from '../ui';
 
 const URL = 'https://issuer.example/.well-known/jwks.json';
 
 async function askFetch() {
-  await userEvent.click(screen.getByRole('button', { name: 'Fetch from URL' }));
+  await userEvent.click(keyButton('issuer', NAMES.fetch));
   await userEvent.type(screen.getByRole('textbox', { name: 'URL' }), URL);
   await userEvent.click(screen.getByRole('button', { name: 'Fetch' }));
   return screen.getByRole('alertdialog');
@@ -21,7 +22,7 @@ async function askFetch() {
 describe('key fetch', () => {
   it('asks before fetching, showing the URL and the privacy note; Cancel fetches nothing', async () => {
     const app = setupApp();
-    renderWithApp(KeyPanel, {}, app);
+    renderWithApp(AppShell, {}, app);
     const confirm = await askFetch();
     expect(confirm).toHaveTextContent(URL);
     expect(confirm).toHaveTextContent(/IP address/);
@@ -31,20 +32,21 @@ describe('key fetch', () => {
     expect(app.platform.fetchUrl).not.toHaveBeenCalled();
   });
 
-  it('fetches and imports after confirmation', async () => {
+  it('fetches and fills the area after confirmation', async () => {
     const app = setupApp();
-    renderWithApp(KeyPanel, {}, app);
+    renderWithApp(AppShell, {}, app);
     const confirm = await askFetch();
     await userEvent.click(within(confirm).getByRole('button', { name: /^fetch/i }));
     await waitFor(() => expect(app.platform.fetchUrl).toHaveBeenCalledWith(URL));
-    await waitFor(() => expect(screen.getAllByRole('article')).toHaveLength(1));
-    expect(screen.getByRole('article')).toHaveTextContent(`URL: ${URL}`);
+    await waitFor(() => expect(app.keys.forRole('issuer')).not.toBeNull());
+    expect(app.keys.forRole('holder')).toBeNull();
+    await waitFor(() => expect(keyArea('issuer')).toHaveTextContent(`URL: ${URL}`));
   });
 
   it('on a CORS failure explains why and offers pasting instead', async () => {
     const app = setupApp();
     app.platform.fetchUrl.mockRejectedValueOnce(new FetchError('cors', URL, 'Failed to fetch'));
-    renderWithApp(KeyPanel, {}, app);
+    renderWithApp(AppShell, {}, app);
     const confirm = await askFetch();
     await userEvent.click(within(confirm).getByRole('button', { name: /^fetch/i }));
     const alert = await screen.findByRole('alert');
@@ -53,9 +55,13 @@ describe('key fetch', () => {
     await userEvent.click(within(alert).getByRole('button', { name: 'Paste instead' }));
     const box = screen.getByRole('textbox', { name: /paste the content/i });
     await userEvent.click(box);
-    await userEvent.paste(fx.VERIFIER_JWK);
-    await userEvent.click(screen.getByRole('button', { name: 'Import' }));
+    await userEvent.paste(fx.ISSUER_PUBLIC_JWK);
+    // the fallback's own Import (each key area also has one)
+    const scope = box.closest<HTMLElement>('form, [role="alert"], [role="dialog"]');
+    if (!scope) throw new Error('the paste fallback has no container');
+    await userEvent.click(within(scope).getByRole('button', { name: 'Import' }));
     await waitFor(() => expect(app.engine.keyImport).toHaveBeenCalled());
+    await waitFor(() => expect(app.keys.forRole('issuer')).not.toBeNull());
   });
 });
 
@@ -73,5 +79,7 @@ describe('fetch hints in a validation report', () => {
     await userEvent.click(within(confirm).getByRole('button', { name: /^fetch/i }));
     await waitFor(() => expect(app.engine.keyImport).toHaveBeenCalled());
     await waitFor(() => expect(app.engine.validate).toHaveBeenCalledTimes(2));
+    // the fetched key verifies the credential: it goes to the Issuer area
+    expect(app.keys.forRole('issuer')).not.toBeNull();
   });
 });

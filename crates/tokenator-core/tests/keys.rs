@@ -127,6 +127,37 @@ fn unsupported_keys_fail_cleanly() {
 }
 
 #[test]
+fn bytes_that_are_not_a_key_fail_with_not_a_key() {
+    // SPEC §3: a token pasted into a key area is rejected with "Not a
+    // recognized key". Recognized but unsupported keys stay `key` (above).
+    let e = engine();
+    let inputs = [
+        token("rfc7515-a3-jws-es256.txt"),
+        token("rfc9901-s5.1-sd-jwt.txt"),
+        token(CWT_TAGGED),
+        token("rfc7519-s3.1-claims.json"),
+        b"not a key".to_vec(),
+        Vec::new(),
+    ];
+    for bytes in inputs {
+        let err = e
+            .key_import(&KeyImportRequest {
+                bytes: bytes.clone().into(),
+                format: None,
+                candidate: None,
+            })
+            .unwrap_err();
+        assert_eq!(
+            err.code,
+            ErrorCode::NotAKey,
+            "{:?}",
+            String::from_utf8_lossy(&bytes)
+        );
+        assert_eq!(err.message, "Not a recognized key");
+    }
+}
+
+#[test]
 fn top_level_key_fixtures_import() {
     let e = engine();
     let cases = [
@@ -700,13 +731,17 @@ fn key_operations_reject_garbage() {
     );
 }
 
-/// #42: a key pasted in an encoded form imports through its detected
+/// #42: a key pasted in an encoded form imports through its `detect_key`
 /// candidate, which unwraps the layers first.
 mod import_candidate {
     use super::*;
 
     fn import_detected(e: &Engine, input: &[u8]) -> Result<Vec<KeyInfo>, ErrorCode> {
-        let candidate = e.detect(input).into_iter().next().expect("a candidate");
+        let candidate = e
+            .detect_key(input)
+            .into_iter()
+            .next()
+            .expect("a key candidate");
         e.key_import(&KeyImportRequest {
             bytes: input.to_vec().into(),
             format: None,
@@ -763,10 +798,46 @@ mod import_candidate {
     }
 
     #[test]
-    fn a_credential_candidate_is_refused() {
+    fn a_credential_candidate_is_not_a_key() {
+        // A token or claim-set candidate (from `detect`) handed to
+        // `key_import`.
         let e = engine();
-        let jws = std::fs::read(testdata("tokens/rfc7515-a3-jws-es256.txt")).unwrap();
-        assert_eq!(import_detected(&e, &jws), Err(ErrorCode::InvalidCandidate));
+        for input in [
+            token("rfc7515-a3-jws-es256.txt"),
+            token(CWT_TAGGED),
+            token("rfc7519-s3.1-claims.json"),
+            key_file("rfc9901-a5-ec-p256-public.jwk.json"),
+        ] {
+            let candidate = e.detect(&input).into_iter().next().expect("a candidate");
+            assert!(!candidate.kind.is_key());
+            let err = e
+                .key_import(&KeyImportRequest {
+                    bytes: input.into(),
+                    format: None,
+                    candidate: Some(candidate),
+                })
+                .unwrap_err();
+            assert_eq!(err.code, ErrorCode::NotAKey);
+            assert_eq!(err.message, "Not a recognized key");
+        }
+    }
+
+    #[test]
+    fn tokens_have_no_key_candidate() {
+        let e = engine();
+        for input in [token("rfc7515-a3-jws-es256.txt"), token(CWT_TAGGED)] {
+            assert!(e.detect_key(&input).is_empty());
+        }
+    }
+
+    #[test]
+    fn edn_cose_key_candidate_imports() {
+        let e = engine();
+        let raw = key_file("rfc9679/ec2-p256.cbor");
+        let item = tokenator_cbor::decode(&raw).unwrap();
+        let text = tokenator_edn::print(&item, &tokenator_edn::PrintOptions::default()).text;
+        let got = import_detected(&e, text.as_bytes()).unwrap();
+        assert_eq!(got[0].cose_thumbprint, RFC9679_THUMBPRINT);
     }
 
     #[test]

@@ -45,7 +45,8 @@ docker run --rm "${tty[@]}" --init \
   "$image" bash -c '
     set -euo pipefail
     rsync -a --delete \
-      --exclude=/.git --exclude=/.worktrees --exclude=/target --exclude=/fuzz/target \
+      --exclude=/.git --exclude=/.worktrees --exclude=/.claude --exclude=/target \
+      --exclude=/fuzz/target \
       --exclude=/app/node_modules --exclude=/app/dist --exclude=/app/test-results \
       --exclude=/crates/tokenator-wasm/pkg \
       /src/ /work/

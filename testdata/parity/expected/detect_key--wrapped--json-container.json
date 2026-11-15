@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cose_key"},"confidence":86,"layers":[{"type":"json_field","path":["key"]},{"type":"base64_url","padded":false,"wrap":null}],"payload_range":{"start":9,"end":185},"breadcrumb":["JSON field /key","base64url","COSE_Key"]}]}

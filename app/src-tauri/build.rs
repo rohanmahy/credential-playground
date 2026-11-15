@@ -7,6 +7,7 @@ const COMMANDS: &[&str] = &[
     "engine_init",
     "engine_info",
     "engine_detect",
+    "engine_detect_key",
     "engine_open",
     "engine_render",
     "engine_parse_edit",
@@ -41,6 +42,7 @@ const COMMANDS: &[&str] = &[
     "registry_cache_get",
     "registry_cache_put",
     "registry_cache_clear",
+    "menu_listen",
 ];
 
 fn main() {

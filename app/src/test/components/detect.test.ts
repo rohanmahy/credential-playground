@@ -1,8 +1,7 @@
-// Input, detection, "Detected as…", and the unwrapping breadcrumb (SPEC §3).
+// "Detected as…" and the unwrapping breadcrumb in the tab header (SPEC §3).
 import { screen, within, waitFor } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it } from 'vitest';
-import AppShell from '../../lib/components/AppShell.svelte';
 import TabHeader from '../../lib/components/TabHeader.svelte';
 import { utf8 } from '../../lib/engine/bytes';
 import * as fx from '../fixtures';
@@ -48,36 +47,5 @@ describe('tab header detection info', () => {
   });
 });
 
-describe('opening input', () => {
-  it('pasting a token opens a tab', async () => {
-    const app = setupApp();
-    renderWithApp(AppShell, {}, app);
-    await userEvent.click(screen.getByRole('textbox', { name: /paste a credential or key/i }));
-    await userEvent.paste(fx.jwtToken);
-    await userEvent.click(screen.getByRole('button', { name: 'Open' }));
-    await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(1));
-    expect(app.engine.detect).toHaveBeenCalledWith(utf8(fx.jwtToken));
-    expect(screen.getByRole('tab', { selected: true })).toHaveTextContent('JWT');
-  });
-
-  it('pasting a key adds it to the key panel instead', async () => {
-    const app = setupApp();
-    app.engine.detect.mockResolvedValueOnce(fx.jwkCandidates);
-    renderWithApp(AppShell, {}, app);
-    await userEvent.click(screen.getByRole('textbox', { name: /paste a credential or key/i }));
-    await userEvent.paste(fx.VERIFIER_JWK);
-    await userEvent.click(screen.getByRole('button', { name: 'Open' }));
-    const keys = screen.getByRole('complementary', { name: 'Keys' });
-    await waitFor(() => expect(within(keys).getAllByRole('article')).toHaveLength(1));
-    expect(screen.queryAllByRole('tab')).toHaveLength(0);
-  });
-
-  it('opens from the clipboard with clipboard provenance', async () => {
-    const app = setupApp();
-    app.platform.clipboard = fx.jwtToken;
-    renderWithApp(AppShell, {}, app);
-    await userEvent.click(screen.getByRole('button', { name: /from clipboard/i }));
-    await waitFor(() => expect(screen.getAllByRole('tab')).toHaveLength(1));
-    expect(screen.getByRole('navigation', { name: 'Provenance' })).toHaveTextContent('Clipboard');
-  });
-});
+// Opening input (paste, clipboard, file, drop into an empty tab) is in
+// emptyTab.test.ts; keys go through the key areas (keyAreas.test.ts).

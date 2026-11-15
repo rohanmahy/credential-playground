@@ -1,6 +1,8 @@
 <script lang="ts">
   // Main pane: read-only line tree (role=tree) over Document.main.text with
-  // folding, annotations, and time hints; CodeMirror in live edit.
+  // folding, annotations, and time hints; CodeMirror in live edit. A paste
+  // or drop into an empty tab's editor runs token detection and fills the
+  // tab; a full editor refuses drops, and pastes into it are plain edits.
   import { tick } from 'svelte';
   import type { NodeId } from '../engine/types';
   import { getAppContext } from '../context';
@@ -9,7 +11,15 @@
   import { hoverText, timeHintText } from '../logic/hover';
   import { kindFamily } from '../logic/kinds';
   import { LINE_HEIGHT, type Slice } from '../logic/viewport';
-  import type { MenuItem } from '../ui';
+  import {
+    acceptDrag,
+    droppedInput,
+    errorMessage,
+    pastedInput,
+    refuseDrop,
+    type AreaInput,
+    type MenuItem,
+  } from '../ui';
   import CodeEditor from './CodeEditor.svelte';
   import Menu from './Menu.svelte';
 
@@ -180,6 +190,45 @@
     workspace.scheduleEdit(tabId, text);
   }
 
+  let fillError = $state<string | null>(null);
+  let filling = $state(false);
+
+  async function fill(input: AreaInput | null) {
+    if (!input) return;
+    fillError = null;
+    filling = true;
+    try {
+      await workspace.fillTab(tabId, input.bytes, input.provenance);
+    } catch (e) {
+      fillError = errorMessage(e);
+    } finally {
+      filling = false;
+    }
+  }
+
+  // Capture phase: these run before CodeMirror's own paste and drop
+  // handling, which must not see input meant for detection.
+  function onpaste(e: ClipboardEvent) {
+    if (!tab?.empty) return;
+    e.preventDefault();
+    e.stopPropagation();
+    void fill(pastedInput(e));
+  }
+
+  function ondragover(e: DragEvent) {
+    if (tab?.empty) acceptDrag(e);
+    else refuseDrop(e);
+  }
+
+  async function ondrop(e: DragEvent) {
+    if (!tab?.empty) {
+      refuseDrop(e);
+      return;
+    }
+    acceptDrag(e);
+    await fill(await droppedInput(e.dataTransfer));
+  }
+
   /** The part of a line to carry the hover text: the member name / label
    *  before the value, or the whole value when there is no name. */
   function split(l: LineInfo): { indent: string; named: string; rest: string; title: string } {
@@ -203,7 +252,15 @@
 
 {#if tab && doc}
   {#if tab.liveEdit}
-    <div class="live">
+    <!-- Paste and drop only reach the editor inside; the keyboard path is
+         the empty tab's Open file… and From clipboard buttons. -->
+    <div
+      class="live"
+      aria-busy={filling}
+      onpastecapture={onpaste}
+      ondragovercapture={ondragover}
+      ondropcapture={ondrop}
+    >
       {#key doc.main.language}
         <CodeEditor
           text={tab.editText}
@@ -222,6 +279,7 @@
           {/each}
         </div>
       {/if}
+      {#if fillError}<p class="diagnostics" role="alert">{fillError}</p>{/if}
     </div>
   {:else}
     <div

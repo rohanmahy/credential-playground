@@ -69,6 +69,55 @@ fn detect_of_arbitrary_bytes() {
 }
 
 #[test]
+fn detect_key_takes_base64url_input() {
+    let (h, fx) = (Harness::new(), Fx::new());
+    for rel in [
+        "keys/rfc7517-a2-private.jwks.json",
+        "keys/sd-cwt-08-c2-issuer-private.cosekey.cbor",
+        "keys/rfc8410-s10.3-ed25519-private.pem",
+    ] {
+        let bytes = read_testdata(rel);
+        let direct = fx.engine.detect_key(&bytes);
+        assert!(
+            !direct.is_empty() && direct.iter().all(|c| c.kind.is_key()),
+            "{rel}"
+        );
+        assert_same(
+            &h,
+            "engine_detect_key",
+            json!({ "input": b64u(&bytes) }),
+            core_json(Ok(direct)),
+        );
+    }
+}
+
+#[test]
+fn detect_key_of_a_token_is_empty() {
+    let (h, fx) = (Harness::new(), Fx::new());
+    for bytes in [&fx.jwt, &fx.cwt] {
+        assert_eq!(
+            h.invoke("engine_detect_key", json!({ "input": b64u(bytes) })),
+            Ok("[]".into())
+        );
+    }
+}
+
+#[test]
+fn detect_of_a_key_has_no_key_kind() {
+    let (h, fx) = (Harness::new(), Fx::new());
+    let jwk = read_testdata("keys/rfc9901-a5-ec-p256-public.jwk.json");
+    let direct = fx.engine.detect(&jwk);
+    assert_eq!(direct.first().map(|c| &c.kind), Some(&Kind::JsonClaims));
+    assert!(direct.iter().all(|c| !c.kind.is_key()));
+    assert_same(
+        &h,
+        "engine_detect",
+        json!({ "input": b64u(&jwk) }),
+        core_json(Ok(direct)),
+    );
+}
+
+#[test]
 fn open_takes_input_candidate_view() {
     let (h, fx) = (Harness::new(), Fx::new());
     for bytes in [&fx.jwt, &fx.cwt] {
@@ -405,6 +454,24 @@ fn key_import_error() {
         .call("engine_key_import", json!({ "req": v(&req) }))
         .unwrap_err();
     assert_eq!(err, v(&fx.engine.key_import(&req).unwrap_err()));
+    assert_eq!(err["code"], "not_a_key", "{err}");
+    assert_eq!(err["message"], "Not a recognized key", "{err}");
+}
+
+#[test]
+fn key_import_of_a_token_candidate_is_not_a_key() {
+    let (h, fx) = (Harness::new(), Fx::new());
+    let candidate = fx.engine.detect(&fx.jwt).remove(0);
+    let req = KeyImportRequest {
+        bytes: Bytes(fx.jwt.clone()),
+        format: None,
+        candidate: Some(candidate),
+    };
+    let err = h
+        .call("engine_key_import", json!({ "req": v(&req) }))
+        .unwrap_err();
+    assert_eq!(err, v(&fx.engine.key_import(&req).unwrap_err()));
+    assert_eq!(err["code"], "not_a_key", "{err}");
 }
 
 #[test]
@@ -582,6 +649,8 @@ fn malformed_arguments_are_rejected_without_panicking() {
         ("engine_detect", json!({})),
         ("engine_detect", json!({ "input": "not base64url!" })),
         ("engine_detect", json!({ "input": "0oQ=" })),
+        ("engine_detect_key", json!({})),
+        ("engine_detect_key", json!({ "input": "not base64url!" })),
         (
             "engine_open",
             json!({ "input": "", "candidate": {}, "view": {} }),

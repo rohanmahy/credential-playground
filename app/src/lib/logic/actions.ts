@@ -6,7 +6,10 @@ import { hasKeyBinding, isClaims, isSd, isSigned, kindFamily } from './kinds';
 
 export interface ActionContext {
   doc: Document;
-  keys: readonly KeyCard[];
+  /** The Issuer area's key (Issue, Redact; Validate verifies with it). */
+  issuer: KeyCard | null;
+  /** The Holder area's key (Present; `cnf` and key binding). */
+  holder: KeyCard | null;
   /** JSON claims marked SD in the tree (Redact on JSON claim sets). */
   sdMarks: readonly NodeId[];
 }
@@ -35,15 +38,6 @@ const DESCRIPTIONS: Record<ActionId, string> = {
   edit_disclosures: 'Add, remove, reorder, or forge disclosures',
 };
 
-/** Holder and verifier keys never issue; unassigned keys may. */
-export function canIssueWith(card: KeyCard): boolean {
-  return card.role === 'issuer' || card.role === null;
-}
-
-export function canHoldWith(card: KeyCard): boolean {
-  return card.role === 'holder' || card.role === null;
-}
-
 /** EDN redaction marks: tag 58 (to be redacted) or 62 (to be decoy). */
 function hasEdnMarks(doc: Document): boolean {
   return doc.main.language === 'edn' && /(^|[^\w.'"])(58|62)\(/m.test(doc.main.text);
@@ -53,15 +47,15 @@ function availability(missing: string[]): Availability {
   return { enabled: missing.length === 0, missing };
 }
 
-function keyNeed(keys: readonly KeyCard[], fits: (c: KeyCard) => boolean, role: string): string[] {
-  const candidates = keys.filter(fits);
-  if (candidates.length === 0) return [`Needs ${role} key`];
-  if (!candidates.some((c) => c.info.private)) return [`Needs ${role} key with a private part`];
+/** What a signing action misses in a key area (`Needs an Issuer key`). */
+function keyNeed(card: KeyCard | null, area: 'an Issuer' | 'a Holder'): string[] {
+  if (!card) return [`Needs ${area} key`];
+  if (!card.info.private) return [`Needs ${area} key with a private part`];
   return [];
 }
 
 export function actionAvailability(ctx: ActionContext): ActionAvailability {
-  const { doc, keys, sdMarks } = ctx;
+  const { doc, issuer, holder, sdMarks } = ctx;
   const kind = doc.kind;
   const claims = isClaims(kind);
   const signed = isSigned(kind);
@@ -70,7 +64,7 @@ export function actionAvailability(ctx: ActionContext): ActionAvailability {
 
   const needClaims = claims ? [] : ['Needs an unsigned claim set'];
   const needSigned = signed ? [] : ['Needs a signed credential (Issue the claim set first)'];
-  const issuerKey = keyNeed(keys, canIssueWith, 'an issuer');
+  const issuerKey = keyNeed(issuer, 'an Issuer');
 
   const marked = sdMarks.length > 0 || hasEdnMarks(doc);
   const disclose: string[] = [];
@@ -86,9 +80,12 @@ export function actionAvailability(ctx: ActionContext): ActionAvailability {
   const present: string[] = [];
   if (kb) present.push('Not on a presentation (it already has key binding)');
   else if (!presentable) present.push('Needs an SD-JWT, SD-CWT, or CWT');
-  present.push(...keyNeed(keys, canHoldWith, 'a holder'));
+  present.push(...keyNeed(holder, 'a Holder'));
 
-  const privateKey = keys.some((k) => k.info.private) ? [] : ['Needs a private key'];
+  const privateKey =
+    issuer?.info.private || holder?.info.private
+      ? []
+      : ['Needs a private key in the Issuer or Holder area'];
 
   return {
     issue: availability([...needClaims, ...issuerKey]),

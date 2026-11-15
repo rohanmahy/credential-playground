@@ -1,11 +1,12 @@
 // Desktop implementation over Tauri commands (app/src-tauri): `fetch_url`
 // (reqwest, no CORS), `open_file`/`save_file` (native dialog from Rust; the
 // webview never names a path), `read_clipboard`/`write_clipboard`, and
-// `registry_cache_*` (a file in the app data dir). Bytes cross as
+// `registry_cache_*` (a file in the app data dir), and `menu_listen` (a
+// Channel the native menu's item ids arrive on). Bytes cross as
 // base64url; PlatformErrors of kind blocked/network/http become FetchError,
 // others Error. now/randomBytes stay local (the interface is synchronous).
 // Contract: app/src-tauri/TEST-PLAN.md.
-import { invoke } from '@tauri-apps/api/core';
+import { Channel, invoke } from '@tauri-apps/api/core';
 import { fromB64u, toB64u, utf8 } from '../engine/bytes';
 import {
   FetchError,
@@ -127,5 +128,20 @@ export class TauriPlatform implements Platform {
 
   randomBytes(n: number): Uint8Array {
     return crypto.getRandomValues(new Uint8Array(n));
+  }
+
+  /** The native menu's item ids arrive on a Channel (a command, so the
+   *  webview needs no event permission). A later subscription replaces
+   *  this one in Rust; unsubscribing just stops the handler. */
+  onMenu(handler: (id: string) => void): () => void {
+    let live = true;
+    const channel = new Channel<string>();
+    channel.onmessage = (id) => {
+      if (live) handler(id);
+    };
+    call('menu_listen', { channel }).catch(() => undefined);
+    return () => {
+      live = false;
+    };
   }
 }

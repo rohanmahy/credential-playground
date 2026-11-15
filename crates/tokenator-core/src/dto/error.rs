@@ -56,6 +56,9 @@ pub enum ErrorCode {
     InvalidInput,
     /// A key could not be imported or converted.
     Key,
+    /// Key import of something that is not a key (a token, a claim set, or
+    /// unrecognized bytes).
+    NotAKey,
     /// A private key is needed.
     NoPrivateKey,
     /// The algorithm is unknown or does not fit the key.

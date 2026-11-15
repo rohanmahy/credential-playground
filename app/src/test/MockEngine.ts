@@ -1,17 +1,25 @@
 // An Engine of vi.fn()s returning fixtures. Override per test with
 // `engine.detect.mockResolvedValueOnce(...)` etc.
+//
+// Two detectors (SPEC §3): `detect` returns only token / claim-set
+// candidates (credential tabs), `detectKey` only key candidates (the key
+// areas). `keyImport` of something that is not a key rejects with
+// EngineError `not_a_key`, "Not a recognized key".
 import { vi } from 'vitest';
-import type { Engine } from '../lib/engine/Engine';
+import { fromB64u, fromUtf8 } from '../lib/engine/bytes';
+import { EngineFailure, type Engine } from '../lib/engine/Engine';
 import type {
   Candidate,
   ConvertClaimsRequest,
   ConvertClaimsResult,
   Document,
+  EditRequest,
+  EditResult,
   Kind,
 } from '../lib/engine/types';
 import * as fx from './fixtures';
 
-function docFor(kind: Kind): Document {
+export function docFor(kind: Kind): Document {
   switch (kind.type) {
     case 'jwt':
       return fx.jwt;
@@ -32,9 +40,30 @@ function docFor(kind: Kind): Document {
   }
 }
 
+const KEY_KINDS: string[] = ['jwk', 'jwk_set', 'cose_key', 'cose_key_set', 'pem'];
+
+/** What `keyImport` rejects with for non-key input (the engine contract). */
+export function notAKey(): EngineFailure {
+  return new EngineFailure({ code: 'not_a_key', message: 'Not a recognized key', node_id: null });
+}
+
+/** A `parseEdit` implementation that parses any text as the requested
+ *  kind (the fixture document of that kind), never stale. For tabs whose
+ *  type must show in the header after an edit. */
+export function parseAsKind(req: EditRequest): Promise<EditResult> {
+  return Promise.resolve({
+    ok: true,
+    bytes: docFor(req.kind).bytes,
+    document: { ...docFor(req.kind), main: { ...docFor(req.kind).main, text: req.text } },
+    diagnostics: [],
+    signature_stale: false,
+  });
+}
+
 export class MockEngine implements Engine {
   info = vi.fn(async () => fx.info);
   detect = vi.fn(async (_input: Uint8Array): Promise<Candidate[]> => fx.jwtCandidates);
+  detectKey = vi.fn(async (_input: Uint8Array): Promise<Candidate[]> => fx.jwkCandidates);
   open = vi.fn(async (_input: Uint8Array, candidate: Candidate) => ({
     ...docFor(candidate.kind),
     layers: candidate.layers,
@@ -67,11 +96,15 @@ export class MockEngine implements Engine {
     tree: fx.cwt.tree,
     diagnostics: [],
   }));
-  keyImport = vi.fn(async (_req: Parameters<Engine['keyImport']>[0]) => [fx.verifierInfo]);
+  keyImport = vi.fn(async (req: Parameters<Engine['keyImport']>[0]) => {
+    const kind = req.candidate?.kind.type;
+    if (kind && !KEY_KINDS.includes(kind)) throw notAKey();
+    return [fx.issuerPublicInfo];
+  });
   keyExport = vi.fn(async (req: Parameters<Engine['keyExport']>[0]) =>
     req.visibility === 'private' ? fx.privateExport : fx.publicExport,
   );
-  keyPublic = vi.fn(async (_key: Parameters<Engine['keyPublic']>[0]) => fx.verifierInfo);
+  keyPublic = vi.fn(async (_key: Parameters<Engine['keyPublic']>[0]) => fx.issuerPublicInfo);
   keyGenerate = vi.fn(async (_req: Parameters<Engine['keyGenerate']>[0]) => fx.issuerInfo);
   keyThumbprint = vi.fn(async (req: Parameters<Engine['keyThumbprint']>[0]) =>
     req.kind === 'jwk' ? fx.jwkThumbprint : fx.coseThumbprint,
@@ -80,9 +113,18 @@ export class MockEngine implements Engine {
     ...fx.issuerInfo,
     kid: { type: 'text' as const, value: fx.issuerInfo.jwk_thumbprint },
   }));
-  keyToJwk = vi.fn(async (req: Parameters<Engine['keyToJwk']>[0]) =>
-    req.visibility === 'private' ? fx.ISSUER_JWK : fx.VERIFIER_JWK,
-  );
+  /** The fixture keys' bytes are their JWK text: returned as is, or
+   *  without `d` for the public part. */
+  keyToJwk = vi.fn(async (req: Parameters<Engine['keyToJwk']>[0]) => {
+    let jwk: Record<string, unknown>;
+    try {
+      jwk = JSON.parse(fromUtf8(fromB64u(req.key.bytes))) as Record<string, unknown>;
+    } catch {
+      return req.visibility === 'private' ? fx.ISSUER_JWK : fx.ISSUER_PUBLIC_JWK;
+    }
+    if (req.visibility !== 'private') delete jwk['d'];
+    return JSON.stringify(jwk);
+  });
   keyToCwk = vi.fn(async (_req: Parameters<Engine['keyToCwk']>[0]) => ({
     ...fx.ednClaims,
     kind: { type: 'cose_key' as const },

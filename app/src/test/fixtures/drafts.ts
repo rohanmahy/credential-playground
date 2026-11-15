@@ -54,10 +54,6 @@ export const ednClaimsDetected = only({ type: 'edn_claims' }, 40, 'EDN claim set
 /** What core should detect for EDN text of a COSE_Sign1 (gap: today it
  *  returns nothing, TEST-PLAN "Core additions needed"). */
 export const cwtEdnDetected = only({ type: 'cwt' }, 80, 'CWT', 60);
-export const jwkDetected: Candidate[] = [
-  ...only({ type: 'jwk' }, 90, 'JWK', 80),
-  ...only({ type: 'json_claims' }, 60, 'JSON claim set', 80),
-];
 export const jwsJsonDetected = only({ type: 'jws_json', general: false }, 90, 'JWS JSON', 120);
 
 export const convertedToEdn: ConvertClaimsResult = {

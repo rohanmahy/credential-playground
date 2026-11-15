@@ -1,6 +1,7 @@
-// Checklist §2 (through the paste box): each token family → detected type
-// → open → Validate, on the native engine. Binary fixtures are pasted as
-// hex. Mirrors app/e2e/paste-validate.spec.ts.
+// Checklist §2 (paste into the startup tab): each token family → detected
+// type → open → Validate, on the native engine. Binary fixtures are pasted
+// as hex. Keys are pasted into the key areas. Mirrors
+// app/e2e/paste-validate.spec.ts.
 import { browser } from '@wdio/globals';
 import {
   appReady,
@@ -9,12 +10,15 @@ import {
   expectThat,
   fixtureHex,
   fixtureText,
-  importKey,
-  keyCards,
+  keyArea,
+  keyFormat,
   mainPane,
   page,
   paste,
+  pasteKey,
+  tabs,
   rawPane,
+  readOnly,
   validate,
 } from '../helpers';
 
@@ -94,6 +98,8 @@ describe('paste and validate', () => {
     it(`${f.name}: detect, open, validate`, async () => {
       await paste(f.input());
       await expectThat(detectedType()).toHaveText(f.kind);
+      // Live edit renders only the visible lines; the read-only tree has them all.
+      await readOnly();
       await expectThat(mainPane()).toContainText(f.shows);
       await expectThat(rawPane()).toBeVisible();
       await validate();
@@ -111,7 +117,8 @@ describe('paste and validate', () => {
   });
 
   it('JWT with its published key: the signature passes', async () => {
-    await importKey(
+    await pasteKey(
+      'issuer',
       JSON.stringify({
         kty: 'EC',
         crv: 'P-256',
@@ -119,13 +126,15 @@ describe('paste and validate', () => {
         y: 'x_FEzRu9m36HLN_tue659LNpXW6pCyStikYjKIWI5a0',
       }),
     );
+    await expectThat(keyArea('issuer')).toContainText('P-256');
     await paste(fixtureText('tokens/rfc7515-a3-jws-es256.txt'));
     await validate();
     await expectSignature('pass');
   });
 
   it('SD-JWT+KB with the RFC 9901 issuer key: signature and disclosures pass', async () => {
-    await importKey(fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
+    await pasteKey('issuer', fixtureText('keys/rfc9901-a5-ec-p256-public.jwk.json'));
+    await expectThat(keyArea('issuer')).toContainText('P-256');
     await paste(fixtureText('tokens/rfc9901-s5.2-sd-jwt-kb.txt'));
     await expectThat(page.getByRole('table', 'Disclosures')).toContainText('given_name');
     const report = await validate();
@@ -133,11 +142,17 @@ describe('paste and validate', () => {
     await expectThat(report).toContainText(/disclosure/i);
   });
 
-  it('a hex COSE_Key pasted into the input goes to the key panel (#42)', async () => {
-    await paste(fixtureHex('keys/rfc8392-a2.3-ec-p256.cosekey.cbor'));
-    await expectThat(keyCards()).toHaveCount(1);
-    await expectThat(keyCards().first()).toContainText('P-256');
-    await expectThat(page.getByRole('tab')).toHaveCount(0);
+  it('a hex COSE_Key pasted into the Holder key area fills it (#42)', async () => {
+    await pasteKey('holder', fixtureHex('keys/rfc8392-a2.3-ec-p256.cosekey.cbor'));
+    await expectThat(keyArea('holder')).toContainText('P-256');
+    await expectThat(keyFormat('holder', 'COSE_Key')).toBeChecked();
+    await expectThat(tabs()).toHaveCount(1);
+    await expectThat(detectedType()).toHaveCount(0);
+  });
+
+  it('a token pasted into a key area is not a key', async () => {
+    await pasteKey('issuer', fixtureText('tokens/rfc7515-a3-jws-es256.txt'));
+    await expectThat(keyArea('issuer').getByRole('alert')).toContainText('Not a recognized key');
   });
 
   it('a JSON claim set opens as an unsigned draft (Validate disabled)', async () => {

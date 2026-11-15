@@ -11,6 +11,7 @@ import {
   page,
   paste,
   rawPane,
+  readOnly,
 } from '../helpers';
 
 describe('synced panes (CBOR)', () => {
@@ -19,6 +20,8 @@ describe('synced panes (CBOR)', () => {
     await appReady();
     await paste(fixtureText('tokens/rfc8392-a3-signed-cwt.hex'));
     await expectThat(detectedType()).toHaveText('CWT');
+    // A pasted tab opens in Live edit (SPEC §4.1); the tree is the read-only view.
+    await readOnly();
   });
 
   it('collapsing in the main pane collapses the raw pane, and back', async () => {

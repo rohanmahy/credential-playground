@@ -8,18 +8,13 @@
     {
       "json": {
         "breadcrumb": [
-          "EDN",
-          "COSE_Key"
+          "EDN claim set"
         ],
-        "confidence": 87,
+        "confidence": 54,
         "kind": {
-          "type": "cose_key"
+          "type": "edn_claims"
         },
-        "layers": [
-          {
-            "type": "edn"
-          }
-        ],
+        "layers": [],
         "payload_range": {
           "end": 159,
           "start": 0

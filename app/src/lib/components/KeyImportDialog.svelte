@@ -1,11 +1,12 @@
 <script lang="ts">
-  // Import keys from a paste, a file, or the clipboard.
-  import type { KeyCard } from '../model';
+  // Import a key into a key area from a paste, a file, or the clipboard.
+  // Key detection runs on the input; a set goes through "Choose a key".
   import { getAppContext } from '../context';
+  import { KEY_ROLE_LABELS, type KeyRole } from '../model';
   import { errorMessage } from '../ui';
   import Dialog from './Dialog.svelte';
 
-  let { onClose }: { onClose?: () => void } = $props();
+  let { role, onClose }: { role: KeyRole; onClose?: () => void } = $props();
 
   const { keys } = getAppContext();
   let text = $state('');
@@ -14,12 +15,12 @@
 
   const close = () => onClose?.();
 
-  async function run(task: () => Promise<KeyCard[]>) {
+  /** `task` resolves false when the user cancelled (no file chosen). */
+  async function run(task: () => Promise<unknown>) {
     busy = true;
     error = null;
     try {
-      const cards = await task();
-      if (cards.length > 0) close();
+      if ((await task()) !== false) close();
     } catch (e) {
       error = errorMessage(e);
     } finally {
@@ -32,9 +33,10 @@
   <form
     onsubmit={(e) => {
       e.preventDefault();
-      void run(() => keys.importText(text));
+      void run(() => keys.importText(role, text));
     }}
   >
+    <p class="muted small">Fills the {KEY_ROLE_LABELS[role]} area.</p>
     <label class="field">
       <span>Key</span>
       <textarea
@@ -46,12 +48,20 @@
     {#if error}<p class="error" role="alert">{error}</p>{/if}
     <div class="buttons">
       <button type="submit" class="primary" disabled={busy || text.trim() === ''}>Import</button>
-      <button type="button" disabled={busy} onclick={() => run(() => keys.importFromClipboard())}
-        >From clipboard</button
+      <button
+        type="button"
+        disabled={busy}
+        onclick={() => run(() => keys.importFromClipboard(role))}>From clipboard</button
       >
-      <button type="button" disabled={busy} onclick={() => run(() => keys.importFromFile())}
+      <button type="button" disabled={busy} onclick={() => run(() => keys.importFromFile(role))}
         >From file…</button
       >
     </div>
   </form>
 </Dialog>
+
+<style>
+  .small {
+    font-size: 0.8rem;
+  }
+</style>

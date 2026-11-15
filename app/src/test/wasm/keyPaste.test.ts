@@ -1,16 +1,16 @@
-// #42: keys pasted into the input in an encoded or wrapped form reach the
-// key panel. Detection unwraps the layers, so the import must use the
-// unwrapped payload, not the raw input. Runs the real WasmEngine through
-// the Workspace store.
+// #42 and SPEC §3 (split detection): keys pasted into a key area in an
+// encoded or wrapped form are found by detectKey, which unwraps the same
+// layers as detect, and import through that candidate. Token detection
+// never returns a key, and key detection never returns a token. Runs the
+// real WasmEngine.
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
-import { describe, expect, it } from 'vitest';
-import { createAppContext } from '../../lib/context';
+import { beforeAll, describe, expect, it } from 'vitest';
+import { EngineFailure } from '../../lib/engine/Engine';
 import { WasmEngine } from '../../lib/engine/WasmEngine';
-import { MockPlatform } from '../MockPlatform';
+import { utf8 } from '../../lib/engine/bytes';
 import { REPO, wasmBytes } from './helpers';
 
-const wasm = wasmBytes();
 const fixture = (path: string) => readFileSync(join(REPO, 'testdata', path));
 
 /** `xxd -p` output: lowercase hex, 60 characters per line. */
@@ -19,40 +19,86 @@ function xxd(bytes: Uint8Array): string {
   return `${hex.match(/.{1,60}/g)?.join('\n') ?? ''}\n`;
 }
 
+const KEY_KINDS = ['jwk', 'jwk_set', 'cose_key', 'cose_key_set', 'pem'];
+
 const COSE_KEY = fixture('keys/rfc8392-a2.3-ec-p256.cosekey.cbor');
 const JWK = fixture('keys/sd-cwt-08-c1-holder-private.jwk.json');
 const PEM = fixture('keys/sd-cwt-08-c1-holder-public.pem').toString('utf8').trim();
+const JWS = fixture('tokens/rfc7515-a3-jws-es256.txt').toString('utf8');
 
-const cases: [string, string][] = [
-  ['hex COSE_Key (xxd -p)', xxd(COSE_KEY)],
-  ['base64url COSE_Key', Buffer.from(COSE_KEY).toString('base64url')],
-  ['base64 JWK', Buffer.from(JWK).toString('base64')],
-  ['quoted PEM', `"${PEM}"`],
+const wrapped: [string, string, string][] = [
+  ['hex COSE_Key (xxd -p)', xxd(COSE_KEY), 'cose_key'],
+  ['base64url COSE_Key', Buffer.from(COSE_KEY).toString('base64url'), 'cose_key'],
+  ['base64 JWK', Buffer.from(JWK).toString('base64'), 'jwk'],
+  ['quoted PEM', `"${PEM}"`, 'pem'],
 ];
 
-async function setup() {
-  const engine = await WasmEngine.load(null, { wasm });
-  return createAppContext(engine, new MockPlatform());
-}
+let engine: WasmEngine;
 
-describe('keys pasted into the input (#42)', () => {
-  it.each(cases)('%s goes to the key panel', async (_name, text) => {
-    const app = await setup();
-    const res = await app.workspace.openText(text, { type: 'pasted' });
-    expect(res.type).toBe('keys');
-    expect(app.workspace.tabs).toHaveLength(0);
-    expect(app.keys.cards).toHaveLength(1);
-    expect(app.keys.cards[0]?.info.crv).toBe('P-256');
-    // Provenance names where the input came from, not the unwrapped form.
-    expect(app.keys.cards[0]?.provenance).toEqual({ type: 'pasted' });
+beforeAll(async () => {
+  engine = await WasmEngine.load(null, { wasm: wasmBytes() });
+});
+
+describe('keys pasted into a key area (#42)', () => {
+  it.each(wrapped)('%s is a key to detectKey and imports', async (_name, text, kind) => {
+    const cands = await engine.detectKey(utf8(text));
+    expect(cands.map((c) => c.kind.type).every((k) => KEY_KINDS.includes(k))).toBe(true);
+    const top = cands[0];
+    if (!top) return expect.fail('no key candidate');
+    expect(top.kind.type).toBe(kind);
+    const cards = await engine.keyImport({
+      bytes: Buffer.from(text).toString('base64url'),
+      candidate: top,
+    });
+    expect(cards).toHaveLength(1);
+    expect(cards[0]?.crv).toBe('P-256');
+  });
+
+  it.each(wrapped)('%s gives detect no key candidate', async (_name, text) => {
+    const kinds = (await engine.detect(utf8(text))).map((c) => c.kind.type);
+    expect(kinds.filter((k) => KEY_KINDS.includes(k))).toEqual([]);
   });
 
   it('the hex COSE_Key is the same key as the raw binary one', async () => {
-    const app = await setup();
-    await app.workspace.openText(xxd(COSE_KEY), { type: 'clipboard' });
-    await app.workspace.openInput(new Uint8Array(COSE_KEY), { type: 'file', name: 'k.cbor' });
-    const [hex, raw] = app.keys.cards;
-    expect(hex?.info.cose_thumbprint).toBe(raw?.info.cose_thumbprint);
-    expect(hex?.provenance).toEqual({ type: 'clipboard' });
+    const hex = xxd(COSE_KEY);
+    const [top] = await engine.detectKey(utf8(hex));
+    if (!top) return expect.fail('no key candidate');
+    const [fromHex] = await engine.keyImport({
+      bytes: Buffer.from(hex).toString('base64url'),
+      candidate: top,
+    });
+    const [raw] = await engine.keyImport({ bytes: Buffer.from(COSE_KEY).toString('base64url') });
+    expect(fromHex?.cose_thumbprint).toBe(raw?.cose_thumbprint);
+  });
+});
+
+describe('tokens pasted into a key area', () => {
+  it('detectKey finds nothing in a JWT, a CWT, or a claim set', async () => {
+    for (const input of [
+      utf8(JWS),
+      new Uint8Array(fixture('tokens/rfc8392-a3-signed-cwt.cbor')),
+      new Uint8Array(fixture('tokens/rfc7519-s3.1-claims.json')),
+    ]) {
+      expect(await engine.detectKey(input)).toEqual([]);
+    }
+  });
+
+  it('keyImport of a token rejects with not_a_key', async () => {
+    const failure = await engine
+      .keyImport({ bytes: Buffer.from(JWS).toString('base64url') })
+      .catch((x: unknown) => x);
+    expect(failure).toBeInstanceOf(EngineFailure);
+    expect((failure as EngineFailure).error.code as string).toBe('not_a_key');
+    expect((failure as EngineFailure).message).toBe('Not a recognized key');
+  });
+
+  it('keyImport with a token candidate rejects with not_a_key', async () => {
+    const [top] = await engine.detect(utf8(JWS));
+    if (!top) return expect.fail('nothing detected');
+    const failure = await engine
+      .keyImport({ bytes: Buffer.from(JWS).toString('base64url'), candidate: top })
+      .catch((x: unknown) => x);
+    expect(failure).toBeInstanceOf(EngineFailure);
+    expect((failure as EngineFailure).error.code as string).toBe('not_a_key');
   });
 });

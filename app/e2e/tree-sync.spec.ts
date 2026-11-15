@@ -2,7 +2,7 @@
 // output: folding and selection are keyed by path-based NodeIds, so they
 // mirror across panes and survive a re-render.
 import { expect, test, type Page } from '@playwright/test';
-import { fixtureText, paste } from './helpers';
+import { fixtureText, paste, readOnly } from './helpers';
 
 function panes(page: Page) {
   return {
@@ -19,6 +19,8 @@ test.describe('COSE (hex rows ↔ EDN lines)', () => {
   test.beforeEach(async ({ page }) => {
     await paste(page, fixtureText('tokens/rfc8392-a3-signed-cwt.hex'));
     await expect(page.getByTestId('detected-type')).toHaveText('CWT');
+    // A pasted tab opens in Live edit (SPEC §4.1); the tree is the read-only view.
+    await readOnly(page);
   });
 
   test('collapsing in the main pane collapses the raw pane', async ({ page }) => {
@@ -109,6 +111,7 @@ test.describe('JOSE (segments ↔ JSON view)', () => {
   test.beforeEach(async ({ page }) => {
     await paste(page, fixtureText('tokens/rfc7515-a3-jws-es256.txt'));
     await expect(page.getByTestId('detected-type')).toHaveText('JWT');
+    await readOnly(page);
     // This payload keeps `"iss":"joe"` on the line where the payload starts,
     // and a line's treeitem is the outermost node starting on it
     // (app/TEST-PLAN.md, Main pane). Re-indented, every claim gets its own

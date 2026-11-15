@@ -23,9 +23,18 @@ export function setupApp(): TestApp {
 
 let tabCounter = 0;
 
-/** Pushes a tab straight into the workspace (bypassing openInput) and
- *  activates it. Returns the tab as stored (reactive). */
+/** Pushes a decoded (non-empty) tab straight into the workspace and
+ *  activates it. Returns the tab as stored (reactive).
+ *
+ *  The Workspace starts with one empty tab (SPEC §4); while that tab is
+ *  still the only one and still empty, seeding replaces it, so a test that
+ *  seeds N tabs sees exactly N. */
 export function seedTab(ws: Workspace, doc: Document, overrides: Partial<Tab> = {}): Tab {
+  const only = ws.tabs[0];
+  if (ws.tabs.length === 1 && only?.empty) {
+    ws.tabs.splice(0, 1);
+    ws.activeId = null;
+  }
   tabCounter += 1;
   const number = ws.tabs.length + 1;
   const tab: Tab = {
@@ -46,6 +55,7 @@ export function seedTab(ws: Workspace, doc: Document, overrides: Partial<Tab> = 
     tampered: false,
     sdMarks: new SvelteSet(),
     report: null,
+    empty: false,
     ...overrides,
   };
   ws.tabs.push(tab);
@@ -55,8 +65,15 @@ export function seedTab(ws: Workspace, doc: Document, overrides: Partial<Tab> = 
   return stored;
 }
 
+/** Puts each card into the key area of its role (`issuer` / `holder`);
+ *  one key per area (SPEC §4.2). The area's text re-renders from the card
+ *  through `engine.keyToJwk` / `keyToCwk`. */
 export function seedKeys(app: AppContext, ...cards: KeyCard[]): void {
-  app.keys.cards.push(...structuredClone(cards));
+  for (const card of structuredClone(cards)) {
+    if (card.role === 'issuer') app.keys.issuer = card;
+    else if (card.role === 'holder') app.keys.holder = card;
+    else throw new Error(`seedKeys: ${card.label} has no area role`);
+  }
 }
 
 export function renderWithApp<P extends Record<string, unknown>>(

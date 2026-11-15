@@ -1,17 +1,20 @@
 // Checklist §1: the real binary launches with the native TauriEngine, and
 // About shows the SD-CWT revision from engine.info().
 import { browser } from '@wdio/globals';
-import { appReady, closeDialog, expectThat, page } from '../helpers';
+import { activePanel, appReady, closeDialog, expectThat, keyArea, page, tabs } from '../helpers';
 
 describe('launch', () => {
   before(appReady);
 
-  it('opens the shell: input box, Keys panel, no tabs', async () => {
-    await expectThat(page.getByRole('button', 'Open')).toBeVisible();
-    await expectThat(page.getByRole('button', 'From clipboard')).toBeVisible();
-    await expectThat(page.getByRole('button', 'Open file…')).toBeVisible();
-    await expectThat(page.getByRole('complementary', 'Keys')).toBeVisible();
-    await expectThat(page.getByRole('tab')).toHaveCount(0);
+  it('opens the shell: no global input, Issuer and Holder key areas, one empty tab', async () => {
+    await expectThat(page.getByRole('textbox', 'Paste a credential or key')).toHaveCount(0);
+    await expectThat(page.getByRole('button', 'Open')).toHaveCount(0);
+    await expectThat(keyArea('issuer')).toBeVisible();
+    await expectThat(keyArea('holder')).toBeVisible();
+    await expectThat(tabs()).toHaveCount(1);
+    await expectThat(activePanel().getByRole('button', 'From clipboard')).toBeVisible();
+    await expectThat(activePanel().getByRole('button', 'Open file…')).toBeVisible();
+    await expectThat(activePanel().getByRole('combobox', 'Type')).toBeVisible();
     await expectThat(page.getByRole('alert')).toHaveCount(0);
   });
 

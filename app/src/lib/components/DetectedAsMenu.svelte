@@ -1,7 +1,6 @@
 <script lang="ts">
   // "Detected as…" menu of the tab's candidates (menuitemradio). On a
-  // draft (#43) it sets the type instead: Auto-detect, then the format's
-  // draft types, the detected one marked.
+  // draft (#43) it sets the type instead, from the format's draft types.
   import type { Kind } from '../engine/types';
   import { getAppContext } from '../context';
   import { DRAFT_KINDS } from '../logic/drafts';
@@ -24,7 +23,7 @@
     return `${kindLabel(c.kind)}${via ? ` (${via})` : ''} · ${c.confidence}%`;
   }
 
-  function setKind(kind: Kind | null) {
+  function setKind(kind: Kind) {
     error = null;
     workspace.setDraftKind(tabId, kind).catch((e: unknown) => (error = errorMessage(e)));
   }
@@ -32,20 +31,13 @@
   function draftItems(): MenuItem[] {
     const draft = tab?.draft;
     if (!draft) return [];
-    return [
-      {
-        label: 'Auto-detect',
-        role: 'menuitemradio',
-        checked: draft.override === null,
-        action: () => setKind(null),
-      },
-      ...DRAFT_KINDS[draft.format].map((k) => ({
-        label: `${kindLabel(k)}${draft.detected?.type === k.type ? ' (detected)' : ''}`,
-        role: 'menuitemradio' as const,
-        checked: draft.override?.type === k.type,
-        action: () => setKind(k),
-      })),
-    ];
+    const current = workspace.draftKind(tab);
+    return DRAFT_KINDS[draft.format].map((k) => ({
+      label: kindLabel(k),
+      role: 'menuitemradio' as const,
+      checked: current?.type === k.type,
+      action: () => setKind(k),
+    }));
   }
 </script>
 

@@ -1,0 +1,9 @@
+{
+  "method": "detect_key",
+  "source": "constructed: json-claims",
+  "args": [
+    {
+      "bytes": "eyJpc3MiOiJqb2UiLAogImV4cCI6MTMwMDgxOTM4MCwKICJodHRwOi8vZXhhbXBsZS5jb20vaXNfcm9vdCI6dHJ1ZX0K"
+    }
+  ]
+}

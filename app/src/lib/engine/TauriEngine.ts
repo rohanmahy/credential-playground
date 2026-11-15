@@ -59,6 +59,8 @@ export class TauriEngine implements Engine {
 
   info: Engine['info'] = () => this.run('engine_info');
   detect: Engine['detect'] = (input) => this.run('engine_detect', { input: toB64u(input) });
+  detectKey: Engine['detectKey'] = (input) =>
+    this.run('engine_detect_key', { input: toB64u(input) });
   open: Engine['open'] = (input, candidate, view) =>
     this.run('engine_open', { input: toB64u(input), candidate, view });
   render: Engine['render'] = (req) => this.run('engine_render', { req });

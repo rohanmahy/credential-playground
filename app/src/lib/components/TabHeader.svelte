@@ -1,23 +1,18 @@
 <script lang="ts">
   // Detected type, Detected as…, unwrapping breadcrumb, provenance
-  // breadcrumb, validation badge, Read-only / Live edit switch, actions,
-  // and the "modified – signature stale" banner.
+  // breadcrumb, validation badge, Read-only / Live edit switch, Clear,
+  // actions, and the "modified – signature stale" banner.
   import { getAppContext } from '../context';
   import { ACTION_LABELS } from '../logic/actions';
   import { kindLabel } from '../logic/kinds';
   import { provenanceLabel } from '../logic/provenance';
+  import type { KeyRole } from '../model';
   import { errorMessage } from '../ui';
   import ActionBar from './ActionBar.svelte';
   import DetectedAsMenu from './DetectedAsMenu.svelte';
   import KeyChoiceDialog from './KeyChoiceDialog.svelte';
   import Dialog from './Dialog.svelte';
-  import {
-    DRAFT_FORMATS,
-    isDraftKeyKind,
-    openableAs,
-    type DiscardReason,
-    type DraftFormat,
-  } from '../logic/drafts';
+  import { DRAFT_FORMATS, type DiscardReason, type DraftFormat } from '../logic/drafts';
 
   let { tabId }: { tabId: string } = $props();
 
@@ -36,11 +31,11 @@
   let choosing = $state(false);
   let error = $state<string | null>(null);
 
-  async function resign(keyId: string) {
+  async function resign(key: string) {
     choosing = false;
     error = null;
     try {
-      await workspace.runAction(tabId, { action: 'resign', keyId });
+      await workspace.runAction(tabId, { action: 'resign', key: key as KeyRole });
     } catch (e) {
       error = errorMessage(e);
     }
@@ -49,13 +44,13 @@
   function startResign() {
     const only = privateKeys.length === 1 ? privateKeys[0] : undefined;
     if (only) void resign(only.id);
-    else if (privateKeys.length === 0) error = 'Re-sign needs a private key in the key panel.';
+    else if (privateKeys.length === 0)
+      error = 'Re-sign needs a private key in the Issuer or Holder area.';
     else choosing = true;
   }
 
   // --- drafts (#43) ---------------------------------------------------
   const draftKind = $derived(tab ? workspace.draftKind(tab) : null);
-  const openAs = $derived(tab?.draft ? openableAs(tab.draft.detected) : null);
   let asking = $state<{ reason: DiscardReason; resolve: (ok: boolean) => void } | null>(null);
 
   async function switchFormat(select: HTMLSelectElement) {
@@ -80,15 +75,6 @@
     asking = null;
   }
 
-  async function draftAction(task: () => Promise<unknown>) {
-    error = null;
-    try {
-      await task();
-    } catch (e) {
-      error = errorMessage(e);
-    }
-  }
-
   const title = (id: string) => workspace.tab(id)?.title ?? 'a closed tab';
 </script>
 
@@ -106,16 +92,6 @@
             {#each DRAFT_FORMATS as f (f.format)}<option value={f.format}>{f.label}</option>{/each}
           </select>
         </label>
-        {#if draftKind && isDraftKeyKind(draftKind)}
-          <button type="button" onclick={() => draftAction(() => workspace.importDraftKey(tabId))}
-            >Add to key panel</button
-          >
-        {/if}
-        {#if openAs}
-          <button type="button" onclick={() => draftAction(() => workspace.openDraftAs(tabId))}
-            >Open as {kindLabel(openAs)}</button
-          >
-        {/if}
       {/if}
       <nav aria-label="Unwrapping layers" class="crumbs">
         <ol>
@@ -138,6 +114,11 @@
         <span class:on={!tab.liveEdit}>Read-only</span><span class:on={tab.liveEdit}>Live edit</span
         >
       </button>
+      <button
+        type="button"
+        title="Back to an empty tab (the keys stay)"
+        onclick={() => workspace.clearTab(tabId)}>Clear</button
+      >
     </div>
     <nav aria-label="Provenance" class="provenance">
       {#if tab.provenance.type === 'derived'}
@@ -180,7 +161,7 @@
         {a.reason.message}{#if a.reason.nodeId !== null}
           (at <code>{a.reason.nodeId || '(root)'}</code>){/if}
       </p>
-      <p>Switching the Format starts over from an empty draft.</p>
+      <p>Switching the Format starts over with no text.</p>
       <div class="buttons">
         <button type="button" class="primary" onclick={() => answer(true)}
           >Discard and switch</button

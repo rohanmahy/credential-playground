@@ -1,0 +1,9 @@
+{
+  "method": "detect_key",
+  "source": "constructed: garbage",
+  "args": [
+    {
+      "bytes": "AP8gbm90IGEga2V5IP4"
+    }
+  ]
+}

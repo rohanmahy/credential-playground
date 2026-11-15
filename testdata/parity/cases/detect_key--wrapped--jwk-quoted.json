@@ -1,0 +1,9 @@
+{
+  "method": "detect_key",
+  "source": "constructed: jwk-quoted",
+  "args": [
+    {
+      "bytes": "J3sKICAia3R5IjogIkVDIiwKICAiYWxnIjogIkVTMjU2IiwKICAia2lkIjogIldSUTJSYlk1UllKQ0l4ZkRRTDlhZ2w5ZkZTQ1lWdTRYb2NxYjZ6ZXJjMU0iLAogICJjcnYiOiAiUC0yNTYiLAogICJ4IjogImhWVHJKMTNOYjcwY2VzWkJxaXlRMlNBaV9RMHdKTFd2R01mTVlhMVNlaTAiLAogICJ5IjogIlRjZXVMR2QtbHRETWdsbDJWYzZTMVZBX1ZDazloNGRkSG5uT1IzQVpRME0iLAogICJkIjogIlYxbW9ibG03T3dBdDNrWjlwTFV2UFFibXdzMURsRmJQQklXNXVHUXBUT1UiCn0n"
+    }
+  ]
+}

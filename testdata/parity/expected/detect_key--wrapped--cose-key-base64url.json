@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"cose_key"},"confidence":86,"layers":[{"type":"base64_url","padded":false,"wrap":null}],"payload_range":{"start":0,"end":176},"breadcrumb":["base64url","COSE_Key"]}]}

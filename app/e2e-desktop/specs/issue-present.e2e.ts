@@ -1,6 +1,7 @@
-// Checklist §5 and §6: Issue/Redact → Present (holder key, audience,
-// nonce) → Validate with key binding, JOSE and COSE, with seeded keys on
-// the native engine. Mirrors app/e2e/issue-present.spec.ts.
+// Checklist §5 and §6: Issue/Redact (Issuer area key) → Present (Holder
+// area key, audience, nonce) → Validate with key binding, JOSE and COSE,
+// with seeded keys on the native engine. Mirrors
+// app/e2e/issue-present.spec.ts.
 import { browser } from '@wdio/globals';
 import {
   actions,
@@ -13,6 +14,7 @@ import {
   mainPane,
   page,
   paste,
+  readOnly,
   rawPane,
   validate,
 } from '../helpers';
@@ -21,7 +23,8 @@ import {
 // presented later are issued with the holder key as `cnf`.
 async function issueWithHolder(action: 'Issue' | 'Redact'): Promise<void> {
   const dialog = page.getByRole('dialog', action);
-  await dialog.getByRole('combobox', 'Holder key (cnf)').selectOption('Holder Ed25519');
+  // cnf = the Holder area's key
+  await dialog.getByRole('checkbox', 'Holder key (cnf)').check();
   await dialog.getByRole('button', action).click();
   await expectThat(dialog).toBeHidden();
 }
@@ -52,6 +55,8 @@ describe('issue, present, validate', () => {
   it('SD-JWT: mark claims, issue, present with audience and nonce, key binding passes', async () => {
     await paste(fixtureText('tokens/rfc9901-a1-input-claims.json'));
     await expectThat(detectedType()).toHaveText('JSON claim set');
+    // A pasted tab opens in Live edit; SD marks are set in the read-only tree.
+    await readOnly();
     await mainPane().locator('[data-node-id="given_name"]').rightClick();
     await page.getByRole('menuitemcheckbox', /selectively disclosable/i).click();
     await expectThat(mainPane().locator('[data-sd-mark="true"]')).toHaveCount(1);
@@ -80,6 +85,7 @@ describe('issue, present, validate', () => {
 
     await presentTo();
     await expectThat(detectedType()).toHaveText('SD-KBT');
+    await readOnly();
     await expectThat(mainPane()).toContainText('/ kcwt /');
 
     const report = await validate();

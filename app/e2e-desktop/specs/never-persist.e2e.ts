@@ -19,10 +19,13 @@ import {
   createKey,
   detectedType,
   expectThat,
+  expectFieldText,
   fixtureText,
-  keyCards,
-  page,
+  keyArea,
+  keyBox,
   paste,
+  tabBox,
+  tabs,
 } from '../helpers';
 
 describe('never persist', () => {
@@ -36,8 +39,12 @@ describe('never persist', () => {
     // Quits the app and launches it again.
     await browser.reloadSession();
     await appReady();
-    await expectThat(keyCards()).toHaveCount(0);
-    await expectThat(page.getByRole('tab')).toHaveCount(0);
+    // back to the startup state: empty key areas and one empty tab
+    await expectFieldText(keyBox('holder'), (t) => t === '', 'is empty');
+    await expectThat(keyArea('holder').getByTestId('kid')).toHaveCount(0);
+    await expectThat(tabs()).toHaveCount(1);
+    await expectFieldText(tabBox(), (t) => t === '', 'is empty');
+    await expectThat(detectedType()).toHaveCount(0);
   });
 
   it('after the run, the app data dir holds no web storage and no other files', () => {

@@ -1,0 +1,1 @@
+{"ok":[{"kind":{"type":"jwk"},"confidence":88,"layers":[{"type":"base64_url","padded":false,"wrap":null}],"payload_range":{"start":0,"end":363},"breadcrumb":["base64url","JWK"]}]}

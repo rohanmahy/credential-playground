@@ -5,9 +5,10 @@ in `TEST-PLAN.md`; this file records how it is built and why.
 
 ## Shape
 
-- `register(builder)` adds the 36 commands; `manage(app, engine, services)`
-  adds their state. `run()` is `Builder::default()` + the dialog and
-  clipboard plugins + `register`, with a `setup` that resolves the app data
+- `register(builder)` adds the 39 commands; `manage(app, engine, services)`
+  adds their state (and an empty `MenuChannel`). `run()` is
+  `Builder::default()` + the dialog and clipboard plugins + the menu bar +
+  `register`, with a `setup` that resolves the app data
   dir and calls `manage` with the real services. The tests call the same
   `register`/`manage` on Tauri's mock runtime with fake dialog and
   clipboard backends, so the command layer under test is the shipped one.
@@ -28,6 +29,18 @@ in `TEST-PLAN.md`; this file records how it is built and why.
   returns a 3xx whose `Location` has a scheme it cannot fetch (`file:`,
   `data:`) without consulting the policy, so any 3xx with a `Location` that
   reaches us is also `blocked`.
+- **Menu bar** (`menu.rs`, SPEC §4): File (New Tab ⌘T/Ctrl+T, Open File…
+  ⌘O/Ctrl+O, From Clipboard, Close Tab ⌘W/Ctrl+W), Edit (predefined undo,
+  redo, cut, copy, paste, select all, so the webview's text editing keeps
+  its shortcuts), View (Split View, Raw Pane, full screen), Tools
+  (Date/time, Settings…), and Help (About; on macOS About sits in the app
+  menu, next to Services/Hide/Quit). Items the webview handles are
+  forwarded by id (`menu::MENU_IDS`) over a `Channel<String>` the front end
+  hands to the `menu_listen` command (`TauriPlatform.onMenu`). A command
+  with a Channel rather than a Tauri event, so the capability still grants
+  only our own commands and no `core:event` permission. The latest
+  `menu_listen` wins (a reload subscribes again); with no listener a menu
+  item does nothing.
 - **Registry cache**: `<app data dir>/registry-snapshot.bin`, written to a
   sibling temp file, fsynced, and renamed. It is the only file the app
   writes on its own; nothing else (including private keys) touches disk.

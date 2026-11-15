@@ -27,6 +27,7 @@ fn call(engine: &TokenatorEngine, case: &Case) -> String {
     match case.method.as_str() {
         "info" => engine.info(),
         "detect" => engine.detect(&bytes(0)),
+        "detect_key" => engine.detect_key(&bytes(0)),
         "open" => engine.open(&bytes(0), &text(1), &text(2)),
         "render" => engine.render(&text(0)),
         "parse_edit" => engine.parse_edit(&text(0)),
@@ -102,6 +103,22 @@ fn the_envelope_is_compact_json_with_ok_or_err() {
     let v: Value = serde_json::from_str(&err).unwrap();
     assert!(v["err"]["message"].is_string());
     assert!(v["err"]["node_id"].is_null());
+}
+
+#[test]
+fn detect_key_returns_only_keys_and_key_import_says_not_a_key() {
+    let engine = bundled();
+    assert_eq!(engine.detect_key(b""), r#"{"ok":[]}"#);
+    let jwk = std::fs::read(testdata().join("keys/rfc9901-a5-ec-p256-public.jwk.json")).unwrap();
+    let v: Value = serde_json::from_str(&engine.detect_key(&jwk)).unwrap();
+    assert_eq!(v["ok"][0]["kind"]["type"], "jwk", "{v}");
+    let v: Value = serde_json::from_str(&engine.detect(&jwk)).unwrap();
+    assert_eq!(v["ok"][0]["kind"]["type"], "json_claims", "{v}");
+    let jws = std::fs::read(testdata().join("tokens/rfc7515-a3-jws-es256.txt")).unwrap();
+    assert_eq!(engine.detect_key(&jws), r#"{"ok":[]}"#);
+    let req = serde_json::json!({ "bytes": Base64UrlUnpadded::encode_string(&jws) });
+    let out = engine.key_import(&req.to_string());
+    assert_eq!(err_code(&out), "not_a_key", "{out}");
 }
 
 #[test]

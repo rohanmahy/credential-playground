@@ -62,14 +62,10 @@ fn random_generation_uses_the_rng() {
 
 #[test]
 fn generated_keys_carry_only_the_role() {
-    for (i, role) in [
-        None,
-        Some(Role::Issuer),
-        Some(Role::Holder),
-        Some(Role::Verifier),
-    ]
-    .into_iter()
-    .enumerate()
+    // Issuer and Holder are the only roles (SPEC §4.2: no Verifier role).
+    for (i, role) in [None, Some(Role::Issuer), Some(Role::Holder)]
+        .into_iter()
+        .enumerate()
     {
         let key = generate(KeySpec::P256, role, None, &mut rng(i as u8)).unwrap();
         assert!(key.is_private());

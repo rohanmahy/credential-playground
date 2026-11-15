@@ -228,10 +228,10 @@ fn edn_candidates(input: &[u8], c: &td::Candidate) -> Vec<Candidate> {
     out
 }
 
-/// Ranked candidates. EDN look-alikes are confirmed by parsing and
-/// classified by the CBOR they encode (#44); EDN that does not parse is
-/// dropped.
-pub(crate) fn detect(input: &[u8]) -> Vec<Candidate> {
+/// Every ranked reading, tokens, claim sets, and keys alike. EDN
+/// look-alikes are confirmed by parsing and classified by the CBOR they
+/// encode (#44); EDN that does not parse is dropped.
+fn readings(input: &[u8]) -> Vec<Candidate> {
     let mut out = Vec::new();
     for c in td::detect(input) {
         match kind_dto(&c.kind) {
@@ -242,6 +242,89 @@ pub(crate) fn detect(input: &[u8]) -> Vec<Candidate> {
     // Stable: ties keep tokenator-detect's order.
     out.sort_by_key(|c| std::cmp::Reverse(c.confidence));
     out
+}
+
+/// Ranked token and claim-set candidates; never a key kind (SPEC §3). A
+/// JWK reads as a JSON claim set and a COSE_Key as a CBOR or EDN one.
+/// JSON claims also read as EDN claims (see [`edn_alternative`]).
+pub(crate) fn detect(input: &[u8]) -> Vec<Candidate> {
+    let mut out = readings(input);
+    out.retain(|c| !c.kind.is_key());
+    let alternatives: Vec<Candidate> = out
+        .iter()
+        .filter_map(|c| edn_alternative(input, c, &out))
+        .collect();
+    for alt in alternatives {
+        if !out
+            .iter()
+            .any(|o| o.kind == alt.kind && o.layers == alt.layers)
+        {
+            out.push(alt);
+        }
+    }
+    // Stable: each alternative ranks just below its JSON reading.
+    out.sort_by_key(|c| std::cmp::Reverse(c.confidence));
+    out
+}
+
+/// The EDN claim set reading of a JSON claim set `c` (JSON text is EDN),
+/// one point below it, so "Detected as…" can switch a draft to EDN. None
+/// when the JSON is a token container or a JWS JSON (a token reading peels
+/// the same layers, or more), or when the EDN parser rejects the text.
+fn edn_alternative(input: &[u8], c: &Candidate, all: &[Candidate]) -> Option<Candidate> {
+    if c.kind != Kind::JsonClaims {
+        return None;
+    }
+    let holds_token = all
+        .iter()
+        .any(|o| o.kind.is_signed() && o.layers.starts_with(&c.layers));
+    if holds_token {
+        return None;
+    }
+    let text = unwrap_all(input, &c.layers).ok()?;
+    edn_cbor(std::str::from_utf8(&text).ok()?)?;
+    let mut alt = c.clone();
+    alt.kind = Kind::EdnClaims;
+    alt.confidence = c.confidence.saturating_sub(1);
+    alt.breadcrumb.pop();
+    alt.breadcrumb.push(alt.kind.label().to_owned());
+    Some(alt)
+}
+
+/// Ranked key candidates only (JWK, JWK Set, COSE_Key, COSE_KeySet, PEM),
+/// through the same unwrapping layers as [`detect`]. A COSE_Key reading
+/// needs a registered integer `kty` in every map: `tokenator-detect` also
+/// offers maps with a text label 1, which are claim sets (a CWT `iss`).
+pub(crate) fn detect_key(input: &[u8]) -> Vec<Candidate> {
+    let mut out = readings(input);
+    out.retain(|c| match c.kind {
+        Kind::CoseKey | Kind::CoseKeySet => registered_cose_keys(input, c),
+        _ => c.kind.is_key(),
+    });
+    out
+}
+
+/// Whether `c` unwraps to a COSE_Key (a map) or COSE_KeySet (a non-empty
+/// array of maps) whose every `kty` (label 1) is a registered integer.
+fn registered_cose_keys(input: &[u8], c: &Candidate) -> bool {
+    let Ok(bytes) = unwrap_all(input, &c.layers) else {
+        return false;
+    };
+    let Ok(item) = tokenator_cbor::decode(&bytes) else {
+        return false;
+    };
+    let registered = |key: &tokenator_cbor::Item<'_>| {
+        crate::cbor::map_get(key, 1)
+            .and_then(crate::cbor::int_of)
+            .is_some_and(|kty| Registry::shared().is_ok_and(|r| r.cose_kty(kty).is_some()))
+    };
+    match (&c.kind, &item.value) {
+        (Kind::CoseKey, tokenator_cbor::Value::Map(_)) => registered(&item),
+        (Kind::CoseKeySet, tokenator_cbor::Value::Array(keys)) => {
+            !keys.is_empty() && keys.iter().all(registered)
+        }
+        _ => false,
+    }
 }
 
 /// Applies `layers` (outermost first) to `input`; a trailing

@@ -52,11 +52,17 @@ describe('drafts with the current core', () => {
     expect(r.diagnostics[0]?.severity).toBe('error');
   });
 
-  it('JSON drafts are detected (claim sets, JWKs); `{}` detects as JSON only', async () => {
+  it('JSON drafts are detected as claim sets (a JWK too), with an EDN reading second', async () => {
     expect((await engine.detect(utf8('{"iss":"x"}')))[0]?.kind).toEqual({ type: 'json_claims' });
     const jwk = '{"kty":"OKP","crv":"Ed25519","x":"11qYAYKxCrfVS_7TyWQHOg7hcvPapiMlrwIaaPcHURo"}';
-    expect((await engine.detect(utf8(jwk)))[0]?.kind).toEqual({ type: 'jwk' });
-    expect((await engine.detect(utf8('{}'))).map((c) => c.kind.type)).toEqual(['json_claims']);
+    // SPEC §3: token detection never returns a key; key detection does.
+    expect((await engine.detect(utf8(jwk)))[0]?.kind).toEqual({ type: 'json_claims' });
+    expect((await engine.detectKey(utf8(jwk)))[0]?.kind).toEqual({ type: 'jwk' });
+    // SPEC §3 "Detected as…": JSON text can be read as EDN instead.
+    expect((await engine.detect(utf8('{}'))).map((c) => c.kind.type)).toEqual([
+      'json_claims',
+      'edn_claims',
+    ]);
   });
 });
 
@@ -66,9 +72,12 @@ describe('core additions for #43 (fail until implemented)', () => {
     expect(kinds[0]).toBe('cwt');
   });
 
-  it('detect classifies an EDN COSE_Key as a key', async () => {
+  it('detect reads an EDN COSE_Key as an EDN claim set; detectKey as a key', async () => {
     const kinds = (await engine.detect(utf8(COSE_KEY))).map((c) => c.kind.type);
-    expect(kinds[0]).toBe('cose_key');
+    expect(kinds[0]).toBe('edn_claims');
+    expect(kinds).not.toContain('cose_key');
+    const keyKinds = (await engine.detectKey(utf8(COSE_KEY))).map((c) => c.kind.type);
+    expect(keyKinds[0]).toBe('cose_key');
   });
 
   it('the binding has convert_claims (JSON ↔ EDN claim sets)', async () => {

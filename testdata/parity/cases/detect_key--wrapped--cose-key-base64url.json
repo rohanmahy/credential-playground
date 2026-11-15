@@ -1,0 +1,9 @@
+{
+  "method": "detect_key",
+  "source": "constructed: cose-key-base64url",
+  "args": [
+    {
+      "bytes": "cHlOWUlHd1RnblphN0ZOWThSZHpQU2djSEh2Y09ZaE5CS1JhSG14bnlGaThJR3daSWxnZ1lQZnhwNERZcDRPX3Q2TGRheWVXNkJLTnU4NzUwOUZvMjVVcGx4bzI1N2toV0NBVU15bk01NGFPUVdrbldaejJXalR6emlfOXBWcC15bW50aVJtamxOUXZEeUFCQVFJQ1VrRnplVzF0WlhSeWFXTkZRMFJUUVRJMU5nTW0"
+    }
+  ]
+}
