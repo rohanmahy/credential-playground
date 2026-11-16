@@ -29,7 +29,7 @@
   /** The smallest SD view height. */
   const MIN_HEIGHT = 40;
   /** The least the panes above keep when the SD view grows. */
-  const PANES_MIN = 80;
+  const PANES_MIN = 160;
   const MIN_COLUMN = 32;
   const DEFAULT_COLUMNS: Record<SdColumn, number> = { Value: 240, Salt: 120, Digest: 180 };
   const COLUMNS = ['Claim', 'Value', 'Salt', 'Digest', 'Status', 'Slot'] as const;

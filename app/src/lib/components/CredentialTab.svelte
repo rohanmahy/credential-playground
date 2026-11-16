@@ -169,7 +169,7 @@
   }
   .panes {
     flex: 1 1 auto;
-    min-height: 5rem;
+    min-height: 10rem;
     overflow: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
