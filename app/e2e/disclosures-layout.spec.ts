@@ -217,6 +217,21 @@ test.describe('splitter', () => {
 });
 
 test.describe('columns', () => {
+  test('Claim starts narrow and Status small, even in a wide window', async ({ page }) => {
+    await page.setViewportSize({ width: 1920, height: 1000 });
+    await paste(page, SD_JWT());
+    const claim = columnHeader(page, 'Claim');
+    await expect(claim).toBeVisible();
+    // No column soaks up the spare width.
+    expect(await width(claim)).toBeLessThanOrEqual(130);
+    expect(await width(columnHeader(page, 'Status'))).toBeLessThanOrEqual(96);
+
+    const handle = columnHandle(page, 'Claim');
+    const before = await width(claim);
+    await dragBy(page, handle, 60, 0);
+    expect(await width(claim)).toBeGreaterThan(before + 30);
+  });
+
   for (const [name, input] of [
     ['SD-JWT', SD_JWT],
     ['SD-CWT', SD_CWT],

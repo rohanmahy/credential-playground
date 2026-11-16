@@ -160,7 +160,7 @@ ambiguous input, e.g. reading a JSON claim set as EDN instead.
   array position, and value. Each one shows whether it matched a digest in the
   payload, and the matching redacted slot is linked in the tree. Decoys are
   marked once they're identified (i.e. digests with no disclosure).
-  - **Layout:** the Value, Salt, and Digest columns are resizable (drag the
+  - **Layout:** the Claim, Value, Salt, and Digest columns are resizable (drag the
     handle in the header, or focus it and use Left/Right). Value wraps (a
     byte string may break anywhere) and is never truncated. Salt and Digest
     stay on one line and are cut with an ellipsis, but the full value is the

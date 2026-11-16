@@ -33,8 +33,8 @@ export function fixtureHex(path: string): string {
 //   Issue      dialog "Issue": checkbox "Holder key (cnf)", no key picker
 //   Present    dialog "Present": no key picker (the Holder area's key)
 //   SD view    region "Selective disclosure" with table "Disclosures"; the
-//              Value, Salt, and Digest headers each hold a vertical
-//              separator "Resize Value column" / "Resize Salt column" /
+//              Claim, Value, Salt, and Digest headers each hold a vertical
+//              separator "Resize Claim column" / "Resize Value column" / "Resize Salt column" /
 //              "Resize Digest column"; between the panes and the SD view a
 //              horizontal separator "Resize disclosures"
 export const NAMES = {
@@ -54,6 +54,7 @@ export const NAMES = {
   sdRegion: 'Selective disclosure',
   disclosures: 'Disclosures',
   resizeColumn: {
+    Claim: 'Resize Claim column',
     Value: 'Resize Value column',
     Salt: 'Resize Salt column',
     Digest: 'Resize Digest column',

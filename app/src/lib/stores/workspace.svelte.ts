@@ -86,7 +86,7 @@ export interface Tab {
 }
 
 /** The resizable columns of the disclosures table. */
-export type SdColumn = 'Value' | 'Salt' | 'Digest';
+export type SdColumn = 'Claim' | 'Value' | 'Salt' | 'Digest';
 
 /** A draft tab's format and type (#43). */
 export interface Draft {

@@ -1,4 +1,4 @@
-// SD view layout (SPEC §4.1): resizable Value / Salt / Digest columns, Value
+// SD view layout (SPEC §4.1): resizable Claim / Value / Salt / Digest columns, Value
 // wraps, Salt and Digest truncate visually but keep their full text, and a
 // resizable split between the panes and the SD view. jsdom has no layout,
 // so these tests pin the ARIA contract, keyboard resizing, inline sizes,
@@ -15,7 +15,7 @@ import * as fx from '../fixtures';
 import { renderWithApp, seedTab, setupApp } from '../render';
 import { NAMES, type ResizableColumn } from '../ui';
 
-const COLUMNS: ResizableColumn[] = ['Value', 'Salt', 'Digest'];
+const COLUMNS: ResizableColumn[] = ['Claim', 'Value', 'Salt', 'Digest'];
 const LONG_HEX = `h'${'00112233445566778899aabbccddeeff'.repeat(12)}'`;
 const LONG_SALT = 'c2FsdC0'.repeat(10);
 const LONG_DIGEST = 'ZGlnZXN0LW9mLWEtbG9uZy1kaXNjbG9zdXJl'.repeat(3);
@@ -74,12 +74,12 @@ describe('disclosure columns', () => {
     ['SD-JWT', fx.sdJwt],
     ['SD-CWT', fx.sdCwt],
   ] as const) {
-    it(`${name}: Value, Salt, and Digest have a focusable vertical resize handle; others none`, () => {
+    it(`${name}: Claim, Value, Salt, and Digest have a focusable vertical resize handle; others none`, () => {
       const app = setupApp();
       const tab = seedTab(app.workspace, doc);
       renderWithApp(DisclosuresView, { tabId: tab.id }, app);
       const handles = within(table()).getAllByRole('separator');
-      expect(handles).toHaveLength(3);
+      expect(handles).toHaveLength(4);
       for (const column of COLUMNS) {
         const h = handle(column);
         expect(header(column)).toContainElement(h);
@@ -90,7 +90,7 @@ describe('disclosure columns', () => {
         expect(num(h, 'aria-valuenow')).toBeGreaterThanOrEqual(num(h, 'aria-valuemin'));
       }
       // the other columns keep their natural width
-      for (const other of ['Claim', 'Status', 'Slot']) {
+      for (const other of ['Status', 'Slot']) {
         expect(within(header(other)).queryByRole('separator')).toBeNull();
         expect(header(other).style.width).toBe('');
       }

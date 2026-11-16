@@ -18,9 +18,9 @@
 //   tab also has a `combobox` "Type" (options "JSON claims", "EDN claims",
 //   "JWT", "SD-JWT", …) and the buttons "Open file…" and "From clipboard".
 // - SD view: `region` "Selective disclosure" holding `table` "Disclosures";
-//   the Value, Salt, and Digest column headers each hold a focusable
-//   `separator` (vertical) "Resize Value column" / "Resize Salt column" /
-//   "Resize Digest column" (ArrowLeft/Right, aria-valuenow = the width in
+//   the Claim, Value, Salt, and Digest column headers each hold a
+//   focusable `separator` (vertical) "Resize Claim column" / "Resize Value
+//   column" / "Resize Salt column" / "Resize Digest column" (ArrowLeft/Right, aria-valuenow = the width in
 //   px, mirrored as the header cell's inline `width`). Between the panes
 //   and the SD view, a focusable `separator` (horizontal) "Resize
 //   disclosures" (ArrowUp grows the SD view, ArrowDown shrinks it;
@@ -60,6 +60,7 @@ export const NAMES = {
   sdRegion: 'Selective disclosure',
   disclosures: 'Disclosures',
   resizeColumn: {
+    Claim: 'Resize Claim column',
     Value: 'Resize Value column',
     Salt: 'Resize Salt column',
     Digest: 'Resize Digest column',
