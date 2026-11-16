@@ -58,7 +58,8 @@ app/
   so tests build fresh instances around a `MockEngine`/`MockPlatform`.
   - `Workspace`: tabs (document, candidates, provenance, collapse set,
     selection, live-edit text, stale flag, SD marks, last report, the
-    per-tab `manual_decode`/`hide_decoded` lists) and the split, plus the
+    per-tab `manual_decode`/`hide_decoded` lists, the SD view's height and
+    column widths once the user resizes them) and the split, plus the
     open date/time chit. The constructor opens one empty tab, and `newTab`
     ("+") opens more. An empty tab (`Tab.empty`) is in Live edit with no
     text, a placeholder document, and a draft (`Tab.draft`: format and type,
@@ -151,6 +152,17 @@ path-based (core TEST-PLAN §4).
   fold, Enter to select, and Shift+F10 / the context-menu key for the node
   menu (SD mark, date/time chit, decode as CBOR, hide decoded view, copy).
   Tabs and the action toolbar use roving focus too.
+- **SD view layout** (`DisclosuresView`, `logic/resize.ts`): resize handles
+  are focusable `role="separator"` elements with `aria-valuenow` in px,
+  dragged with pointer capture or moved by arrow keys (16 px, Shift ×4).
+  A horizontal splitter above the SD view sets its height (clamped so the
+  panes keep 80 px); until then the view fits its content, capped at a
+  third of the window. The Value, Salt, and Digest headers carry handles
+  and inline widths under `table-layout: fixed`; Salt and Digest truncate
+  with CSS ellipsis only, so the DOM, `title`, and copies stay whole. Sizes
+  live in `Tab.sdHeight` / `Tab.sdColumns` (in memory, per tab), so they
+  survive tab switches. Inline sizes are set through `style:` (CSSOM),
+  allowed by the CSP either way.
 
 ## Components
 

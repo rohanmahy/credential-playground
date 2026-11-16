@@ -77,7 +77,16 @@ export interface Tab {
   /** An empty tab (SPEC §4.1): no text yet. The first fill (typing, or a
    *  paste or drop that runs detection) ends it; only Clear brings it back. */
   empty?: boolean;
+  /** SD view height in px set through its splitter; null/absent until the
+   *  user resizes it (then the view fits its content, up to a third of the
+   *  window). In memory only, never stored (SPEC §4.1). */
+  sdHeight?: number | null;
+  /** Disclosures table column widths in px set by the user (SPEC §4.1). */
+  sdColumns?: Partial<Record<SdColumn, number>>;
 }
+
+/** The resizable columns of the disclosures table. */
+export type SdColumn = 'Value' | 'Salt' | 'Digest';
 
 /** A draft tab's format and type (#43). */
 export interface Draft {
@@ -345,6 +354,18 @@ export class Workspace {
 
   activate(id: string): void {
     if (this.tab(id)) this.activeId = id;
+  }
+
+  /** The SD view height the user chose for a tab (SPEC §4.1). */
+  setSdHeight(id: string, px: number): void {
+    const tab = this.tab(id);
+    if (tab) tab.sdHeight = px;
+  }
+
+  /** A disclosures column width the user chose for a tab (SPEC §4.1). */
+  setSdColumn(id: string, column: SdColumn, px: number): void {
+    const tab = this.tab(id);
+    if (tab) tab.sdColumns = { ...tab.sdColumns, [column]: px };
   }
 
   close(id: string): void {

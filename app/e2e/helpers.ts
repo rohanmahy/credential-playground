@@ -32,6 +32,11 @@ export function fixtureHex(path: string): string {
 //              "From clipboard"
 //   Issue      dialog "Issue": checkbox "Holder key (cnf)", no key picker
 //   Present    dialog "Present": no key picker (the Holder area's key)
+//   SD view    region "Selective disclosure" with table "Disclosures"; the
+//              Value, Salt, and Digest headers each hold a vertical
+//              separator "Resize Value column" / "Resize Salt column" /
+//              "Resize Digest column"; between the panes and the SD view a
+//              horizontal separator "Resize disclosures"
 export const NAMES = {
   areas: { issuer: 'Issuer key', holder: 'Holder key' },
   keyFormat: 'Key format',
@@ -46,7 +51,17 @@ export const NAMES = {
   openFile: 'Open file…',
   fromClipboard: 'From clipboard',
   cnf: 'Holder key (cnf)',
+  sdRegion: 'Selective disclosure',
+  disclosures: 'Disclosures',
+  resizeColumn: {
+    Value: 'Resize Value column',
+    Salt: 'Resize Salt column',
+    Digest: 'Resize Digest column',
+  },
+  resizeDisclosures: 'Resize disclosures',
 } as const;
+
+export type ResizableColumn = keyof typeof NAMES.resizeColumn;
 
 export type AreaRole = 'issuer' | 'holder';
 
@@ -210,4 +225,57 @@ export async function watchCsp(page: Page): Promise<() => Promise<string[]>> {
     );
   });
   return () => page.evaluate(() => (window as unknown as { __csp: string[] }).__csp);
+}
+
+// ---------------------------------------------------------------- SD view
+
+/** The active tab's SD view (the disclosures area). */
+export function sdRegion(page: Page): Locator {
+  return activePanel(page).getByRole('region', { name: NAMES.sdRegion, exact: true });
+}
+
+export function disclosuresTable(page: Page): Locator {
+  return activePanel(page).getByRole('table', { name: NAMES.disclosures, exact: true });
+}
+
+/** The resize handle in a column header of the disclosures table. */
+export function columnHandle(page: Page, column: ResizableColumn): Locator {
+  return disclosuresTable(page).getByRole('separator', { name: NAMES.resizeColumn[column] });
+}
+
+/** The splitter between the panes and the SD view. */
+export function sdSplitter(page: Page): Locator {
+  return activePanel(page).getByRole('separator', { name: NAMES.resizeDisclosures, exact: true });
+}
+
+/** A column's header cell (its name may include the handle's label). */
+export function columnHeader(page: Page, column: string): Locator {
+  return disclosuresTable(page).getByRole('columnheader', { name: new RegExp(`^${column}\\b`) });
+}
+
+/** The body cell of `column` in disclosure row `row` (0-based), found by
+ *  the header's position. */
+export async function columnCell(page: Page, column: string, row = 0): Promise<Locator> {
+  const table = disclosuresTable(page);
+  const index = await table
+    .getByRole('columnheader')
+    .evaluateAll(
+      (ths, name) => ths.findIndex((th) => (th.textContent ?? '').trim().startsWith(name)),
+      column,
+    );
+  if (index < 0) throw new Error(`no column ${column}`);
+  return table.locator('tbody tr').nth(row).locator('td').nth(index);
+}
+
+/** Presses the mouse on the middle of `target`, moves by (dx, dy) in steps,
+ *  and releases (a pointer drag). */
+export async function dragBy(page: Page, target: Locator, dx: number, dy: number): Promise<void> {
+  const box = await target.boundingBox();
+  if (!box) throw new Error('dragBy: target not visible');
+  const x = box.x + box.width / 2;
+  const y = box.y + box.height / 2;
+  await page.mouse.move(x, y);
+  await page.mouse.down();
+  await page.mouse.move(x + dx, y + dy, { steps: 8 });
+  await page.mouse.up();
 }
