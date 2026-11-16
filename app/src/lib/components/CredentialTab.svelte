@@ -4,7 +4,8 @@
   // instead of the header, above the same (empty) Live edit text.
   // The main pane and a hex raw pane share one vertical scroll container,
   // so each hex block stays beside its EDN line; long documents render
-  // only the lines in view.
+  // only the lines in view. The SD view below has its own splitter and
+  // scroller; it gets the panes to keep them a minimum height.
   import { getAppContext } from '../context';
   import { hiddenLines, lineInfos } from '../logic/lines';
   import { LINE_HEIGHT, windowFor } from '../logic/viewport';
@@ -116,7 +117,7 @@
         <div class="pane raw"><RawPane {tabId} {slice} /></div>
       {/if}
     </div>
-    <DisclosuresView {tabId} />
+    <DisclosuresView {tabId} panes={scroller} />
     {#if tab.report}
       <ValidationReport
         report={tab.report}
@@ -168,7 +169,7 @@
   }
   .panes {
     flex: 1 1 auto;
-    min-height: 10rem;
+    min-height: 5rem;
     overflow: auto;
     display: grid;
     grid-template-columns: minmax(0, 1fr);
