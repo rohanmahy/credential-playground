@@ -156,9 +156,10 @@ path-based (core TEST-PLAN §4).
   are focusable `role="separator"` elements with `aria-valuenow` in px,
   dragged with pointer capture or moved by arrow keys (16 px, Shift ×4).
   A horizontal splitter above the SD view sets its height (clamped so the
-  panes keep 80 px); until then the view fits its content, capped at a
-  third of the window. The Value, Salt, and Digest headers carry handles
-  and inline widths under `table-layout: fixed`; Salt and Digest truncate
+  panes keep 160 px); until then the view fits its content, capped at a
+  third of the window. The Claim, Value, Salt, and Digest headers carry
+  handles and inline widths under `table-layout: fixed`, and the table is
+  exactly as wide as its columns, so none soaks up spare room; Salt and Digest truncate
   with CSS ellipsis only, so the DOM, `title`, and copies stay whole. Sizes
   live in `Tab.sdHeight` / `Tab.sdColumns` (in memory, per tab), so they
   survive tab switches. Inline sizes are set through `style:` (CSSOM),
