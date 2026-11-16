@@ -17,6 +17,15 @@
 //   panel has a `textbox` "Credential text" and a button "Clear"; an empty
 //   tab also has a `combobox` "Type" (options "JSON claims", "EDN claims",
 //   "JWT", "SD-JWT", …) and the buttons "Open file…" and "From clipboard".
+// - SD view: `region` "Selective disclosure" holding `table` "Disclosures";
+//   the Value, Salt, and Digest column headers each hold a focusable
+//   `separator` (vertical) "Resize Value column" / "Resize Salt column" /
+//   "Resize Digest column" (ArrowLeft/Right, aria-valuenow = the width in
+//   px, mirrored as the header cell's inline `width`). Between the panes
+//   and the SD view, a focusable `separator` (horizontal) "Resize
+//   disclosures" (ArrowUp grows the SD view, ArrowDown shrinks it;
+//   aria-valuenow = its height in px, mirrored as the region's inline
+//   `height`).
 import { act, screen, within } from '@testing-library/svelte';
 import userEvent from '@testing-library/user-event';
 import { EditorView } from '@codemirror/view';
@@ -48,7 +57,17 @@ export const NAMES = {
   sdJwt: 'SD-JWT',
   openFile: 'Open file…',
   fromClipboard: 'From clipboard',
+  sdRegion: 'Selective disclosure',
+  disclosures: 'Disclosures',
+  resizeColumn: {
+    Value: 'Resize Value column',
+    Salt: 'Resize Salt column',
+    Digest: 'Resize Digest column',
+  },
+  resizeDisclosures: 'Resize disclosures',
 } as const;
+
+export type ResizableColumn = keyof typeof NAMES.resizeColumn;
 
 export function keyArea(role: AreaRole): HTMLElement {
   return screen.getByRole('region', { name: NAMES.areas[role] });
